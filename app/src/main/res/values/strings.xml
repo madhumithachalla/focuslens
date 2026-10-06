@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusLens</string>
+    <string name="a11y_description">FocusLens checks which app is open so it can show a pause screen on the apps you chose to limit. For Instagram and YouTube it also notes which tab is showing (for example Reels or Home) to measure your time. It does not store messages, posts or any text from your screen.</string>
+</resources>
