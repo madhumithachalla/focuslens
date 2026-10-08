@@ -48,8 +48,11 @@ fun friendlyScreen(pkg: String, cls: String): String {
 enum class Range(val title: String, val approximate: Boolean = false) {
     TODAY("Today"),
     WEEK("Last 7 days"),
-    MONTHS6("Last 6 months", approximate = true),
-    ALL("All available", approximate = true)
+    MONTH("Last 30 days", approximate = true),
+    YEAR("Last 12 months", approximate = true),
+    ALL("All available", approximate = true),
+    /** The actual window is whatever the user picked — see loadCustom(). */
+    CUSTOM("Custom range", approximate = true)
 }
 
 class UsageRepository(private val context: Context) {
@@ -83,12 +86,26 @@ class UsageRepository(private val context: Context) {
         return when (range) {
             Range.TODAY -> usageBetween(startOfToday(), end)
             Range.WEEK -> usageBetween(startOfToday() - 6L * DAY_MS, end)
-            // Android only keeps detailed events for about a week. Older data
-            // exists only as monthly (about 6 months) and yearly (about 2 years)
-            // totals, so these views are summed from those buckets.
-            Range.MONTHS6 -> aggregate(UsageStatsManager.INTERVAL_MONTHLY, end - 183L * DAY_MS, end)
+            // Android only keeps precise minute-level events for about a week. Older
+            // data exists only as monthly (about 6 months back) and yearly (about 2
+            // years back) pre-summed buckets, so these views are built from those.
+            Range.MONTH -> aggregate(UsageStatsManager.INTERVAL_MONTHLY, end - 30L * DAY_MS, end)
+            Range.YEAR -> aggregate(UsageStatsManager.INTERVAL_YEARLY, end - 365L * DAY_MS, end)
             Range.ALL -> aggregate(UsageStatsManager.INTERVAL_YEARLY, 0L, end)
+            Range.CUSTOM -> emptyList() // use loadCustom(start, end) directly instead
         }
+    }
+
+    /**
+     * A user-picked date range. Spans of a week or less use the precise event log (same
+     * path as TODAY/WEEK); anything longer falls back to the pre-summed monthly buckets,
+     * same accuracy trade-off as MONTH/YEAR above.
+     */
+    fun loadCustom(startMillis: Long, endMillis: Long): List<AppUsage> {
+        val end = endMillis.coerceAtMost(System.currentTimeMillis())
+        val spanDays = (end - startMillis) / DAY_MS
+        return if (spanDays <= 7) usageBetween(startMillis, end)
+        else aggregate(UsageStatsManager.INTERVAL_MONTHLY, startMillis, end)
     }
 
     private fun aggregate(interval: Int, start: Long, end: Long): List<AppUsage> {

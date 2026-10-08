@@ -24,6 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -131,8 +134,9 @@ fun FocusLensMain(repo: UsageRepository) {
                 Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Journal") })
                 Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Mental health") })
                 Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Reading") })
-                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Playlists") })
-                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Guide") })
+                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Focus Score") })
+                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Playlists") })
+                Tab(selected = tab == 8, onClick = { tab = 8 }, text = { Text("Guide") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
@@ -142,7 +146,8 @@ fun FocusLensMain(repo: UsageRepository) {
                     3 -> JournalScreen()
                     4 -> MentalHealthScreen()
                     5 -> ArticlesScreen()
-                    6 -> FocusPlaylistsScreen()
+                    6 -> FocusScoreScreen()
+                    7 -> FocusPlaylistsScreen()
                     else -> GuideScreen()
                 }
             }
@@ -196,6 +201,11 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     val prefs = remember { FocusPrefs(context) }
     val scope = rememberCoroutineScope()
 
+    var customStart by remember { mutableStateOf<Long?>(null) }
+    var customEnd by remember { mutableStateOf<Long?>(null) }
+    var pickingStart by remember { mutableStateOf(false) }
+    var pickingEnd by remember { mutableStateOf(false) }
+
     // Lets the user pick where to save the file (for example the Downloads folder).
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
@@ -218,12 +228,15 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         }
     }
 
-    LaunchedEffect(range, refreshTick) {
+    LaunchedEffect(range, refreshTick, customStart, customEnd) {
+        if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
-        rows = withContext(Dispatchers.IO) { repo.load(range) }
+        rows = withContext(Dispatchers.IO) {
+            if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
+        }
         breakdown = withContext(Dispatchers.IO) {
             try {
-                repo.screenBreakdown(range)
+                if (range == Range.CUSTOM) emptyMap() else repo.screenBreakdown(range)
             } catch (e: Exception) {
                 emptyMap()
             }
@@ -254,6 +267,31 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                     selected = r == range,
                     onClick = { range = r },
                     label = { Text(r.title) }
+                )
+            }
+        }
+        if (range == Range.CUSTOM) {
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { pickingStart = true }) {
+                    Text(customStart?.let { formatPickedDate(it) } ?: "From")
+                }
+                OutlinedButton(onClick = { pickingEnd = true }) {
+                    Text(customEnd?.let { formatPickedDate(it) } ?: "To")
+                }
+            }
+            if (pickingStart) {
+                DatePickerDialogPicker(
+                    initial = customStart,
+                    onPicked = { customStart = it; pickingStart = false },
+                    onDismiss = { pickingStart = false }
+                )
+            }
+            if (pickingEnd) {
+                DatePickerDialogPicker(
+                    initial = customEnd,
+                    onPicked = { customEnd = it; pickingEnd = false },
+                    onDismiss = { pickingEnd = false }
                 )
             }
         }
@@ -334,3 +372,22 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         }
     }
 }
+
+@Composable
+fun DatePickerDialogPicker(initial: Long?, onPicked: (Long) -> Unit, onDismiss: () -> Unit) {
+    val state = rememberDatePickerState(initialSelectedDateMillis = initial)
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(onClick = { state.selectedDateMillis?.let(onPicked) ?: onDismiss() }) {
+                Text("OK")
+            }
+        },
+        dismissButton = { Button(onClick = onDismiss) { Text("Cancel") } }
+    ) {
+        DatePicker(state = state)
+    }
+}
+
+fun formatPickedDate(millis: Long): String =
+    java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.US).format(java.util.Date(millis))
