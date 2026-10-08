@@ -14,6 +14,18 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+
+        // From the Spotify Developer Dashboard (developer.spotify.com/dashboard) — create an
+        // app there, add this redirect URI, and paste the Client ID into local.properties as
+        // SPOTIFY_CLIENT_ID=... (gitignored, so it's never committed).
+        val spotifyClientId = project.findProperty("SPOTIFY_CLIENT_ID") as String? ?: ""
+        buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
+        manifestPlaceholders["spotifyRedirectScheme"] = "focuslens"
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
     }
 
     buildTypes {
@@ -32,9 +44,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
-    }
-    buildFeatures {
-        compose = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -56,4 +65,15 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // Spotify's official App Remote SDK — controls playback in the user's installed Spotify
+    // app directly (play/pause/queue a playlist URI); no separate web login needed.
+    // NOTE: I can't reach the internet from this sandbox to confirm the current exact
+    // artifact coordinates/version. Spotify distributes this as an .aar via GitHub releases
+    // (github.com/spotify/android-sdk/releases) rather than a normal Maven artifact in most
+    // versions — when you open this in Android Studio, check that page for the current
+    // recommended include method (JitPack coordinate or a local .aar in app/libs/) and swap
+    // the line below if it doesn't resolve as-is.
+    implementation("com.spotify.android:auth:2.1.1")
+    implementation("com.github.spotify:android-sdk:release-2.2.0")
 }
