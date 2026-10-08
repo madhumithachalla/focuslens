@@ -47,6 +47,9 @@ interface CycleLogDao {
     @Query("SELECT * FROM cycle_logs WHERE date BETWEEN :from AND :to ORDER BY date")
     fun between(from: String, to: String): Flow<List<CycleLogEntity>>
 
+    @Query("SELECT * FROM cycle_logs WHERE date BETWEEN :from AND :to ORDER BY date")
+    suspend fun betweenOnce(from: String, to: String): List<CycleLogEntity>
+
     @Query("SELECT * FROM cycle_logs WHERE mode = 'MENSTRUAL' AND periodStart = 1 ORDER BY date DESC LIMIT :limit")
     suspend fun recentPeriodStarts(limit: Int): List<CycleLogEntity>
 
@@ -68,6 +71,24 @@ interface WearableDao {
 
     @Query("SELECT * FROM wearable_samples WHERE metric = :metric AND recordedAt BETWEEN :from AND :to ORDER BY recordedAt")
     fun metricBetween(metric: String, from: Long, to: Long): Flow<List<WearableSampleEntity>>
+}
+
+@Dao
+interface JournalDao {
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insert(entry: JournalEntryEntity): Long
+
+    @Query("SELECT * FROM journal_entries WHERE date = :date LIMIT 1")
+    suspend fun forDate(date: String): JournalEntryEntity?
+
+    @Query("SELECT * FROM journal_entries ORDER BY date DESC LIMIT :limit")
+    fun recent(limit: Int): Flow<List<JournalEntryEntity>>
+
+    @Query("SELECT * FROM journal_entries ORDER BY date DESC LIMIT :limit")
+    suspend fun recentOnce(limit: Int): List<JournalEntryEntity>
+
+    @Query("SELECT COUNT(*) FROM journal_entries")
+    suspend fun totalCount(): Int
 }
 
 @Dao
