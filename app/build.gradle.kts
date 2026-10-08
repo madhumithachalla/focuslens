@@ -16,11 +16,10 @@ android {
         versionName = "0.1.0"
 
         // From the Spotify Developer Dashboard (developer.spotify.com/dashboard) — create an
-        // app there, add this redirect URI, and paste the Client ID into local.properties as
-        // SPOTIFY_CLIENT_ID=... (gitignored, so it's never committed).
+        // app there, add redirect URI focuslens://auth, and paste the Client ID into
+        // local.properties as SPOTIFY_CLIENT_ID=... (gitignored, so it's never committed).
         val spotifyClientId = project.findProperty("SPOTIFY_CLIENT_ID") as String? ?: ""
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
-        manifestPlaceholders["spotifyRedirectScheme"] = "focuslens"
     }
 
     buildFeatures {
@@ -66,14 +65,12 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // Spotify's official App Remote SDK — controls playback in the user's installed Spotify
-    // app directly (play/pause/queue a playlist URI); no separate web login needed.
-    // NOTE: I can't reach the internet from this sandbox to confirm the current exact
-    // artifact coordinates/version. Spotify distributes this as an .aar via GitHub releases
-    // (github.com/spotify/android-sdk/releases) rather than a normal Maven artifact in most
-    // versions — when you open this in Android Studio, check that page for the current
-    // recommended include method (JitPack coordinate or a local .aar in app/libs/) and swap
-    // the line below if it doesn't resolve as-is.
-    implementation("com.spotify.android:auth:2.1.1")
-    implementation("com.github.spotify:android-sdk:release-2.2.0")
+    // Spotify's official App Remote SDK. Confirmed directly from spotify/android-sdk's own
+    // README and demo app build.gradle: this is distributed ONLY as a prebuilt .aar checked
+    // into that repo (app-remote-lib/spotify-app-remote-release-0.8.0.aar), never published
+    // to Google's Maven, Maven Central, or JitPack — an earlier guessed Maven coordinate here
+    // failed in CI because that artifact genuinely doesn't exist anywhere. gson is the one
+    // real transitive dependency, per that same demo app.
+    implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
+    implementation("com.google.code.gson:gson:2.8.6")
 }
