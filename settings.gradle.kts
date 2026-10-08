@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Spotify's App Remote SDK is only distributed via JitPack, not Maven Central.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
