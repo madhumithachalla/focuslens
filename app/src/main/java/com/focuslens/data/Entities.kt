@@ -42,7 +42,9 @@ data class CycleLogEntity(
     val date: String, // yyyyMMdd
     val energyLevel: Int? = null, // 1-5, used by both modes
     val moodTags: String? = null, // comma-separated, free-form so it never forces a gendered vocabulary
-    val symptomTags: String? = null
+    val symptomTags: String? = null,
+    /** Marks the first day of a period — the only field the cycle-length prediction reads. */
+    val periodStart: Boolean = false
 )
 
 enum class MindfulnessType { BREATHING, MEDITATION, STRETCH, WALK }
