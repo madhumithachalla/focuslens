@@ -114,6 +114,28 @@ class FocusPrefs(context: Context) {
     /** Times today the user saw the block screen and chose not to open the app. */
     fun totalGaveUpToday(): Int = blocked().sumOf { gaveUpToday(it) }
 
+    /**
+     * Sum of passes (opened anyway) and gave-ups (resisted) across every currently
+     * blocked app over the last [days] days — the raw numbers the Focus Score reads.
+     * Walking real stored per-date keys, not an estimate.
+     */
+    fun resistStatsLast(days: Int): Pair<Int, Int> {
+        val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
+        val cal = java.util.Calendar.getInstance()
+        var passes = 0
+        var gaveUp = 0
+        for (pkg in blocked()) {
+            val c = cal.clone() as java.util.Calendar
+            repeat(days) {
+                val d = fmt.format(c.time)
+                passes += sp.getInt("passes_${pkg}_$d", 0)
+                gaveUp += sp.getInt("gaveup_${pkg}_$d", 0)
+                c.add(java.util.Calendar.DAY_OF_MONTH, -1)
+            }
+        }
+        return passes to gaveUp
+    }
+
     // ---- Hyper Focus: blocks every app device-wide, not just the ones toggled on ----
 
     /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this time. */
