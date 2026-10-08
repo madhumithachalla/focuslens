@@ -3,6 +3,7 @@ package com.focuslens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -12,6 +13,7 @@ import com.focuslens.data.AppDatabase
 import com.focuslens.data.CycleMode
 import com.focuslens.data.CyclePrediction
 import com.focuslens.data.CycleRepository
+import com.focuslens.data.ProfileEntity
 import kotlinx.coroutines.launch
 
 @Composable
@@ -21,83 +23,112 @@ fun CycleScreen() {
     val repo = remember { CycleRepository(db.cycleLogDao()) }
     val scope = rememberCoroutineScope()
 
-    var mode by remember { mutableStateOf<CycleMode?>(null) }
+    var profile by remember { mutableStateOf<ProfileEntity?>(null) }
     var prediction by remember { mutableStateOf<CyclePrediction?>(null) }
+    var energyLevel by remember { mutableStateOf<Int?>(null) }
     var loading by remember { mutableStateOf(true) }
 
     suspend fun refresh() {
+        profile = db.profileDao().get()
         prediction = repo.predictNextCycle()
         loading = false
     }
 
-    LaunchedEffect(Unit) {
-        val profile = db.profileDao().get()
-        mode = profile?.defaultCycleMode ?: CycleMode.OFF
-        refresh()
+    LaunchedEffect(Unit) { refresh() }
+
+    fun setTracking(menstrual: Boolean, general: Boolean) {
+        val p = profile ?: return
+        scope.launch {
+            val updated = p.copy(trackMenstrualCycle = menstrual, trackGeneralEnergy = general)
+            db.profileDao().update(updated)
+            refresh()
+        }
     }
 
-    if (loading || mode == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+    if (loading || profile == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
     }
 
+    val p = profile!!
+
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         Text("Cycle & energy", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("Pick as many as apply — not an either/or.", fontSize = 12.sp)
         Spacer(Modifier.height(16.dp))
 
-        when (mode) {
-            CycleMode.OFF -> {
-                Text("Not tracked right now.", fontSize = 14.sp)
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = false, onClick = { mode = CycleMode.MENSTRUAL }, label = { Text("Track menstrual cycle") })
-                    FilterChip(selected = false, onClick = { mode = CycleMode.GENERAL_ENERGY }, label = { Text("Track general energy") })
+        if (!p.trackMenstrualCycle && !p.trackGeneralEnergy) {
+            Text("Not tracked right now.", fontSize = 14.sp)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = false, onClick = { setTracking(true, p.trackGeneralEnergy) }, label = { Text("Track menstrual cycle") })
+                FilterChip(selected = false, onClick = { setTracking(p.trackMenstrualCycle, true) }, label = { Text("Track general energy") })
+            }
+            return@Column
+        }
+
+        if (p.trackMenstrualCycle) {
+            val pred = prediction
+            if (pred == null) {
+                Text(
+                    "No period start logged yet — log today as day 1 of a period to begin building an estimate.",
+                    fontSize = 13.sp
+                )
+            } else {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            if (pred.isConfident) "ESTIMATED NEXT CYCLE" else "EARLY ESTIMATE (fewer than 3 logged cycles)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text("Day ${pred.currentCycleDay} · next start around ${formatDate(pred.predictedNextStart)}", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg) — your own data, not a clinical model. Treat it as a rough guide, not a diagnosis.",
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = {
+                scope.launch {
+                    repo.logToday(CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null)
+                    refresh()
+                }
+            }) {
+                Text("Log today as period start")
+            }
+            Spacer(Modifier.height(20.dp))
+        }
 
-            CycleMode.MENSTRUAL -> {
-                val p = prediction
-                if (p == null) {
-                    Text(
-                        "No period start logged yet — log today as day 1 of a period to begin building an estimate.",
-                        fontSize = 13.sp
+        if (p.trackGeneralEnergy) {
+            Text("General energy", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                (1..5).forEach { level ->
+                    FilterChip(
+                        selected = energyLevel == level,
+                        onClick = {
+                            energyLevel = level
+                            scope.launch {
+                                repo.logToday(CycleMode.GENERAL_ENERGY, periodStart = false, energyLevel = level, moodTags = null)
+                            }
+                        },
+                        label = { Text("$level") }
                     )
-                } else {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(
-                                if (p.isConfident) "ESTIMATED NEXT CYCLE" else "EARLY ESTIMATE (fewer than 3 logged cycles)",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text("Day ${p.currentCycleDay} · next start around ${formatDate(p.predictedNextStart)}", fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "A rolling average of your last ${if (p.isConfident) "3+" else "few"} logged cycles (${p.averageCycleLengthDays} days avg) — your own data, not a clinical model. Treat it as a rough guide, not a diagnosis.",
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = {
-                    scope.launch {
-                        repo.logToday(CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null)
-                        refresh()
-                    }
-                }) {
-                    Text("Log today as period start")
                 }
             }
+            Spacer(Modifier.height(20.dp))
+        }
 
-            CycleMode.GENERAL_ENERGY -> {
-                Text("Logging general energy & mood — no cycle prediction, just your own pattern over time.", fontSize = 13.sp)
-            }
-
-            else -> {}
+        TextButton(onClick = { setTracking(false, false) }) {
+            Text("Turn off cycle & energy tracking")
         }
     }
 }

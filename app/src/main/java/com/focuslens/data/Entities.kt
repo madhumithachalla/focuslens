@@ -81,8 +81,8 @@ data class WearableSampleEntity(
 enum class AgeBracket { UNDER_18, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_PLUS, PREFER_NOT_TO_SAY }
 
 /**
- * Single-row profile used only to tailor copy, defaults and the cycle-tracking prompt
- * at onboarding (e.g. which Settings sections show by default). Never used to gate features.
+ * Single-row profile used only to tailor copy, defaults and which Settings sections show
+ * by default. Never used to gate features.
  */
 @Entity(tableName = "profile")
 data class ProfileEntity(
@@ -90,6 +90,10 @@ data class ProfileEntity(
     val ageBracket: AgeBracket,
     /** Free text, not an enum — never force a user into a fixed gender list. */
     val genderIdentity: String?,
-    val defaultCycleMode: CycleMode,
+    /** Independent, not mutually exclusive — tracking a cycle and general energy isn't an either/or. */
+    val trackMenstrualCycle: Boolean,
+    val trackGeneralEnergy: Boolean,
+    /** Comma-joined ids from TOPIC_OPTIONS (OnboardingScreen.kt) — free-form tags, not an enum. */
+    val topics: String,
     val onboardedAt: Long
 )
