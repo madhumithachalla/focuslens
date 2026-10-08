@@ -31,9 +31,10 @@ class Converters {
         CycleLogEntity::class,
         MindfulnessSessionEntity::class,
         WearableSampleEntity::class,
-        ProfileEntity::class
+        ProfileEntity::class,
+        JournalEntryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -44,6 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mindfulnessDao(): MindfulnessDao
     abstract fun wearableDao(): WearableDao
     abstract fun profileDao(): ProfileDao
+    abstract fun journalDao(): JournalDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -53,7 +55,11 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "focuslens.db"
-            ).build().also { instance = it }
+            )
+                // Pre-release app, no real user data to preserve yet — simplest path
+                // through schema changes until there's something worth migrating.
+                .fallbackToDestructiveMigration()
+                .build().also { instance = it }
         }
     }
 }
