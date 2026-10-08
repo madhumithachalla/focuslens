@@ -86,14 +86,45 @@ class BlockActivity : ComponentActivity() {
         val over = usedMin >= limit
         val passes = prefs.passesToday(pkg)
         val resisted = prefs.gaveUpToday(pkg)
+        val maxSkips = prefs.maxSkipsPerDay(pkg)
+
+        // Two independent hard stops, same idea as Minimalist Focus Launcher's time-based
+        // app locks: once either is hit, there is no challenge left to beat today — only
+        // BREATHE/MATH/PHRASE earns a few more minutes; neither does once locked.
+        val skipLimitReached = passes >= maxSkips
+        val locked = skipLimitReached || over
+
+        if (locked) {
+            setContent {
+                MaterialTheme(
+                    colorScheme = lightColorScheme(
+                        primary = Color(0xFF1F3A34),
+                        background = Color(0xFFF7F5F0),
+                        surface = Color(0xFFF7F5F0)
+                    )
+                ) {
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                        BackHandler { goHome(prefs) }
+                        LockedScreen(
+                            label = label,
+                            usedMin = usedMin,
+                            limit = limit,
+                            skipLimitReached = skipLimitReached,
+                            maxSkips = maxSkips,
+                            onGiveUp = { goHome(prefs) }
+                        )
+                    }
+                }
+            }
+            return
+        }
 
         val steps = when {
-            over -> listOf(Challenge.BREATHE, Challenge.MATH, Challenge.PHRASE)
             passes == 0 -> listOf(Challenge.BREATHE)
             passes == 1 -> listOf(Challenge.BREATHE, Challenge.MATH)
             else -> listOf(Challenge.MATH, Challenge.PHRASE)
         }
-        val grantMin = if (over) 5 else 10
+        val grantMin = 10
 
         setContent {
             MaterialTheme(
@@ -229,6 +260,58 @@ fun BlockScreen(
         )
         TextButton(onClick = onGiveUp) {
             Text("Not now, take me home", fontSize = 16.sp)
+        }
+    }
+}
+
+/** No challenge, no bypass — the daily allotment (skips or time) is spent. */
+@Composable
+fun LockedScreen(
+    label: String,
+    usedMin: Long,
+    limit: Int,
+    skipLimitReached: Boolean,
+    maxSkips: Int,
+    onGiveUp: () -> Unit
+) {
+    val minutesToMidnight = remember {
+        val cal = java.util.Calendar.getInstance()
+        val nowMillis = cal.timeInMillis
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 23)
+        cal.set(java.util.Calendar.MINUTE, 59)
+        cal.set(java.util.Calendar.SECOND, 59)
+        ((cal.timeInMillis - nowMillis) / 60_000L).coerceAtLeast(0L)
+    }
+    val hours = minutesToMidnight / 60
+    val mins = minutesToMidnight % 60
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("🔒", fontSize = 48.sp)
+        Spacer(Modifier.height(12.dp))
+        Text("Locked for today", fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            if (skipLimitReached) {
+                "You've used all $maxSkips of today's skips for $label. No challenge gets you back in — same as Minimalist's time-based app lock."
+            } else {
+                "You've reached today's $limit min limit on $label ($usedMin min used). It's locked, not just harder — same as Minimalist's time-based app lock."
+            },
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Resets in ${hours}h ${mins}m",
+            fontSize = 13.sp,
+            color = Color.Gray
+        )
+        Spacer(Modifier.height(28.dp))
+        TextButton(onClick = onGiveUp) {
+            Text("Take me home", fontSize = 16.sp)
         }
     }
 }

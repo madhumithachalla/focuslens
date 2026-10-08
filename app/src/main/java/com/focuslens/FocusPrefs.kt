@@ -35,6 +35,18 @@ class FocusPrefs(context: Context) {
         sp.edit().putInt("limit_$pkg", minutes.coerceIn(0, 480)).apply()
     }
 
+    /**
+     * How many times a day the user can pass the challenge and get back into an app
+     * before it locks for the rest of the day — same idea as Minimalist Focus Launcher's
+     * time-based app locks: once the daily allotment is spent, there is no further
+     * challenge to beat, only a wait until the next day. Default 3, per-app.
+     */
+    fun maxSkipsPerDay(pkg: String): Int = sp.getInt("maxskips_$pkg", 3)
+
+    fun setMaxSkipsPerDay(pkg: String, max: Int) {
+        sp.edit().putInt("maxskips_$pkg", max.coerceIn(0, 20)).apply()
+    }
+
     /** After a challenge is passed, the app is open until this time. */
     fun allowedUntil(pkg: String): Long = sp.getLong("allow_$pkg", 0L)
 
