@@ -50,18 +50,6 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
-        <!-- Spotify's auth library's own activity; it handles the redirect URI below internally. -->
-        <activity
-            android:name="com.spotify.sdk.android.auth.LoginActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${spotifyRedirectScheme}" android:host="auth" />
-            </intent-filter>
-        </activity>
-
         <!-- Detects which app is in front. Needs the user to switch it on in Accessibility settings. -->
         <service
             android:name=".FocusAccessibilityService"
