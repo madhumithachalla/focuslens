@@ -28,6 +28,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -123,18 +124,20 @@ fun FocusLensMain(repo: UsageRepository) {
     if (hasPermission) {
         var tab by remember { mutableIntStateOf(0) }
         Column(Modifier.fillMaxSize()) {
-            TabRow(selectedTabIndex = tab) {
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Usage") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Focus") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Cycle") })
                 Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Playlists") })
+                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Guide") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
                     0 -> Dashboard(repo, refreshTick)
                     1 -> FocusScreen(repo, refreshTick)
                     2 -> CycleScreen()
-                    else -> FocusPlaylistsScreen()
+                    3 -> FocusPlaylistsScreen()
+                    else -> GuideScreen()
                 }
             }
         }

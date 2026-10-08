@@ -41,6 +41,15 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- Covers every app device-wide during a Hyper Focus session. -->
+        <activity
+            android:name=".HyperFocusBlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
         <!-- Spotify's auth library's own activity; it handles the redirect URI below internally. -->
         <activity
             android:name="com.spotify.sdk.android.auth.LoginActivity"
