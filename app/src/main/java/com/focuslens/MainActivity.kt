@@ -128,15 +128,21 @@ fun FocusLensMain(repo: UsageRepository) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Usage") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Focus") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Cycle") })
-                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Playlists") })
-                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Guide") })
+                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Journal") })
+                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Mental health") })
+                Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Reading") })
+                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Playlists") })
+                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Guide") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
                     0 -> Dashboard(repo, refreshTick)
                     1 -> FocusScreen(repo, refreshTick)
                     2 -> CycleScreen()
-                    3 -> FocusPlaylistsScreen()
+                    3 -> JournalScreen()
+                    4 -> MentalHealthScreen()
+                    5 -> ArticlesScreen()
+                    6 -> FocusPlaylistsScreen()
                     else -> GuideScreen()
                 }
             }

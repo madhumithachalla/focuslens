@@ -59,6 +59,16 @@ data class MindfulnessSessionEntity(
     val startedAt: Long
 )
 
+@Entity(tableName = "journal_entries")
+data class JournalEntryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: String, // yyyyMMdd — one entry per day, keyed by date like the cycle log
+    val prompt: String?,
+    val text: String,
+    val mood: String?, // one of the same mood ids used elsewhere: low/flat/okay/good/great
+    val createdAt: Long
+)
+
 @Entity(tableName = "wearable_samples")
 data class WearableSampleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

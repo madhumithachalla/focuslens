@@ -24,6 +24,9 @@ private val SECTIONS = listOf(
     GuideSection("🔒", "Hard daily locks", "Two independent stops, 3 skips/day by default: hit your skip count OR your daily minute limit and that app locks completely until midnight — no further challenge to beat, same as Minimalist Focus Launcher's time-based app locks."),
     GuideSection("🧘", "Hyper Focus", "Blocks every app on the phone at once, not just the ones you toggled — for when you need a hard stop, not a per-app one. No challenge during it (that defeats the point), but it's never a true lockout: typing a confirmation phrase always ends it early."),
     GuideSection("🩸", "Cycle & energy", "Log a period start or a general energy/mood day. Once you've logged 2+ starts, it shows a rolling-average estimate of your next cycle — explicitly your own data, not a clinical prediction."),
+    GuideSection("📓", "Journal", "Daily prompts or free writing, one entry per day, with a mood tag. Builds a real streak — hits a celebration moment at 3/7/14/30 days."),
+    GuideSection("💭", "Mental health", "A 14-day mood trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis."),
+    GuideSection("📰", "Reading", "A short list of honest starting points from established health organizations — not a feed, just a few real links."),
     GuideSection("🎧", "Playlists", "Connects to your own installed Spotify app (not a separate login) and plays curated focus playlists — lo-fi, deep focus, rain.")
 )
 
