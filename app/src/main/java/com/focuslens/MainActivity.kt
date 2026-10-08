@@ -75,6 +75,34 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FocusLensApp(repo: UsageRepository) {
+    val context = LocalContext.current
+    val db = remember { com.focuslens.data.AppDatabase.get(context) }
+    var profile by remember { mutableStateOf<com.focuslens.data.ProfileEntity?>(null) }
+    var profileChecked by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        profile = db.profileDao().get()
+        profileChecked = true
+    }
+
+    if (!profileChecked) return
+
+    if (profile == null) {
+        OnboardingScreen(onDone = { newProfile ->
+            scope.launch {
+                db.profileDao().insert(newProfile)
+                profile = newProfile
+            }
+        })
+        return
+    }
+
+    FocusLensMain(repo)
+}
+
+@Composable
+fun FocusLensMain(repo: UsageRepository) {
     var hasPermission by remember { mutableStateOf(repo.hasPermission()) }
     var refreshTick by remember { mutableIntStateOf(0) }
 
