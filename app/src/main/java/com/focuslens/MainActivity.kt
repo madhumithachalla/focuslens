@@ -126,9 +126,14 @@ fun FocusLensMain(repo: UsageRepository) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Usage") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Focus") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Playlists") })
             }
             Box(Modifier.weight(1f)) {
-                if (tab == 0) Dashboard(repo, refreshTick) else FocusScreen(repo, refreshTick)
+                when (tab) {
+                    0 -> Dashboard(repo, refreshTick)
+                    1 -> FocusScreen(repo, refreshTick)
+                    else -> FocusPlaylistsScreen()
+                }
             }
         }
     } else {
