@@ -25,8 +25,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # No Android SDK setup step: ubuntu-latest's runner image ships with the SDK,
+      # platform 34, and build-tools already installed (and ANDROID_HOME already set).
+      # android-actions/setup-android@v3 was tried here first and crashed trying to
+      # install the legacy "tools" package, which Google removed from the SDK years
+      # ago — that action is unmaintained for current SDK manager behavior.
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
