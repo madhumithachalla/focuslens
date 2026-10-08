@@ -15,11 +15,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private const val GITHUB_URL = "https://github.com/madhumithachalla/focuslens"
+private const val APK_URL = "https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk"
 
 private data class GuideSection(val emoji: String, val title: String, val body: String)
 
 private val SECTIONS = listOf(
-    GuideSection("📊", "Usage", "Shows real screen time read from Android's own Usage Access data — the same source Digital Wellbeing uses. Tap an app to see which section inside it (Reels, Shorts) took the time."),
+    GuideSection("📊", "Usage", "Real screen time from Android's own Usage Access data. Today, week, month, year, all-time, or pick a custom date range. Tap an app to see which section inside it (Reels, Shorts) took the time."),
+    GuideSection("📈", "Focus Score", "A composite of how consistently you resist opening blocked apps and keep up your journal — reflects app habits only, explicitly not a grade or productivity prediction."),
     GuideSection("🛡️", "Focus — per-app blocking", "Toggle an app on to set a daily minute limit. Opening it shows a short challenge (breathing, math, a typed phrase) that gets harder the more times you open it that day."),
     GuideSection("🔒", "Hard daily locks", "Two independent stops, 3 skips/day by default: hit your skip count OR your daily minute limit and that app locks completely until midnight — no further challenge to beat, same as Minimalist Focus Launcher's time-based app locks."),
     GuideSection("🧘", "Hyper Focus", "Blocks every app on the phone at once, not just the ones you toggled — for when you need a hard stop, not a per-app one. No challenge during it (that defeats the point), but it's never a true lockout: typing a confirmation phrase always ends it early."),
@@ -66,18 +68,33 @@ fun GuideScreen() {
                     Text("Get the app", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "FocusLens isn't on the Play Store or App Store yet — there's no public listing to link to. " +
-                            "Android is the only platform it runs on right now (it's built natively in Kotlin, not " +
-                            "cross-platform), so there's no iOS version to download either.",
+                        "Not on the Play Store yet, but every push to main auto-builds a real, " +
+                            "installable APK via GitHub Actions — this is an actual download, not a store listing.",
                         fontSize = 13.sp,
                         color = Color.Gray
                     )
                     Spacer(Modifier.height(10.dp))
                     Button(onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(APK_URL)))
+                    }) {
+                        Text("Download latest APK (Android)")
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_URL)))
                     }) {
-                        Text("View source on GitHub (Android)")
+                        Text("View source on GitHub")
                     }
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "iOS: genuinely not possible to add here. This is a native Kotlin/Android app — " +
+                            "an iOS version needs a separate Swift/SwiftUI codebase, a Mac with Xcode to build it, " +
+                            "and a paid Apple Developer account to sign and distribute it, even just via TestFlight. " +
+                            "None of that exists for this project yet, and I can't fabricate a download link for " +
+                            "something that hasn't been built.",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
             }
         }
