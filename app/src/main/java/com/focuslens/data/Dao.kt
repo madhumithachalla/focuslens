@@ -41,10 +41,17 @@ data class ReasonCount(val reason: MissReason, val count: Int)
 
 @Dao
 interface CycleLogDao {
-    @Insert suspend fun insert(log: CycleLogEntity): Long
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insert(log: CycleLogEntity): Long
 
     @Query("SELECT * FROM cycle_logs WHERE date BETWEEN :from AND :to ORDER BY date")
     fun between(from: String, to: String): Flow<List<CycleLogEntity>>
+
+    @Query("SELECT * FROM cycle_logs WHERE mode = 'MENSTRUAL' AND periodStart = 1 ORDER BY date DESC LIMIT :limit")
+    suspend fun recentPeriodStarts(limit: Int): List<CycleLogEntity>
+
+    @Query("SELECT * FROM cycle_logs WHERE date = :date LIMIT 1")
+    suspend fun forDate(date: String): CycleLogEntity?
 }
 
 @Dao
