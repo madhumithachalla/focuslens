@@ -133,6 +133,41 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            val hyperActive = remember(rev, tick) { prefs.isHyperFocusActive() }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1F3A34))
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Hyper Focus", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (hyperActive) "Active — blocking every app except calls."
+                        else "Blocks every app on the phone, not just the ones below — for when you need a hard stop.",
+                        color = Color(0xFFBFD3C9),
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (hyperActive) {
+                        Button(onClick = {
+                            prefs.endHyperFocus()
+                            rev++
+                        }) { Text("End early") }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(25, 45, 60).forEach { mins ->
+                                Button(onClick = {
+                                    prefs.startHyperFocus(mins)
+                                    rev++
+                                }) { Text("${mins}m") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

@@ -113,4 +113,28 @@ class FocusPrefs(context: Context) {
 
     /** Times today the user saw the block screen and chose not to open the app. */
     fun totalGaveUpToday(): Int = blocked().sumOf { gaveUpToday(it) }
+
+    // ---- Hyper Focus: blocks every app device-wide, not just the ones toggled on ----
+
+    /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this time. */
+    fun hyperFocusUntil(): Long = sp.getLong("hyperfocus_until", 0L)
+
+    fun startHyperFocus(minutes: Int) {
+        sp.edit().putLong("hyperfocus_until", System.currentTimeMillis() + minutes * 60_000L).apply()
+    }
+
+    fun endHyperFocus() {
+        sp.edit().putLong("hyperfocus_until", 0L).apply()
+    }
+
+    fun isHyperFocusActive(): Boolean = System.currentTimeMillis() < hyperFocusUntil()
+
+    /** Apps the user explicitly exempted from Hyper Focus (e.g. a work chat app). The phone's own dialer is always allowed, separately. */
+    fun hyperFocusAllowlist(): Set<String> = sp.getStringSet("hyperfocus_allow", emptySet())?.toSet() ?: emptySet()
+
+    fun setHyperFocusAllowed(pkg: String, allowed: Boolean) {
+        val s = hyperFocusAllowlist().toMutableSet()
+        if (allowed) s.add(pkg) else s.remove(pkg)
+        sp.edit().putStringSet("hyperfocus_allow", s).apply()
+    }
 }

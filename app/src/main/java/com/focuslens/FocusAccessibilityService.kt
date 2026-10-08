@@ -87,11 +87,31 @@ class FocusAccessibilityService : AccessibilityService() {
         check(pkg)
     }
 
+    private fun defaultDialerPackage(): String? =
+        (getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)
+            ?.defaultDialerPackage
+
     private fun check(pkg: String) {
-        if (!prefs.enabled || !prefs.isBlocked(pkg)) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing) return
         val now = System.currentTimeMillis()
+
+        if (prefs.isHyperFocusActive()) {
+            val allowed = pkg in prefs.hyperFocusAllowlist() || pkg == defaultDialerPackage()
+            if (!allowed) {
+                if (now - lastLaunch < 1_500L) return
+                lastLaunch = now
+                startActivity(
+                    Intent(this, HyperFocusBlockActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                        putExtra("pkg", pkg)
+                    }
+                )
+            }
+            return
+        }
+
+        if (!prefs.enabled || !prefs.isBlocked(pkg)) return
         if (now < prefs.allowedUntil(pkg)) return
-        if (BlockActivity.showing) return
         if (now - lastLaunch < 1_500L) return
         lastLaunch = now
         val intent = Intent(this, BlockActivity::class.java).apply {
