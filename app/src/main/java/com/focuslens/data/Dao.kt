@@ -22,6 +22,12 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun byId(id: Long): TaskEntity?
+
+    @Query("SELECT * FROM tasks ORDER BY scheduledAt DESC")
+    fun all(): Flow<List<TaskEntity>>
+
+    @Query("DELETE FROM tasks WHERE id = :id")
+    suspend fun delete(id: Long)
 }
 
 @Dao
@@ -35,6 +41,15 @@ interface CheckInDao {
     /** Every missed check-in grouped by reason, used to tune which suggestion actually helps this user. */
     @Query("SELECT reason, COUNT(*) as count FROM check_ins WHERE completed = 0 AND reason IS NOT NULL GROUP BY reason")
     suspend fun missReasonCounts(): List<ReasonCount>
+
+    @Query("SELECT reason, COUNT(*) as count FROM check_ins WHERE completed = 0 AND reason IS NOT NULL AND createdAt >= :since GROUP BY reason")
+    suspend fun missReasonCountsSince(since: Long): List<ReasonCount>
+
+    @Query("SELECT COUNT(*) FROM check_ins WHERE completed = 1 AND createdAt >= :since")
+    suspend fun completedCountSince(since: Long): Int
+
+    @Query("SELECT COUNT(*) FROM check_ins WHERE completed = 0 AND createdAt >= :since")
+    suspend fun missedCountSince(since: Long): Int
 }
 
 data class ReasonCount(val reason: MissReason, val count: Int)

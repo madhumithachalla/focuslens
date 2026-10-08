@@ -87,6 +87,8 @@ enum class AgeBracket { UNDER_18, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_PLUS, 
 @Entity(tableName = "profile")
 data class ProfileEntity(
     @PrimaryKey val id: Int = 0,
+    /** What the app calls the user elsewhere (Journal, celebrations) — local only, no account behind it. */
+    val preferredName: String,
     val ageBracket: AgeBracket,
     /** Free text, not an enum — never force a user into a fixed gender list. */
     val genderIdentity: String?,
