@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focuslens.data.AgeBracket
 import com.focuslens.data.ProfileEntity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private data class AgeOption(val bracket: AgeBracket, val label: String)
 
@@ -44,7 +47,24 @@ private val TOPIC_OPTIONS = listOf(
     "shift_worker" to "Shift worker",
     "creative" to "Creative / freelancer",
     "fitness" to "Fitness-focused",
-    "mental_health" to "Mental health-focused"
+    "mental_health" to "Mental health-focused",
+    "reading" to "Reading",
+    "writing" to "Writing",
+    "other_activities" to "Other learning/creative activities"
+)
+
+/**
+ * Why someone's actually here — read later by Learn/Guide to lead with the right section
+ * (e.g. doom-scrolling → Focus tips first) instead of showing everything with equal weight.
+ * "Prefer not to say" is its own exclusive option, same pattern as the cycle-tracking skip.
+ */
+private val MOTIVATION_OPTIONS = listOf(
+    "reduce_scrolling" to "Reduce doom-scrolling / social media use",
+    "focus" to "Improve focus & productivity",
+    "cycle_tracking" to "Track my cycle or energy",
+    "mental_health" to "Mental health support",
+    "habits" to "Build better habits/routines",
+    "other" to "Something else"
 )
 
 /**
@@ -84,7 +104,20 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
     var selectedTopics by remember { mutableStateOf(setOf<String>()) }
     var selectedNeurodivergent by remember { mutableStateOf(setOf<String>()) }
     var neurodivergentCustom by remember { mutableStateOf("") }
+    var selectedMotivations by remember { mutableStateOf(setOf<String>()) }
+    var motivationPreferNotToSay by remember { mutableStateOf(false) }
+    var birthday by remember { mutableStateOf<String?>(null) } // yyyyMMdd
+    var birthdayPicking by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+
+    fun toggleMotivation(id: String) {
+        selectedMotivations = if (id in selectedMotivations) selectedMotivations - id else selectedMotivations + id
+        if (selectedMotivations.isNotEmpty()) motivationPreferNotToSay = false
+    }
+    fun toggleMotivationPreferNotToSay() {
+        motivationPreferNotToSay = !motivationPreferNotToSay
+        if (motivationPreferNotToSay) selectedMotivations = emptySet()
+    }
 
     fun toggleMenstrual() {
         trackMenstrual = !trackMenstrual
@@ -200,15 +233,56 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     }
 
                     Spacer(Modifier.height(20.dp))
-                    Text("Cycle & energy tracking", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text("Birthday (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Only used so FocusLens can remind you about your own birthday checklist (see Birthdays).", fontSize = 12.sp)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = birthday?.let(::formatYyyyMmDd) ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        placeholder = { Text("Select your birthday") },
+                        trailingIcon = {
+                            TextButton(onClick = { birthdayPicking = true }) { Text("Pick") }
+                        },
+                        modifier = Modifier.fillMaxWidth().clickable { birthdayPicking = true }
+                    )
+                    if (birthdayPicking) {
+                        DatePickerDialogPicker(
+                            initial = null,
+                            onPicked = { millis ->
+                                birthday = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(millis))
+                                birthdayPicking = false
+                            },
+                            onDismiss = { birthdayPicking = false }
+                        )
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+                    Text("Why are you using FocusLens? (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Pick as many as apply — helps Guide and Learn lead with what's relevant to you.", fontSize = 12.sp)
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                items(MOTIVATION_OPTIONS) { (id, label) ->
+                    ChecklistRow(label = label, checked = id in selectedMotivations, onToggle = { toggleMotivation(id) })
+                }
+
+                item {
+                    ChecklistRow("Prefer not to say", motivationPreferNotToSay, { toggleMotivationPreferNotToSay() })
+
+                    Spacer(Modifier.height(20.dp))
+                    Text("Tracking", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "Pick as many as apply — tracking a cycle and general energy aren't mutually exclusive.",
+                        "If you get periods, pick that directly below. Either way, you can also turn on the other " +
+                            "trackers (energy, mood, sleep, water) — pick as many as apply, none are exclusive.",
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.height(8.dp))
-                    ChecklistRow("Menstrual cycle", trackMenstrual, { toggleMenstrual() })
-                    ChecklistRow("General energy", trackGeneral, { toggleGeneral() })
+                    ChecklistRow("I get periods — track my cycle", trackMenstrual, { toggleMenstrual() })
+                    ChecklistRow("Show other trackers (energy, mood, sleep, water)", trackGeneral, { toggleGeneral() })
                     ChecklistRow("Skip for now", skipCycle, { toggleSkipCycle() })
 
                     Spacer(Modifier.height(20.dp))
@@ -273,7 +347,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 if (!canContinue) {
                     Text(
-                        "Add a name, age range and a cycle-tracking option to continue.",
+                        "Add a name, age range and a tracking option to continue.",
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
@@ -297,6 +371,8 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                                 trackGeneralEnergy = trackGeneral,
                                 topics = selectedTopics.joinToString(","),
                                 neurodivergentTags = neurodivergentAll.joinToString(","),
+                                usageMotivation = selectedMotivations.joinToString(","),
+                                birthday = birthday,
                                 onboardedAt = System.currentTimeMillis()
                             )
                         )
@@ -308,6 +384,14 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
             }
         }
     }
+}
+
+private fun formatYyyyMmDd(date: String): String {
+    if (date.length != 8) return date
+    val month = date.substring(4, 6).toInt()
+    val day = date.substring(6, 8).toInt()
+    val names = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    return "${names[month - 1]} $day"
 }
 
 /** A minimal always-visible scroll indicator — shows there's more content without needing a swipe to discover it. */

@@ -52,6 +52,15 @@ private val PHASE_GUIDANCE = mapOf(
     )
 )
 
+private data class TrackerType(val mode: CycleMode, val label: String, val hint: String)
+
+private val TRACKER_TYPES = listOf(
+    TrackerType(CycleMode.GENERAL_ENERGY, "Energy", "1 low – 5 high"),
+    TrackerType(CycleMode.MOOD, "Mood", "1 low – 5 great"),
+    TrackerType(CycleMode.SLEEP, "Sleep quality", "1 poor – 5 great"),
+    TrackerType(CycleMode.WATER, "Water intake", "1 very little – 5 plenty")
+)
+
 @Composable
 fun CycleScreen() {
     val context = LocalContext.current
@@ -61,7 +70,7 @@ fun CycleScreen() {
 
     var profile by remember { mutableStateOf<ProfileEntity?>(null) }
     var prediction by remember { mutableStateOf<CyclePrediction?>(null) }
-    var energyLevel by remember { mutableStateOf<Int?>(null) }
+    var trackerValues by remember { mutableStateOf<Map<CycleMode, Int?>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var pickingPeriodDate by remember { mutableStateOf(false) }
     var healthConnectStatus by remember { mutableStateOf<String?>(null) }
@@ -69,6 +78,7 @@ fun CycleScreen() {
     suspend fun refresh() {
         profile = db.profileDao().get()
         prediction = repo.predictNextCycle()
+        trackerValues = TRACKER_TYPES.associate { it.mode to repo.todayValue(it.mode) }
         loading = false
     }
 
@@ -112,17 +122,20 @@ fun CycleScreen() {
     val p = profile!!
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Cycle & energy", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Tracking", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Text("Pick as many as apply — not an either/or.", fontSize = 12.sp)
+        Text(
+            "Anyone who gets periods can track that directly — everyone else can pick whichever of the other trackers fit, any subset, any day.",
+            fontSize = 12.sp
+        )
         Spacer(Modifier.height(16.dp))
 
         if (!p.trackMenstrualCycle && !p.trackGeneralEnergy) {
             Text("Not tracked right now.", fontSize = 14.sp)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = false, onClick = { setTracking(true, p.trackGeneralEnergy) }, label = { Text("Track menstrual cycle") })
-                FilterChip(selected = false, onClick = { setTracking(p.trackMenstrualCycle, true) }, label = { Text("Track general energy") })
+                FilterChip(selected = false, onClick = { setTracking(true, p.trackGeneralEnergy) }, label = { Text("Track my cycle") })
+                FilterChip(selected = false, onClick = { setTracking(p.trackMenstrualCycle, true) }, label = { Text("Show other trackers") })
             }
             return@Column
         }
@@ -234,27 +247,33 @@ fun CycleScreen() {
         }
 
         if (p.trackGeneralEnergy) {
-            Text("General energy", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text("Trackers", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            Text("Pick whichever you want to log today — logging one never requires the others.", fontSize = 11.sp, color = Color.Gray)
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (1..5).forEach { level ->
-                    FilterChip(
-                        selected = energyLevel == level,
-                        onClick = {
-                            energyLevel = level
-                            scope.launch {
-                                repo.logToday(CycleMode.GENERAL_ENERGY, periodStart = false, energyLevel = level, moodTags = null)
-                            }
-                        },
-                        label = { Text("$level") }
-                    )
+            TRACKER_TYPES.forEach { tracker ->
+                Text("${tracker.label} (${tracker.hint})", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..5).forEach { level ->
+                        FilterChip(
+                            selected = trackerValues[tracker.mode] == level,
+                            onClick = {
+                                trackerValues = trackerValues + (tracker.mode to level)
+                                scope.launch {
+                                    repo.logToday(tracker.mode, periodStart = false, energyLevel = level, moodTags = null)
+                                }
+                            },
+                            label = { Text("$level") }
+                        )
+                    }
                 }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(20.dp))
         }
 
         TextButton(onClick = { setTracking(false, false) }) {
-            Text("Turn off cycle & energy tracking")
+            Text("Turn off tracking")
         }
     }
 }

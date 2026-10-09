@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Context
 import com.focuslens.data.AppDatabase
+import com.focuslens.data.CycleMode
 import com.focuslens.data.MissReason
 import com.focuslens.data.TaskRepository
 import java.text.SimpleDateFormat
@@ -34,11 +35,20 @@ private data class DayMood(val date: String, val score: Int?)
  * for missed tasks this week points at Sleep; "distracted" points at Focus & Productivity.
  * Falls back to a general pick. Mirrors the same rules in the web app's app.js.
  */
-private fun pickSuggestion(context: Context, avgMoodScore: Double?, topMissReason: MissReason?): Pair<LearnItem, String>? {
+private val STUDY_RELATED_TOPIC_IDS = setOf("student", "reading", "writing", "other_activities")
+
+/**
+ * Mood/energy and missed-task signals take priority since they're acute (something's off
+ * right now); the onboarding topic tags are a steadier fallback for what kind of Learn
+ * content fits this person day-to-day. Only the topic tags the user picked are read — this
+ * never infers a "discipline" from anything else (journal text, app usage, etc).
+ */
+private fun pickSuggestion(context: Context, avgMoodScore: Double?, topMissReason: MissReason?, topics: Set<String>): Pair<LearnItem, String>? {
     val (topic, why) = when {
         avgMoodScore != null && avgMoodScore < 2.5 -> LearnTopic.MENTAL_HEALTH to "your mood/energy trend has been low lately"
         topMissReason == MissReason.TIRED -> LearnTopic.SLEEP to "\"tired\" has been your top reason for missed tasks this week"
         topMissReason == MissReason.DISTRACTED -> LearnTopic.FOCUS_PRODUCTIVITY to "\"distracted\" has been your top reason for missed tasks this week"
+        topics.any { it in STUDY_RELATED_TOPIC_IDS } -> LearnTopic.STUDY_SKILLS to "you flagged studying, reading or writing in your setup"
         else -> null to "a pick from Learn"
     }
     val prefs = LearnPrefs(context)
@@ -63,7 +73,9 @@ fun MentalHealthScreen() {
     var hasDisclosedNeurodivergent by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        hasDisclosedNeurodivergent = db.profileDao().get()?.neurodivergentTags?.isNotBlank() == true
+        val profile = db.profileDao().get()
+        hasDisclosedNeurodivergent = profile?.neurodivergentTags?.isNotBlank() == true
+        val topics = profile?.topics?.split(",")?.toSet() ?: emptySet()
         val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
         val cal = Calendar.getInstance()
         val dates = (0 until 14).map {
@@ -73,7 +85,9 @@ fun MentalHealthScreen() {
         }.reversed()
 
         val journalByDate = db.journalDao().recentOnce(60).associateBy { it.date }
-        val cycleByDate = db.cycleLogDao().betweenOnce(dates.first(), dates.last()).associateBy { it.date }
+        val cycleByDate = db.cycleLogDao().betweenOnce(dates.first(), dates.last())
+            .filter { it.mode == CycleMode.GENERAL_ENERGY }
+            .associateBy { it.date }
 
         days = dates.map { date ->
             val journalMood = journalByDate[date]?.mood?.let { MOOD_SCORE[it] }
@@ -84,7 +98,7 @@ fun MentalHealthScreen() {
 
         val avg = days.mapNotNull { it.score }.let { if (it.isEmpty()) null else it.average() }
         val reflection = TaskRepository(db.taskDao(), db.checkInDao()).weeklyReflection()
-        suggestion = pickSuggestion(context, avg, reflection.topMissReason)
+        suggestion = pickSuggestion(context, avg, reflection.topMissReason, topics)
     }
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {

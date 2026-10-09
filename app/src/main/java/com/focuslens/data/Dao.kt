@@ -57,7 +57,7 @@ data class ReasonCount(val reason: MissReason, val count: Int)
 @Dao
 interface CycleLogDao {
     @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
-    suspend fun insert(log: CycleLogEntity): Long
+    suspend fun insert(log: CycleLogEntity)
 
     @Query("SELECT * FROM cycle_logs WHERE date BETWEEN :from AND :to ORDER BY date")
     fun between(from: String, to: String): Flow<List<CycleLogEntity>>
@@ -68,8 +68,8 @@ interface CycleLogDao {
     @Query("SELECT * FROM cycle_logs WHERE mode = 'MENSTRUAL' AND periodStart = 1 ORDER BY date DESC LIMIT :limit")
     suspend fun recentPeriodStarts(limit: Int): List<CycleLogEntity>
 
-    @Query("SELECT * FROM cycle_logs WHERE date = :date LIMIT 1")
-    suspend fun forDate(date: String): CycleLogEntity?
+    @Query("SELECT * FROM cycle_logs WHERE date = :date AND mode = :mode LIMIT 1")
+    suspend fun forDateAndMode(date: String, mode: CycleMode): CycleLogEntity?
 }
 
 @Dao
@@ -125,6 +125,27 @@ interface DailyUsageDao {
             "WHERE date BETWEEN :from AND :to GROUP BY pkg"
     )
     suspend fun totals(from: String, to: String): List<PkgTotal>
+}
+
+@Dao
+interface PersonDao {
+    @Insert suspend fun insert(person: PersonEntity): Long
+    @Query("DELETE FROM people WHERE id = :id") suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM people ORDER BY name")
+    fun all(): Flow<List<PersonEntity>>
+
+    @Query("SELECT * FROM people ORDER BY name")
+    suspend fun allOnce(): List<PersonEntity>
+}
+
+@Dao
+interface BirthdayWishDao {
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsert(wish: BirthdayWishEntity)
+
+    @Query("SELECT * FROM birthday_wishes WHERE year = :year")
+    suspend fun forYear(year: Int): List<BirthdayWishEntity>
 }
 
 @Dao
