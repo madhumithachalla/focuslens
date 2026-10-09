@@ -96,6 +96,21 @@ data class DailyUsageEntity(
 )
 
 /**
+ * Hour-of-day granularity, same "protect it before Android's raw event log ages out"
+ * strategy as DailyUsageEntity — Android itself never keeps hourly detail beyond about a
+ * week, so this is the only way an hour-by-hour view can exist for days further back than
+ * that. A session spanning an hour boundary is split proportionally across both hours by
+ * UsageRepository.hourlyBreakdown, so these numbers add up to the same daily total.
+ */
+@Entity(tableName = "hourly_usage", primaryKeys = ["date", "hour", "pkg"])
+data class HourlyUsageEntity(
+    val date: String, // yyyyMMdd
+    val hour: Int, // 0-23, device local time
+    val pkg: String,
+    val millis: Long
+)
+
+/**
  * A friend/family birthday the user tracks. `birthday` is MMdd (month+day only, 4 chars) —
  * the year genuinely doesn't matter for a recurring birthday and storing one would wrongly
  * imply FocusLens is tracking someone's age. `source` distinguishes a manually-typed entry

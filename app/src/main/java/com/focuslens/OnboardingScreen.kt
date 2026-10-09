@@ -69,9 +69,14 @@ private val MOTIVATION_OPTIONS = listOf(
 
 /**
  * Entirely optional, never required to continue, never used to gate any feature — only to
- * more readily surface the Neurodivergence & ADHD section of Learn (see
- * MentalHealthScreen.kt). A free-form list, not a diagnosis: anyone can pick whatever
- * applies, self-identified or diagnosed, or skip this section entirely.
+ * more readily surface relevant Learn resources (ADHD/neurodivergence screeners, anxiety/
+ * depression screeners — see MentalHealthScreen.kt). A free-form list, not a diagnosis:
+ * anyone can pick whatever applies, self-identified or diagnosed, or skip entirely. STRICT
+ * RULE: this section never gates, limits, or changes which features are usable — only which
+ * Learn resources get surfaced more readily. "Prefer not to say" and "Not sure" are their own
+ * exclusive choices (not silence) — picking either clears every checkbox below, same pattern
+ * as elsewhere in this screen; "Not sure" additionally flags MentalHealthScreen to offer real
+ * screeners rather than a diagnosis of its own.
  */
 private val NEURODIVERGENT_OPTIONS = listOf(
     "adhd" to "ADHD / ADD",
@@ -79,7 +84,10 @@ private val NEURODIVERGENT_OPTIONS = listOf(
     "dyslexia" to "Dyslexia",
     "dyspraxia" to "Dyspraxia",
     "ocd" to "OCD",
-    "tics" to "Tourette's / tic disorder"
+    "tics" to "Tourette's / tic disorder",
+    "anxiety" to "Anxiety",
+    "depression" to "Depression",
+    "other_health_condition" to "Another health condition"
 )
 
 /**
@@ -104,6 +112,8 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
     var selectedTopics by remember { mutableStateOf(setOf<String>()) }
     var selectedNeurodivergent by remember { mutableStateOf(setOf<String>()) }
     var neurodivergentCustom by remember { mutableStateOf("") }
+    var neurodivergentPreferNotToSay by remember { mutableStateOf(false) }
+    var neurodivergentNotSure by remember { mutableStateOf(false) }
     var selectedMotivations by remember { mutableStateOf(setOf<String>()) }
     var motivationPreferNotToSay by remember { mutableStateOf(false) }
     var birthday by remember { mutableStateOf<String?>(null) } // yyyyMMdd
@@ -117,6 +127,30 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
     fun toggleMotivationPreferNotToSay() {
         motivationPreferNotToSay = !motivationPreferNotToSay
         if (motivationPreferNotToSay) selectedMotivations = emptySet()
+    }
+
+    fun toggleNeurodivergent(id: String) {
+        selectedNeurodivergent = if (id in selectedNeurodivergent) selectedNeurodivergent - id else selectedNeurodivergent + id
+        if (selectedNeurodivergent.isNotEmpty()) {
+            neurodivergentPreferNotToSay = false
+            neurodivergentNotSure = false
+        }
+    }
+    fun toggleNeurodivergentPreferNotToSay() {
+        neurodivergentPreferNotToSay = !neurodivergentPreferNotToSay
+        if (neurodivergentPreferNotToSay) {
+            selectedNeurodivergent = emptySet()
+            neurodivergentCustom = ""
+            neurodivergentNotSure = false
+        }
+    }
+    fun toggleNeurodivergentNotSure() {
+        neurodivergentNotSure = !neurodivergentNotSure
+        if (neurodivergentNotSure) {
+            selectedNeurodivergent = emptySet()
+            neurodivergentCustom = ""
+            neurodivergentPreferNotToSay = false
+        }
     }
 
     fun toggleMenstrual() {
@@ -304,36 +338,38 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
 
                 item {
                     Spacer(Modifier.height(20.dp))
-                    Text("Disability or neurodivergence (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text("Disability, neurodivergence & mental health (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "Completely optional, skippable, and never used to limit anything in the app — just lets us " +
-                            "more readily point you toward the ADHD & neurodivergence resources in Learn, since this " +
-                            "app already builds in things that can help (structured to-dos, gentle reminders, focus " +
-                            "tools). Self-identified or diagnosed, whatever applies to you.",
+                        "Completely optional, skippable, and never used to limit anything in the app — strictly: " +
+                            "nothing below ever gates or changes which features you can use. It only lets us more " +
+                            "readily point you toward relevant resources in Learn, since this app already builds in " +
+                            "things that can help (structured to-dos, gentle reminders, focus tools). Self-identified " +
+                            "or diagnosed, whatever applies to you — and \"Not sure\" is a real answer, not a gap: " +
+                            "picking it offers real screening resources, never a diagnosis of our own.",
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.height(8.dp))
                 }
 
                 items(NEURODIVERGENT_OPTIONS) { (id, label) ->
-                    ChecklistRow(
-                        label = label,
-                        checked = id in selectedNeurodivergent,
-                        onToggle = {
-                            selectedNeurodivergent = if (id in selectedNeurodivergent) selectedNeurodivergent - id else selectedNeurodivergent + id
-                        }
-                    )
+                    ChecklistRow(label = label, checked = id in selectedNeurodivergent, onToggle = { toggleNeurodivergent(id) })
                 }
 
                 item {
                     OutlinedTextField(
                         value = neurodivergentCustom,
-                        onValueChange = { neurodivergentCustom = it },
+                        onValueChange = {
+                            neurodivergentCustom = it
+                            if (it.isNotBlank()) { neurodivergentPreferNotToSay = false; neurodivergentNotSure = false }
+                        },
                         placeholder = { Text("Something else (optional)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(4.dp))
+                    ChecklistRow("Not sure", neurodivergentNotSure, { toggleNeurodivergentNotSure() })
+                    ChecklistRow("Prefer not to say", neurodivergentPreferNotToSay, { toggleNeurodivergentPreferNotToSay() })
                 }
 
                 item { Spacer(Modifier.height(16.dp)) }
@@ -361,7 +397,12 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                             gender == "Prefer not to say" -> null
                             else -> gender
                         }
-                        val neurodivergentAll = selectedNeurodivergent + listOfNotNull(neurodivergentCustom.trim().ifBlank { null })
+                        val neurodivergentAll = selectedNeurodivergent +
+                            listOfNotNull(neurodivergentCustom.trim().ifBlank { null }) +
+                            listOfNotNull(
+                                "not_sure".takeIf { neurodivergentNotSure },
+                                "prefer_not_to_say".takeIf { neurodivergentPreferNotToSay }
+                            )
                         onDone(
                             ProfileEntity(
                                 preferredName = name.trim(),
