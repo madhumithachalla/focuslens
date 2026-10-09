@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.gms.google-services")
 }
@@ -47,9 +48,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
+    // No composeOptions{ kotlinCompilerExtensionVersion } block: that mechanism only applied
+    // to the old K1 compiler (Kotlin 1.9.x). With Kotlin 2.x, the
+    // org.jetbrains.kotlin.plugin.compose plugin applied above handles the Compose compiler,
+    // version-aligned with the Kotlin version automatically.
 }
 
 dependencies {
