@@ -1,5 +1,8 @@
 package com.focuslens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -17,6 +20,9 @@ import com.focuslens.data.CyclePrediction
 import com.focuslens.data.CycleRepository
 import com.focuslens.data.ProfileEntity
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Commonly-cited "cycle syncing" guidance — widely circulated wellness framing, not a
@@ -57,11 +63,32 @@ fun CycleScreen() {
     var prediction by remember { mutableStateOf<CyclePrediction?>(null) }
     var energyLevel by remember { mutableStateOf<Int?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var pickingPeriodDate by remember { mutableStateOf(false) }
+    var healthConnectStatus by remember { mutableStateOf<String?>(null) }
 
     suspend fun refresh() {
         profile = db.profileDao().get()
         prediction = repo.predictNextCycle()
         loading = false
+    }
+
+    val healthConnectPermissionLauncher = rememberLauncherForActivityResult(
+        contract = HealthConnectBridge.requestPermissionContract()
+    ) { granted ->
+        if (granted.containsAll(HealthConnectBridge.PERMISSIONS)) {
+            scope.launch {
+                val dates = HealthConnectBridge.readPeriodStarts(context)
+                if (dates.isNotEmpty()) {
+                    repo.importPeriodStarts(dates)
+                    refresh()
+                    healthConnectStatus = "Imported ${dates.size} period start date${if (dates.size == 1) "" else "s"} from Health Connect."
+                } else {
+                    healthConnectStatus = "No period data found in Health Connect yet — not every watch or app writes it there."
+                }
+            }
+        } else {
+            healthConnectStatus = "Permission not granted — nothing imported."
+        }
     }
 
     LaunchedEffect(Unit) { refresh() }
@@ -149,13 +176,59 @@ fun CycleScreen() {
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Button(onClick = {
-                scope.launch {
-                    repo.logToday(CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null)
-                    refresh()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    scope.launch {
+                        repo.logToday(CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null)
+                        refresh()
+                    }
+                }) {
+                    Text("Log today as period start")
+                }
+                OutlinedButton(onClick = { pickingPeriodDate = true }) {
+                    Text("Log a different date")
+                }
+            }
+            if (pickingPeriodDate) {
+                DatePickerDialogPicker(
+                    initial = null,
+                    onPicked = { millis ->
+                        val date = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(millis))
+                        scope.launch {
+                            repo.logForDate(date, CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null)
+                            refresh()
+                        }
+                        pickingPeriodDate = false
+                    },
+                    onDismiss = { pickingPeriodDate = false }
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = {
+                when {
+                    HealthConnectBridge.needsInstall(context) -> {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.healthdata"))
+                        )
+                    }
+                    !HealthConnectBridge.isAvailable(context) -> {
+                        healthConnectStatus = "Health Connect isn't available on this device."
+                    }
+                    else -> healthConnectPermissionLauncher.launch(HealthConnectBridge.PERMISSIONS)
                 }
             }) {
-                Text("Log today as period start")
+                Text("Import from watch (Health Connect)")
+            }
+            Text(
+                "Reads period-start dates your watch or another health app (Samsung Health, Fitbit, Flo, etc.) " +
+                    "may have already saved to Health Connect — only if you tap this, and only that one data type.",
+                fontSize = 11.sp,
+                color = Color.Gray
+            )
+            healthConnectStatus?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
             Spacer(Modifier.height(20.dp))
         }

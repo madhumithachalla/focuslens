@@ -73,4 +73,9 @@ dependencies {
     // real transitive dependency, per that same demo app.
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
     implementation("com.google.code.gson:gson:2.8.6")
+
+    // Optional, user-initiated import of period-start dates from Health Connect (the
+    // system-level store a watch or health app can write cycle data into). Read-only, never
+    // writes anything back, and only runs when the user taps "Import from watch."
+    implementation("androidx.health.connect:connect-client:1.1.0")
 }

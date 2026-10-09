@@ -155,9 +155,8 @@ export function milestoneFor(streak) {
 
 // ---- Cycle & energy (ports CycleRepository.kt) ----
 
-export function logCycle(mode, periodStart, energyLevel, moodTags) {
+export function logCycle(mode, periodStart, energyLevel, moodTags, date = todayKey()) {
   const state = loadAll();
-  const date = todayKey();
   const idx = state.cycle.findIndex((c) => c.date === date);
   const existing = idx >= 0 ? state.cycle[idx] : null;
   const entry = {

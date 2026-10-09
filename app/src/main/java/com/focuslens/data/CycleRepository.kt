@@ -92,18 +92,27 @@ class CycleRepository(private val dao: CycleLogDao) {
     }
 
     suspend fun logToday(mode: CycleMode, periodStart: Boolean, energyLevel: Int?, moodTags: String?) {
-        val today = DAY_FORMAT.format(Date())
-        val existing = dao.forDate(today)
+        logForDate(DAY_FORMAT.format(Date()), mode, periodStart, energyLevel, moodTags)
+    }
+
+    /** Same as [logToday] but for any date (yyyyMMdd) — lets a period start be logged after the fact. */
+    suspend fun logForDate(date: String, mode: CycleMode, periodStart: Boolean, energyLevel: Int?, moodTags: String?) {
+        val existing = dao.forDate(date)
         dao.insert(
             CycleLogEntity(
                 id = existing?.id ?: 0,
                 mode = mode,
-                date = today,
+                date = date,
                 energyLevel = energyLevel ?: existing?.energyLevel,
                 moodTags = moodTags ?: existing?.moodTags,
                 symptomTags = existing?.symptomTags,
                 periodStart = periodStart || (existing?.periodStart ?: false)
             )
         )
+    }
+
+    /** Imports period-start dates (yyyyMMdd) from an external source, e.g. Health Connect. Safe to re-run. */
+    suspend fun importPeriodStarts(dates: List<String>) {
+        dates.forEach { logForDate(it, CycleMode.MENSTRUAL, periodStart = true, energyLevel = null, moodTags = null) }
     }
 }
