@@ -71,9 +71,13 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    // Bumped from 2.6.1: that version predates Room's KSP2 compatibility fixes and hits a
+    // real KSP2 bug ("unexpected jvm signature V") on Unit-returning suspend DAO methods —
+    // confirmed still present even on KSP 2.3.12, so this needs a newer Room, not a KSP
+    // workaround (KSP1, the previous workaround, was removed entirely in KSP 2.3.x).
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+    ksp("androidx.room:room-compiler:2.7.2")
 
     // Spotify's official App Remote SDK. Confirmed directly from spotify/android-sdk's own
     // README and demo app build.gradle: this is distributed ONLY as a prebuilt .aar checked
