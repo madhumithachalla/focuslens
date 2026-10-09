@@ -46,14 +46,30 @@ fun StudyModeScreen() {
     var showSpotifyPicker by remember { mutableStateOf(false) }
     var sessionActive by remember { mutableStateOf(prefs.isHyperFocusActive()) }
     var confirmEnd by remember { mutableStateOf(false) }
+    var justFinished by remember { mutableStateOf(false) }
 
     val connector = remember { SpotifyConnector(context) }
     var spotifyState by remember { mutableStateOf<SpotifyState>(SpotifyState.Disconnected) }
 
+    if (justFinished) {
+        Column(
+            Modifier.fillMaxSize().background(Color.Black).padding(28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Session complete", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
+            RewardSuggestionCard(title = "You just finished a study session")
+            Spacer(Modifier.height(20.dp))
+            Button(onClick = { justFinished = false }) { Text("Back to Study Mode") }
+        }
+        return
+    }
+
     if (sessionActive) {
         InSessionScreen(
             resetAt = prefs.hyperFocusUntil(),
-            onEnded = { sessionActive = false },
+            onEnded = { sessionActive = false; justFinished = true },
             onEndEarly = { confirmEnd = true }
         )
         if (confirmEnd) {

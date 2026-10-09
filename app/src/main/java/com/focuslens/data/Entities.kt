@@ -78,6 +78,19 @@ data class WearableSampleEntity(
     val recordedAt: Long
 )
 
+/**
+ * FocusLens's own exact per-day, per-app usage snapshot — kept so history doesn't degrade
+ * once Android's precise event log (about a week) ages into coarser monthly/yearly
+ * buckets. Written once per finished day by UsageHistoryRepository, never edited after.
+ */
+@Entity(tableName = "daily_usage", primaryKeys = ["date", "pkg"])
+data class DailyUsageEntity(
+    val date: String, // yyyyMMdd
+    val pkg: String,
+    val millis: Long,
+    val launches: Int
+)
+
 enum class AgeBracket { UNDER_18, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_PLUS, PREFER_NOT_TO_SAY }
 
 /**

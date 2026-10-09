@@ -137,10 +137,11 @@ fun FocusLensMain(repo: UsageRepository) {
                 Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Cycle") })
                 Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Journal") })
                 Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Mental health") })
-                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Reading") })
-                Tab(selected = tab == 8, onClick = { tab = 8 }, text = { Text("Focus Score") })
-                Tab(selected = tab == 9, onClick = { tab = 9 }, text = { Text("Playlists") })
-                Tab(selected = tab == 10, onClick = { tab = 10 }, text = { Text("Guide") })
+                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Learn") })
+                Tab(selected = tab == 8, onClick = { tab = 8 }, text = { Text("Explore") })
+                Tab(selected = tab == 9, onClick = { tab = 9 }, text = { Text("Focus Score") })
+                Tab(selected = tab == 10, onClick = { tab = 10 }, text = { Text("Playlists") })
+                Tab(selected = tab == 11, onClick = { tab = 11 }, text = { Text("Guide") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
@@ -151,9 +152,10 @@ fun FocusLensMain(repo: UsageRepository) {
                     4 -> CycleScreen()
                     5 -> JournalScreen()
                     6 -> MentalHealthScreen()
-                    7 -> ArticlesScreen()
-                    8 -> FocusScoreScreen()
-                    9 -> FocusPlaylistsScreen()
+                    7 -> LearnScreen()
+                    8 -> MediaSuggestionsScreen()
+                    9 -> FocusScoreScreen()
+                    10 -> FocusPlaylistsScreen()
                     else -> GuideScreen()
                 }
             }
@@ -205,7 +207,12 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     var breakdown by remember { mutableStateOf<Map<String, List<ScreenTime>>>(emptyMap()) }
     var expanded by remember { mutableStateOf<String?>(null) }
     val prefs = remember { FocusPrefs(context) }
+    val history = remember { UsageHistoryRepository(context, repo) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { history.catchUp() }
+    }
 
     var customStart by remember { mutableStateOf<Long?>(null) }
     var customEnd by remember { mutableStateOf<Long?>(null) }
@@ -238,7 +245,14 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
         rows = withContext(Dispatchers.IO) {
-            if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
+            val (from, to) = when (range) {
+                Range.CUSTOM -> customStart!! to customEnd!!
+                Range.MONTH -> (System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
+                Range.YEAR -> (System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
+                else -> null to null
+            }
+            val exact = if (from != null && to != null) history.tryExact(from, to) else null
+            exact ?: if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
         }
         breakdown = withContext(Dispatchers.IO) {
             try {

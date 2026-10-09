@@ -284,6 +284,10 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
+        if (resisted > 0) {
+            item { RewardSuggestionCard(title = "You chose not to open a blocked app today — nice") }
+        }
+
         item {
             Text(
                 "Your most used apps (last 7 days)",

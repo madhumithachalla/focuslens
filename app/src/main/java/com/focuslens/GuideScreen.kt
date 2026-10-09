@@ -20,7 +20,7 @@ private const val APK_URL = "https://github.com/madhumithachalla/focuslens/relea
 private data class GuideSection(val emoji: String, val title: String, val body: String)
 
 private val SECTIONS = listOf(
-    GuideSection("📊", "Usage", "Real screen time from Android's own Usage Access data. Today, week, month, year, all-time, or pick a custom date range. Tap an app to see which section inside it (Reels, Shorts) took the time."),
+    GuideSection("📊", "Usage", "Real screen time from Android's own Usage Access data. Today, week, month, year, all-time, or pick a custom date range. Tap an app to see which section inside it (Reels, Shorts) took the time. FocusLens also snapshots each finished day into its own storage, so Month/Year views stay exact once enough days are snapshotted, instead of degrading into Android's coarser monthly buckets after about a week — this only protects data going forward, it can't recover days already gone."),
     GuideSection("📈", "Focus Score", "A composite of how consistently you resist opening blocked apps and keep up your journal — reflects app habits only, explicitly not a grade or productivity prediction."),
     GuideSection("🛡️", "Focus — per-app blocking", "Toggle an app on to set a daily minute limit. Opening it shows a short challenge (breathing, math, a typed phrase) that gets harder the more times you open it that day."),
     GuideSection("🔒", "Hard daily locks", "Two independent stops, 3 skips/day by default: hit your skip count OR your daily minute limit and that app locks completely until 6am the next morning — no further challenge to beat, same as Minimalist Focus Launcher's time-based app locks. These counts live in FocusLens's own storage, keyed by the app's package name — uninstalling and reinstalling Instagram or YouTube doesn't reset them; only uninstalling FocusLens itself would."),
@@ -32,7 +32,9 @@ private val SECTIONS = listOf(
     GuideSection("🩸", "Cycle & energy", "Log a period start or a general energy/mood day. Once you've logged 2+ starts, it shows a rolling-average estimate of your next cycle — explicitly your own data, not a clinical prediction."),
     GuideSection("📓", "Journal", "Daily prompts or free writing, one entry per day, with a mood tag. Builds a real streak — hits a celebration moment at 3/7/14/30 days."),
     GuideSection("💭", "Mental health", "A 14-day mood trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis."),
-    GuideSection("📰", "Reading", "A short list of honest starting points from established health organizations — not a feed, just a few real links."),
+    GuideSection("📰", "Learn", "Newsletters, articles and research hubs across focus, sleep, mental health, habits and study skills — a few honest starting points, not a feed. Before \"Mark as read\" sticks, you answer a short self-reflection prompt (more for a dense research hub than a short newsletter) — not graded, just enough to make sure it wasn't a blind tap. Answers are discarded immediately, never stored."),
+    GuideSection("🎬", "Explore", "A short curated list of real books, movies and series, filterable by interest. Not a live catalog and not linked to a specific streaming service — availability changes too often and by region to point at honestly."),
+    GuideSection("🎁", "Reward suggestions", "After you resist opening a blocked app, or finish a Study Mode session, FocusLens offers one small, real-world thing to do with the moment — a stretch, a message to a friend, a glass of water. Plain curated list, no points or levels to chase."),
     GuideSection("🎧", "Playlists", "Connects to your own installed Spotify app (not a separate login) and plays curated focus playlists — lo-fi, deep focus, rain.")
 )
 
