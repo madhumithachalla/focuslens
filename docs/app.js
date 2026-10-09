@@ -1,7 +1,7 @@
 import {
   LEARN_TOPICS, LEARN_ITEMS, REFLECTION_PROMPTS,
   MEDIA_GENRES, MEDIA_ITEMS, MEDIA_KINDS,
-  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP,
+  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE,
 } from "./content.js";
 import * as store from "./storage.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
@@ -153,9 +153,9 @@ function renderJournal(container) {
   const card = el(`
     <div class="card">
       <div class="bold mb-0">${todayEntry ? "Update today's entry" : "Today's entry"}</div>
-      <label class="field">Mood</label>
-      <div class="chips" id="mood-chips"></div>
-      <label class="field">What's on your mind?</label>
+      <p class="field" id="mood-label">Mood</p>
+      <div class="chips" id="mood-chips" role="group" aria-labelledby="mood-label"></div>
+      <label class="field" for="journal-text">What's on your mind?</label>
       <textarea id="journal-text" placeholder="Write freely, or answer: what's one thing that went well today?"></textarea>
       <div class="mt-8"><button class="primary" id="journal-save">Save entry</button></div>
     </div>
@@ -165,11 +165,12 @@ function renderJournal(container) {
   let selectedMood = todayEntry?.mood || null;
   const moodChips = card.querySelector("#mood-chips");
   MOODS.forEach((m) => {
-    const chip = el(`<div class="chip${selectedMood === m.id ? " active" : ""}">${m.emoji}</div>`);
+    const chip = el(`<button type="button" class="chip${selectedMood === m.id ? " active" : ""}" aria-pressed="${selectedMood === m.id}" aria-label="Mood: ${m.id}">${m.emoji}</button>`);
     chip.onclick = () => {
       selectedMood = m.id;
-      moodChips.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+      moodChips.querySelectorAll(".chip").forEach((c) => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
       chip.classList.add("active");
+      chip.setAttribute("aria-pressed", "true");
     };
     moodChips.appendChild(chip);
   });
@@ -215,8 +216,9 @@ function renderCycle(container) {
   `));
 
   if (prediction) {
+    const guidance = PHASE_GUIDANCE[prediction.phase];
     container.appendChild(el(`
-      <div class="card soft">
+      <div class="card soft" style="border-left:5px solid ${guidance ? guidance.color : "var(--border)"}">
         <div class="bold mb-0">Day ${prediction.currentCycleDay} of your cycle — ${prediction.phase}</div>
         <p class="small mt-8" style="margin-bottom:4px">
           ${prediction.isConfident ? "Estimated" : "Early estimate (log a couple more cycles for a steadier average)"}
@@ -229,6 +231,12 @@ function renderCycle(container) {
           temperature, LH strips, or an ultrasound can actually confirm ovulation. Not a diagnosis or a
           contraception method.
         </p>
+        ${guidance ? `
+          <div class="mt-8" style="padding-top:10px;border-top:1px solid var(--border)">
+            <span class="small bold" style="color:${guidance.color}">WHAT PEOPLE COMMONLY DO IN THIS PHASE</span>
+            <p class="small mt-8" style="margin-bottom:0">${escapeHtml(guidance.text)}</p>
+          </div>
+        ` : ""}
       </div>
     `));
   } else {
@@ -242,8 +250,8 @@ function renderCycle(container) {
         <input type="checkbox" id="period-start" style="width:auto;margin-right:6px" />
         Period started today
       </label>
-      <label class="field">Energy level (1 low – 5 high)</label>
-      <div class="chips" id="energy-chips"></div>
+      <p class="field" id="energy-label">Energy level (1 low – 5 high)</p>
+      <div class="chips" id="energy-chips" role="group" aria-labelledby="energy-label"></div>
       <div class="mt-8"><button class="primary" id="cycle-save">Save today's log</button></div>
     </div>
   `);
@@ -252,11 +260,12 @@ function renderCycle(container) {
   let energy = null;
   const energyChips = card.querySelector("#energy-chips");
   [1, 2, 3, 4, 5].forEach((lvl) => {
-    const chip = el(`<div class="chip">${lvl}</div>`);
+    const chip = el(`<button type="button" class="chip" aria-pressed="false" aria-label="Energy level ${lvl} of 5">${lvl}</button>`);
     chip.onclick = () => {
       energy = lvl;
-      energyChips.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+      energyChips.querySelectorAll(".chip").forEach((c) => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
       chip.classList.add("active");
+      chip.setAttribute("aria-pressed", "true");
     };
     energyChips.appendChild(chip);
   });
@@ -298,7 +307,7 @@ function renderTasks(container) {
   const addCard = el(`
     <div class="card">
       <input type="text" id="task-title" placeholder="What needs doing?" />
-      <label class="field">Schedule it (optional — leave blank for a plain to-do with no time)</label>
+      <label class="field" for="task-when">Schedule it (optional — leave blank for a plain to-do with no time)</label>
       <input type="datetime-local" id="task-when" />
       <div class="mt-8"><button class="primary" id="task-add">Add task</button></div>
     </div>
@@ -378,7 +387,7 @@ function renderTaskRow(t) {
       missBox.appendChild(label);
       const chips = el(`<div class="chips mt-8"></div>`);
       MISS_REASONS.forEach((r) => {
-        const chip = el(`<div class="chip">${r.label}</div>`);
+        const chip = el(`<button type="button" class="chip">${r.label}</button>`);
         chip.onclick = () => {
           store.markIncomplete(t.id, r.id, null);
           render();
@@ -502,7 +511,7 @@ function renderLearn(container) {
 
     const chips = el(`<div class="chips"></div>`);
     LEARN_TOPICS.forEach((t) => {
-      const chip = el(`<div class="chip${t.id === topic ? " active" : ""}">${t.label}</div>`);
+      const chip = el(`<button type="button" class="chip${t.id === topic ? " active" : ""}" aria-pressed="${t.id === topic}">${t.label}</button>`);
       chip.onclick = () => { topic = t.id; draw(); };
       chips.appendChild(chip);
     });
@@ -549,8 +558,9 @@ function openReflection(item, onDone) {
     </div>
   `);
   const fields = overlay.querySelector("#prompt-fields");
-  const inputs = prompts.map((p) => {
-    const wrap = el(`<div><label class="field">${escapeHtml(p)}</label><textarea placeholder="A sentence is enough"></textarea></div>`);
+  const inputs = prompts.map((p, i) => {
+    const id = `reflection-${i}`;
+    const wrap = el(`<div><label class="field" for="${id}">${escapeHtml(p)}</label><textarea id="${id}" placeholder="A sentence is enough"></textarea></div>`);
     fields.appendChild(wrap);
     return wrap.querySelector("textarea");
   });
@@ -585,7 +595,7 @@ function renderExplore(container) {
 
     const chips = el(`<div class="chips"></div>`);
     MEDIA_GENRES.forEach((g) => {
-      const chip = el(`<div class="chip${g.id === genre ? " active" : ""}">${g.label}</div>`);
+      const chip = el(`<button type="button" class="chip${g.id === genre ? " active" : ""}" aria-pressed="${g.id === genre}">${g.label}</button>`);
       chip.onclick = () => { genre = g.id; draw(); };
       chips.appendChild(chip);
     });
@@ -646,7 +656,7 @@ function renderAccount(container) {
 
     const tabs = el(`<div class="chips"></div>`);
     ["signin", "signup"].forEach((m) => {
-      const chip = el(`<div class="chip${mode === m ? " active" : ""}">${m === "signin" ? "Sign in" : "Sign up"}</div>`);
+      const chip = el(`<button type="button" class="chip${mode === m ? " active" : ""}" aria-pressed="${mode === m}">${m === "signin" ? "Sign in" : "Sign up"}</button>`);
       chip.onclick = () => { mode = m; draw(); };
       tabs.appendChild(chip);
     });
@@ -654,10 +664,10 @@ function renderAccount(container) {
 
     const card = el(`
       <div class="card">
-        ${mode === "signup" ? '<label class="field">Display name</label><input type="text" id="acct-name" placeholder="What should we call you?" />' : ""}
-        <label class="field">Email</label>
+        ${mode === "signup" ? '<label class="field" for="acct-name">Display name</label><input type="text" id="acct-name" placeholder="What should we call you?" />' : ""}
+        <label class="field" for="acct-email">Email</label>
         <input type="email" id="acct-email" placeholder="you@example.com" />
-        <label class="field">Password</label>
+        <label class="field" for="acct-password">Password</label>
         <input type="password" id="acct-password" placeholder="${mode === "signup" ? "At least 6 characters" : "Your password"}" />
         <p class="small" style="color:var(--danger);display:none" id="acct-error"></p>
         <div class="mt-8"><button class="primary" id="acct-submit">${mode === "signup" ? "Create account" : "Sign in"}</button></div>

@@ -104,6 +104,29 @@ export const REWARD_IDEAS = [
   { category: "Reflect", text: "Write down what you want to do with the time you just got back." },
 ];
 
+// Commonly-cited "cycle syncing" guidance — widely circulated wellness framing, not a
+// clinically proven formula. Everyone's actual experience varies; treat as a starting
+// suggestion to notice how you feel against, not a rule to follow regardless of how you
+// actually feel that day.
+export const PHASE_GUIDANCE = {
+  "Follicular phase": {
+    color: "var(--phase-follicular)",
+    text: "Energy commonly starts rising through this phase. Often suggested for: starting new projects, planning, brainstorming, and ramping up exercise intensity as you feel able to.",
+  },
+  "Fertile window": {
+    color: "var(--phase-fertile)",
+    text: "Energy and confidence often climb further here. Often suggested for: social plans, presentations, or harder conversations, if that matches how you're feeling.",
+  },
+  Ovulation: {
+    color: "var(--phase-ovulation)",
+    text: "Energy often peaks around now for many people. Often suggested for: your most demanding task or a big social event — but only if your own energy actually backs it up today.",
+  },
+  "Luteal phase": {
+    color: "var(--phase-luteal)",
+    text: "Energy and focus commonly ease off through this phase, sometimes more sharply near the end. Often suggested for: detail work, wrapping up tasks, gentler exercise, and extra rest.",
+  },
+};
+
 export const MOODS = [
   { emoji: "😔", id: "low", score: 1 },
   { emoji: "😐", id: "flat", score: 2 },
@@ -133,7 +156,7 @@ export const MISS_SUGGESTIONS = {
 export const ROADMAP = {
   current: [
     { title: "Journal", brief: "Daily prompts or free writing, one entry per day, with a mood tag and a real streak (celebrates at 3/7/14/30/60/100 days)." },
-    { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts: a rolling-average estimate of your next cycle, current phase (follicular/fertile window/ovulation/luteal), and an estimated fertile window, using the standard ~14-day luteal-phase rule of thumb. An estimate from your own data, not a clinical prediction, diagnosis, or contraception method." },
+    { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts: a rolling-average estimate of your next cycle, current phase (follicular/fertile window/ovulation/luteal) with its own accessible color, an estimated fertile window, and commonly-cited \"what people often do in this phase\" guidance. An estimate from your own data and widely-circulated wellness framing, not a clinical prediction, diagnosis, or contraception method." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
     { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
     { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education and LGBTQ+ support, gated by a short self-reflection prompt before \"mark as read\" sticks." },
