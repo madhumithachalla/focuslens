@@ -5,6 +5,7 @@ import {
 } from "./content.js";
 import * as store from "./storage.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
+import { watchAuth, signUp, signIn, signOutUser, authErrorMessage } from "./firebase.js";
 
 const ROUTES = [
   { id: "roadmap", label: "Roadmap" },
@@ -14,7 +15,14 @@ const ROUTES = [
   { id: "mental-health", label: "Mental health" },
   { id: "learn", label: "Learn" },
   { id: "explore", label: "Explore" },
+  { id: "account", label: "Account" },
 ];
+
+let currentUser = null;
+watchAuth((user) => {
+  currentUser = user;
+  if (currentRoute() === "account") render();
+});
 
 const nav = document.getElementById("nav");
 const page = document.getElementById("page");
@@ -48,6 +56,7 @@ function render() {
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
+    account: renderAccount,
   };
   (renderers[route] || renderRoadmap)(page);
   window.scrollTo(0, 0);
@@ -412,21 +421,62 @@ function renderMentalHealth(container) {
   });
 
   const have = scores.filter((s) => s != null);
+  let avgScore = null;
   if (have.length === 0) {
     container.appendChild(el(`<p class="muted">Log a journal mood or an energy level on the Journal/Cycle pages to see a trend here.</p>`));
-    return;
+  } else {
+    avgScore = have.reduce((a, b) => a + b, 0) / have.length;
+    container.appendChild(el(`<div class="card soft">14-day average: <span class="bold">${avgScore.toFixed(1)} / 5</span></div>`));
+
+    const bars = el(`<div class="trend-bars"></div>`);
+    scores.forEach((s) => {
+      const height = s ? Math.round((s / 5) * 90) : 4;
+      bars.appendChild(el(`<div class="trend-bar${s ? "" : " empty"}" style="height:${height}px"></div>`));
+    });
+    container.appendChild(bars);
+    container.appendChild(el(`<p class="small muted">Oldest → newest, left to right. Blank bars are days with no log.</p>`));
   }
 
-  const avg = (have.reduce((a, b) => a + b, 0) / have.length).toFixed(1);
-  container.appendChild(el(`<div class="card soft">14-day average: <span class="bold">${avg} / 5</span></div>`));
+  renderSuggestionCard(container, avgScore);
+}
 
-  const bars = el(`<div class="trend-bars"></div>`);
-  scores.forEach((s) => {
-    const height = s ? Math.round((s / 5) * 90) : 4;
-    bars.appendChild(el(`<div class="trend-bar${s ? "" : " empty"}" style="height:${height}px"></div>`));
-  });
-  container.appendChild(bars);
-  container.appendChild(el(`<p class="small muted">Oldest → newest, left to right. Blank bars are days with no log.</p>`));
+/**
+ * Picks one Learn topic to surface based on a few plain, inspectable rules — not AI, not a
+ * diagnosis, just pointing at what your own recent data suggests might help: a low mood
+ * average points at Mental Health resources, "tired" as your top missed-task reason points
+ * at Sleep, "distracted" points at Focus & Productivity. Falls back to a general pick.
+ */
+function renderSuggestionCard(container, avgMoodScore) {
+  const reflection = store.weeklyReflection();
+  let topic = null;
+  let why = "";
+
+  if (avgMoodScore != null && avgMoodScore < 2.5) {
+    topic = "MENTAL_HEALTH";
+    why = "your mood/energy trend has been low lately";
+  } else if (reflection.topMissReason === "TIRED") {
+    topic = "SLEEP";
+    why = "\"tired\" has been your top reason for missed tasks this week";
+  } else if (reflection.topMissReason === "DISTRACTED") {
+    topic = "FOCUS_PRODUCTIVITY";
+    why = "\"distracted\" has been your top reason for missed tasks this week";
+  }
+
+  const pool = topic ? LEARN_ITEMS.filter((i) => i.topic === topic) : LEARN_ITEMS;
+  const unread = pool.filter((i) => !store.isLearnRead(i.id));
+  const item = (unread.length > 0 ? unread : pool)[Math.floor(Math.random() * (unread.length > 0 ? unread.length : pool.length))];
+  if (!item) return;
+
+  container.appendChild(el(`
+    <div class="card" style="border-color:var(--accent)">
+      <div class="small bold" style="color:var(--accent)">SUGGESTED FOR YOU</div>
+      <p class="small muted mt-8" style="margin-bottom:8px">${why ? `Based on simple rules (not AI) — ${why}.` : "A pick from Learn, based on simple rules — not AI, not a diagnosis."}</p>
+      <a href="${item.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+        <div class="bold">${escapeHtml(item.title)}</div>
+        <div class="small muted">${escapeHtml(item.source)}</div>
+      </a>
+    </div>
+  `));
 }
 
 // ---------------------------------------------------------------- Learn
@@ -556,6 +606,83 @@ function renderExplore(container) {
 }
 
 // ---------------------------------------------------------------- Reward suggestions
+
+// ---------------------------------------------------------------- Account
+
+function renderAccount(container) {
+  if (currentUser) {
+    container.appendChild(el(`
+      <div>
+        <h1>Account</h1>
+        <p class="subtitle">Signed in as <span class="bold">${escapeHtml(currentUser.displayName || currentUser.email)}</span>.</p>
+      </div>
+    `));
+    container.appendChild(el(`
+      <div class="card soft">
+        <p class="small" style="margin-bottom:0">Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built. Your Journal/Cycle/To-do data on this page stays in this browser for now, not yet synced to this account.</p>
+      </div>
+    `));
+    const out = el(`<button class="outline mt-8">Sign out</button>`);
+    out.onclick = async () => { await signOutUser(); render(); };
+    container.appendChild(out);
+    return;
+  }
+
+  let mode = "signin";
+  function draw() {
+    container.innerHTML = "";
+    container.appendChild(el(`
+      <div>
+        <h1>Account</h1>
+        <p class="subtitle">Sign in so your data can eventually follow you across devices, and so you can use community features once they're live.</p>
+      </div>
+    `));
+
+    const tabs = el(`<div class="chips"></div>`);
+    ["signin", "signup"].forEach((m) => {
+      const chip = el(`<div class="chip${mode === m ? " active" : ""}">${m === "signin" ? "Sign in" : "Sign up"}</div>`);
+      chip.onclick = () => { mode = m; draw(); };
+      tabs.appendChild(chip);
+    });
+    container.appendChild(tabs);
+
+    const card = el(`
+      <div class="card">
+        ${mode === "signup" ? '<label class="field">Display name</label><input type="text" id="acct-name" placeholder="What should we call you?" />' : ""}
+        <label class="field">Email</label>
+        <input type="email" id="acct-email" placeholder="you@example.com" />
+        <label class="field">Password</label>
+        <input type="password" id="acct-password" placeholder="${mode === "signup" ? "At least 6 characters" : "Your password"}" />
+        <p class="small" style="color:var(--danger);display:none" id="acct-error"></p>
+        <div class="mt-8"><button class="primary" id="acct-submit">${mode === "signup" ? "Create account" : "Sign in"}</button></div>
+      </div>
+    `);
+    container.appendChild(card);
+
+    const emailInput = card.querySelector("#acct-email");
+    const passInput = card.querySelector("#acct-password");
+    const errorEl = card.querySelector("#acct-error");
+
+    card.querySelector("#acct-submit").onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passInput.value;
+      errorEl.style.display = "none";
+      try {
+        if (mode === "signup") {
+          const name = card.querySelector("#acct-name").value.trim() || email.split("@")[0];
+          await signUp(email, password, name);
+        } else {
+          await signIn(email, password);
+        }
+        render();
+      } catch (e) {
+        errorEl.textContent = authErrorMessage(e);
+        errorEl.style.display = "block";
+      }
+    };
+  }
+  draw();
+}
 
 function renderRewardCard(title) {
   let idea = REWARD_IDEAS[Math.floor(Math.random() * REWARD_IDEAS.length)];

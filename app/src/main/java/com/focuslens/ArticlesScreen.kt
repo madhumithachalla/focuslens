@@ -25,7 +25,9 @@ enum class LearnTopic(val label: String) {
     MENTAL_HEALTH("Mental Health"),
     HABITS("Habits & Behavior"),
     STUDY_SKILLS("Study Skills"),
-    RESEARCH("Research & Papers")
+    RESEARCH("Research & Papers"),
+    SEX_ED("Sex Education"),
+    LGBTQ("LGBTQ+ Support")
 }
 
 data class LearnItem(
@@ -75,7 +77,23 @@ private val LEARN_ITEMS = listOf(
     LearnItem("pubmed", "Biomedical and life-science research", "PubMed",
         "https://pubmed.ncbi.nlm.nih.gov/", LearnTopic.RESEARCH, 3, "Research hub"),
     LearnItem("jstor", "Academic journals and papers", "JSTOR",
-        "https://www.jstor.org/", LearnTopic.RESEARCH, 3, "Research hub")
+        "https://www.jstor.org/", LearnTopic.RESEARCH, 3, "Research hub"),
+    LearnItem("scarleteen", "Sex ed for real life", "Scarleteen",
+        "https://www.scarleteen.com/", LearnTopic.SEX_ED, 1, "Org hub"),
+    LearnItem("amaze", "Honest, age-appropriate sex ed", "AMAZE",
+        "https://amaze.org/", LearnTopic.SEX_ED, 1, "Org hub"),
+    LearnItem("planned_parenthood", "Sexual health info and services", "Planned Parenthood",
+        "https://www.plannedparenthood.org/", LearnTopic.SEX_ED, 2, "Org hub"),
+    LearnItem("nhs_sexual_health", "Sexual health", "NHS",
+        "https://www.nhs.uk/live-well/sexual-health/", LearnTopic.SEX_ED, 1, "Org hub"),
+    LearnItem("trevor_project", "Crisis support for LGBTQ+ young people", "The Trevor Project",
+        "https://www.thetrevorproject.org/", LearnTopic.LGBTQ, 1, "Org hub"),
+    LearnItem("qlife", "LGBTIQ+ peer support (Australia)", "QLife",
+        "https://qlife.org.au/", LearnTopic.LGBTQ, 1, "Org hub"),
+    LearnItem("pflag", "Support for LGBTQ+ people and families", "PFLAG",
+        "https://pflag.org/", LearnTopic.LGBTQ, 2, "Org hub"),
+    LearnItem("stonewall", "LGBTQ+ rights and resources", "Stonewall",
+        "https://www.stonewall.org.uk/", LearnTopic.LGBTQ, 2, "Org hub")
 )
 
 private val REFLECTION_PROMPTS = listOf(
