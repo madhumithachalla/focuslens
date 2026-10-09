@@ -34,9 +34,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          # AGP 8.9.1 (bumped for the Health Connect dependency's compileSdk 36
-          # requirement) needs Gradle 8.11.1 or newer.
-          gradle-version: "8.11.1"
+          # AGP 8.12.0 needs a newer Gradle than 8.11.1 — using 8.14.4, which Kotlin's own
+          # build output confirmed is a real current release (it's the version Kotlin 2.5.0
+          # will require as its own minimum).
+          gradle-version: "8.14.4"
 
       - name: Write Spotify Client ID
         # SPOTIFY_CLIENT_ID is a repo secret set under Settings > Secrets and
