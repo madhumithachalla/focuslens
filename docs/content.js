@@ -123,6 +123,7 @@ export const ROADMAP = {
     { title: "Journal", brief: "Daily prompts or free writing, one entry per day, with a mood tag and a real streak (celebrates at 3/7/14/30/60/100 days)." },
     { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts, a rolling-average estimate of your next cycle — your own data, not a clinical prediction." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
+    { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
     { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits and study skills, gated by a short self-reflection prompt before \"mark as read\" sticks." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
