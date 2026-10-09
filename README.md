@@ -35,6 +35,13 @@ tested on one phone (Pixel 6a, Android 16).
   element names and a fixed list of tab words. It does not store text, messages or posts.
 - Nothing leaves the phone. There is no account, server or network code.
 
+## Download
+
+Not on the Play Store yet, but every push to `main` auto-builds a real, installable
+debug APK: [download the latest APK](https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk).
+It's unsigned/sideloaded, so Android will show a Play Protect warning before
+installing — tap "More details" then "Install anyway" to proceed.
+
 ## Run it
 
 1. Install Android Studio and open this folder. Let Gradle sync.
