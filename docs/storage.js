@@ -165,6 +165,27 @@ export function logCycle(mode, periodStart, energyLevel, moodTags, date = todayK
     energyLevel: energyLevel != null ? energyLevel : existing ? existing.energyLevel : null,
     moodTags: moodTags != null ? moodTags : existing ? existing.moodTags : null,
     periodStart: periodStart || (existing ? existing.periodStart : false),
+    trackers: existing ? existing.trackers || {} : {},
+  };
+  if (idx >= 0) state.cycle[idx] = entry;
+  else state.cycle.push(entry);
+  saveAll(state);
+}
+
+// Generic per-day tracker value (energy/mood/sleep/water/…), independent of period logging —
+// a day can have any subset of these, never all-or-nothing. "energy" also mirrors into the
+// legacy energyLevel field so the existing Mental Health trend keeps reading it unchanged.
+export function logTrackerValue(trackerType, value, date = todayKey()) {
+  const state = loadAll();
+  const idx = state.cycle.findIndex((c) => c.date === date);
+  const existing = idx >= 0 ? state.cycle[idx] : null;
+  const entry = {
+    date,
+    mode: existing ? existing.mode : null,
+    energyLevel: trackerType === "energy" ? value : existing ? existing.energyLevel : null,
+    moodTags: existing ? existing.moodTags : null,
+    periodStart: existing ? existing.periodStart : false,
+    trackers: { ...(existing ? existing.trackers : {}), [trackerType]: value },
   };
   if (idx >= 0) state.cycle[idx] = entry;
   else state.cycle.push(entry);
@@ -246,6 +267,65 @@ export function markLearnRead(id) {
 export function learnReadCount(ids) {
   const state = loadAll();
   return ids.filter((id) => state.learnRead[id]).length;
+}
+
+// ---- Birthdays ----
+// `birthday` is MMdd (month+day only) — the year doesn't matter for a recurring birthday.
+
+export function addPerson(name, mmdd) {
+  const state = loadAll();
+  if (!state.people) state.people = [];
+  const person = { id: state.nextId++, name, birthday: mmdd || null, createdAt: Date.now() };
+  state.people.push(person);
+  saveAll(state);
+  return person;
+}
+
+export function listPeople() {
+  return (loadAll().people || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function deletePerson(id) {
+  const state = loadAll();
+  state.people = (state.people || []).filter((p) => p.id !== id);
+  saveAll(state);
+}
+
+function daysUntilBirthday(mmdd) {
+  const month = parseInt(mmdd.slice(0, 2), 10);
+  const day = parseInt(mmdd.slice(2, 4), 10);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next = new Date(today.getFullYear(), month - 1, day);
+  if (next < today) next.setFullYear(next.getFullYear() + 1);
+  return Math.round((next - today) / 86_400_000);
+}
+
+export function upcomingBirthdays() {
+  return listPeople()
+    .filter((p) => p.birthday)
+    .map((p) => ({ ...p, daysUntil: daysUntilBirthday(p.birthday) }))
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+}
+
+export function setBirthdayWish(personId, year, wished) {
+  const state = loadAll();
+  if (!state.birthdayWishes) state.birthdayWishes = {};
+  const key = `${year}:${personId}`;
+  if (wished) state.birthdayWishes[key] = true;
+  else delete state.birthdayWishes[key];
+  saveAll(state);
+}
+
+export function wishedThisYear(year) {
+  const state = loadAll();
+  const wishes = state.birthdayWishes || {};
+  const prefix = `${year}:`;
+  return new Set(
+    Object.keys(wishes)
+      .filter((k) => k.startsWith(prefix))
+      .map((k) => parseInt(k.slice(prefix.length), 10))
+  );
 }
 
 export { todayKey, addDaysToKey };

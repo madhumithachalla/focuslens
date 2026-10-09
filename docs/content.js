@@ -135,6 +135,14 @@ export const PHASE_GUIDANCE = {
   },
 };
 
+// Tracking is opt-in per type — nobody is forced into any one of these; pick whichever apply.
+export const TRACKER_TYPES = [
+  { id: "energy", label: "Energy", hint: "1 low – 5 high" },
+  { id: "mood", label: "Mood", hint: "1 low – 5 great" },
+  { id: "sleep", label: "Sleep quality", hint: "1 poor – 5 great" },
+  { id: "water", label: "Water intake", hint: "1 very little – 5 plenty" },
+];
+
 export const MOODS = [
   { emoji: "😔", id: "low", score: 1 },
   { emoji: "😐", id: "flat", score: 2 },

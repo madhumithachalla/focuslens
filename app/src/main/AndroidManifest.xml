@@ -20,6 +20,12 @@
          from watch" and a source app (Samsung Health, Fitbit, Flo, etc.) has written any. -->
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
 
+    <!-- Optional: only requested if the user taps "Import from Contacts" on the Birthdays
+         screen — reads contact names + birthdays already on the device (this picks up any
+         synced account's contacts, including a Google account's, not just ones added
+         manually). Declining it just means typing birthdays in by hand instead. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/ic_menu_view"

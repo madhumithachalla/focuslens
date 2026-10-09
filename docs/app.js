@@ -1,7 +1,7 @@
 import {
   LEARN_TOPICS, LEARN_ITEMS, REFLECTION_PROMPTS,
   MEDIA_GENRES, MEDIA_ITEMS, MEDIA_KINDS,
-  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE,
+  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES,
 } from "./content.js";
 import * as store from "./storage.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
@@ -13,11 +13,12 @@ import {
 const ROUTES = [
   { id: "roadmap", label: "Roadmap" },
   { id: "journal", label: "Journal" },
-  { id: "cycle", label: "Cycle" },
+  { id: "cycle", label: "Tracking" },
   { id: "tasks", label: "To-do" },
   { id: "mental-health", label: "Mental health" },
   { id: "learn", label: "Learn" },
   { id: "explore", label: "Explore" },
+  { id: "birthdays", label: "Birthdays" },
   { id: "account", label: "Account" },
 ];
 
@@ -61,6 +62,7 @@ function render() {
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
+    birthdays: renderBirthdays,
     account: renderAccount,
   };
   (renderers[route] || renderRoadmap)(page);
@@ -215,8 +217,8 @@ function renderCycle(container) {
 
   container.appendChild(el(`
     <div>
-      <h1>Cycle & Energy</h1>
-      <p class="subtitle">Log a period start or a general energy day. This is a rolling average of your own logged data — not a clinical prediction.</p>
+      <h1>Tracking</h1>
+      <p class="subtitle">Anyone who gets periods can log that directly below — everyone else can pick whichever of the other trackers fit. This is a rolling average of your own logged data, not a clinical prediction.</p>
     </div>
   `));
 
@@ -248,38 +250,53 @@ function renderCycle(container) {
     container.appendChild(el(`<p class="muted">Log at least two period starts to see a rolling-average estimate here.</p>`));
   }
 
-  const card = el(`
+  const periodCard = el(`
     <div class="card">
-      <div class="bold">Log today</div>
+      <div class="bold mb-0">Period</div>
+      <p class="small muted mt-8" style="margin-bottom:8px">For anyone who gets periods — logging this is what powers the cycle estimate above.</p>
       <label class="field">
         <input type="checkbox" id="period-start" style="width:auto;margin-right:6px" />
         Period started today
       </label>
-      <p class="field" id="energy-label">Energy level (1 low – 5 high)</p>
-      <div class="chips" id="energy-chips" role="group" aria-labelledby="energy-label"></div>
-      <div class="mt-8"><button class="primary" id="cycle-save">Save today's log</button></div>
+      <div class="mt-8"><button class="primary" id="period-save">Save</button></div>
     </div>
   `);
-  container.appendChild(card);
-
-  let energy = null;
-  const energyChips = card.querySelector("#energy-chips");
-  [1, 2, 3, 4, 5].forEach((lvl) => {
-    const chip = el(`<button type="button" class="chip" aria-pressed="false" aria-label="Energy level ${lvl} of 5">${lvl}</button>`);
-    chip.onclick = () => {
-      energy = lvl;
-      energyChips.querySelectorAll(".chip").forEach((c) => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
-      chip.classList.add("active");
-      chip.setAttribute("aria-pressed", "true");
-    };
-    energyChips.appendChild(chip);
-  });
-
-  card.querySelector("#cycle-save").onclick = () => {
-    const periodStart = card.querySelector("#period-start").checked;
-    store.logCycle(periodStart ? "MENSTRUAL" : "GENERAL_ENERGY", periodStart, energy, null);
+  container.appendChild(periodCard);
+  periodCard.querySelector("#period-save").onclick = () => {
+    if (periodCard.querySelector("#period-start").checked) store.logCycle("MENSTRUAL", true, null, null);
     render();
   };
+
+  const trackersCard = el(`
+    <div class="card">
+      <div class="bold mb-0">Trackers</div>
+      <p class="small muted mt-8" style="margin-bottom:8px">Pick whichever you want to log today — none of these are required, and logging one doesn't require the others.</p>
+    </div>
+  `);
+  container.appendChild(trackersCard);
+  const todayEntry = store.recentCycleLogs(1).find((c) => c.date === store.todayKey());
+  TRACKER_TYPES.forEach((t) => {
+    const current = todayEntry && todayEntry.trackers ? todayEntry.trackers[t.id] : null;
+    const row = el(`
+      <div class="mt-8">
+        <p class="field" id="tracker-${t.id}-label">${escapeHtml(t.label)} (${escapeHtml(t.hint)})</p>
+        <div class="chips" role="group" aria-labelledby="tracker-${t.id}-label"></div>
+      </div>
+    `);
+    const chipsEl = row.querySelector(".chips");
+    [1, 2, 3, 4, 5].forEach((lvl) => {
+      const active = current === lvl;
+      const chip = el(`<button type="button" class="chip${active ? " active" : ""}" aria-pressed="${active}" aria-label="${escapeHtml(t.label)} ${lvl} of 5">${lvl}</button>`);
+      chip.onclick = () => {
+        store.logTrackerValue(t.id, lvl);
+        chipsEl.querySelectorAll(".chip").forEach((c) => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
+        chip.classList.add("active");
+        chip.setAttribute("aria-pressed", "true");
+      };
+      chipsEl.appendChild(chip);
+    });
+    trackersCard.appendChild(row);
+  });
 
   const pastCard = el(`
     <div class="card">
@@ -651,6 +668,98 @@ function renderExplore(container) {
   }
 
   draw();
+}
+
+// ---------------------------------------------------------------- Birthdays
+
+function formatMmdd(mmdd) {
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = parseInt(mmdd.slice(0, 2), 10);
+  const day = parseInt(mmdd.slice(2, 4), 10);
+  return `${names[month - 1]} ${day}`;
+}
+
+function renderBirthdays(container) {
+  container.appendChild(el(`
+    <div>
+      <h1>Birthdays</h1>
+      <p class="subtitle">Upcoming birthdays, and a checklist of who's wished you on yours.</p>
+    </div>
+  `));
+
+  container.appendChild(el(`
+    <div class="card soft">
+      <p class="small" style="margin-bottom:0">
+        No contacts import here — reading a Google account's contacts from a browser needs a Google sign-in
+        consent flow this app hasn't built yet (and it would mean clicking through an "unverified app" warning
+        until that's formally reviewed by Google). The Android app's Birthdays tab can import real contacts today,
+        since it reads the phone's own Contacts app directly. Add people by hand here for now.
+      </p>
+    </div>
+  `));
+
+  const addCard = el(`
+    <div class="card">
+      <div class="bold">Add someone manually</div>
+      <label class="field" for="person-name">Name</label>
+      <input type="text" id="person-name" placeholder="Name" />
+      <label class="field" for="person-bday">Birthday (optional)</label>
+      <input type="date" id="person-bday" />
+      <div class="mt-8"><button class="primary" id="person-add">Add</button></div>
+    </div>
+  `);
+  container.appendChild(addCard);
+  addCard.querySelector("#person-add").onclick = () => {
+    const name = addCard.querySelector("#person-name").value.trim();
+    if (!name) return;
+    const bdayVal = addCard.querySelector("#person-bday").value;
+    const mmdd = bdayVal ? bdayVal.slice(5, 7) + bdayVal.slice(8, 10) : null;
+    store.addPerson(name, mmdd);
+    render();
+  };
+
+  container.appendChild(el(`<div class="roadmap-section-title">Upcoming birthdays</div>`));
+  const upcoming = store.upcomingBirthdays();
+  if (upcoming.length === 0) {
+    container.appendChild(el(`<p class="muted">None added yet.</p>`));
+  } else {
+    upcoming.forEach((p) => {
+      const when = p.daysUntil === 0 ? "Today!" : p.daysUntil === 1 ? "Tomorrow" : `In ${p.daysUntil} days (${formatMmdd(p.birthday)})`;
+      container.appendChild(el(`
+        <div class="row" style="justify-content:space-between;padding:6px 2px">
+          <span>${escapeHtml(p.name)}</span>
+          <span class="small muted">${when}</span>
+        </div>
+      `));
+    });
+  }
+
+  const currentYear = new Date().getFullYear();
+  container.appendChild(el(`<div class="roadmap-section-title">${currentYear} birthday wishes</div>`));
+  container.appendChild(el(`
+    <p class="small muted">
+      Tick off who's wished you this year so you don't lose track of who to thank or wish back — nothing here
+      reads your messages automatically, you check these off yourself.
+    </p>
+  `));
+  const people = store.listPeople();
+  if (people.length === 0) {
+    container.appendChild(el(`<p class="muted">Add people above to start a checklist.</p>`));
+  } else {
+    const wished = store.wishedThisYear(currentYear);
+    people.forEach((p) => {
+      const row = el(`
+        <label class="field" style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" style="width:auto" ${wished.has(p.id) ? "checked" : ""} />
+          ${escapeHtml(p.name)}
+        </label>
+      `);
+      row.querySelector("input").onchange = (e) => {
+        store.setBirthdayWish(p.id, currentYear, e.target.checked);
+      };
+      container.appendChild(row);
+    });
+  }
 }
 
 // ---------------------------------------------------------------- Reward suggestions

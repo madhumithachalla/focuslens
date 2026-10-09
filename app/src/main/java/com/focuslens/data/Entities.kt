@@ -33,14 +33,18 @@ data class CheckInEntity(
     val createdAt: Long
 )
 
-enum class CycleMode { MENSTRUAL, GENERAL_ENERGY, OFF }
+/** GENERAL_ENERGY/MOOD/SLEEP/WATER are independent trackers — a day can carry any subset of
+ *  them at once (see the composite key below), never an either/or like the old single-row-
+ *  per-day schema forced. */
+enum class CycleMode { MENSTRUAL, GENERAL_ENERGY, MOOD, SLEEP, WATER, OFF }
 
-@Entity(tableName = "cycle_logs")
+/** Composite (date, mode) key — not autoGenerate id — is what lets one day hold a MENSTRUAL
+ *  row and a MOOD row and a SLEEP row simultaneously, each independently upserted. */
+@Entity(tableName = "cycle_logs", primaryKeys = ["date", "mode"])
 data class CycleLogEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val mode: CycleMode,
     val date: String, // yyyyMMdd
-    val energyLevel: Int? = null, // 1-5, used by both modes
+    val energyLevel: Int? = null, // 1-5, meaning depends on mode (energy/mood/sleep/water level)
     val moodTags: String? = null, // comma-separated, free-form so it never forces a gendered vocabulary
     val symptomTags: String? = null,
     /** Marks the first day of a period — the only field the cycle-length prediction reads. */
@@ -91,6 +95,33 @@ data class DailyUsageEntity(
     val launches: Int
 )
 
+/**
+ * A friend/family birthday the user tracks. `birthday` is MMdd (month+day only, 4 chars) —
+ * the year genuinely doesn't matter for a recurring birthday and storing one would wrongly
+ * imply FocusLens is tracking someone's age. `source` distinguishes a manually-typed entry
+ * from one pulled in via the optional, permission-gated Google Contacts import.
+ */
+@Entity(tableName = "people")
+data class PersonEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val birthday: String?, // MMdd, or null if unknown (still trackable in the wish checklist)
+    val source: String = "manual", // "manual" | "google_contacts"
+    val createdAt: Long
+)
+
+/**
+ * Per-year checklist entry: did this person wish the user on the user's own birthday this
+ * year. Nothing here is detected automatically (no message/call content is ever read) — it's
+ * a plain manual checklist so the user doesn't lose track of who to thank or wish back.
+ */
+@Entity(tableName = "birthday_wishes", primaryKeys = ["year", "personId"])
+data class BirthdayWishEntity(
+    val year: Int,
+    val personId: Long,
+    val wished: Boolean = false
+)
+
 enum class AgeBracket { UNDER_18, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_PLUS, PREFER_NOT_TO_SAY }
 
 /**
@@ -117,5 +148,11 @@ data class ProfileEntity(
      * MentalHealthScreen.kt). Empty string means "skipped / prefer not to say," not "none."
      */
     val neurodivergentTags: String,
+    /** Comma-joined ids from MOTIVATION_OPTIONS (OnboardingScreen.kt) — why the user is here,
+     *  e.g. "reduce_scrolling,focus". Empty string means skipped/prefer not to say, used to
+     *  decide which Guide/Learn section to lead with, never to gate anything. */
+    val usageMotivation: String = "",
+    /** yyyyMMdd, optional — only used for the user's own Birthdays checklist reminder. */
+    val birthday: String? = null,
     val onboardedAt: Long
 )

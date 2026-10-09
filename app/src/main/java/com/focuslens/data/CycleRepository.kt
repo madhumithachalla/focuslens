@@ -95,12 +95,13 @@ class CycleRepository(private val dao: CycleLogDao) {
         logForDate(DAY_FORMAT.format(Date()), mode, periodStart, energyLevel, moodTags)
     }
 
-    /** Same as [logToday] but for any date (yyyyMMdd) — lets a period start be logged after the fact. */
+    /** Same as [logToday] but for any date (yyyyMMdd) — lets a period start be logged after the
+     *  fact. Each mode keeps its own independent row per date (see CycleLogEntity's composite
+     *  key), so logging a MOOD value the same day never touches a MENSTRUAL or SLEEP row. */
     suspend fun logForDate(date: String, mode: CycleMode, periodStart: Boolean, energyLevel: Int?, moodTags: String?) {
-        val existing = dao.forDate(date)
+        val existing = dao.forDateAndMode(date, mode)
         dao.insert(
             CycleLogEntity(
-                id = existing?.id ?: 0,
                 mode = mode,
                 date = date,
                 energyLevel = energyLevel ?: existing?.energyLevel,
@@ -110,6 +111,11 @@ class CycleRepository(private val dao: CycleLogDao) {
             )
         )
     }
+
+    /** The current value (1-5) logged for a given tracker mode today, if any — lets the UI
+     *  show which chip is already active without a separate query per screen. */
+    suspend fun todayValue(mode: CycleMode): Int? =
+        dao.forDateAndMode(DAY_FORMAT.format(Date()), mode)?.energyLevel
 
     /** Imports period-start dates (yyyyMMdd) from an external source, e.g. Health Connect. Safe to re-run. */
     suspend fun importPeriodStarts(dates: List<String>) {
