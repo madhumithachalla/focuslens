@@ -8,6 +8,6 @@ plugins {
     // of the old composeOptions{ kotlinCompilerExtensionVersion } mechanism, which only
     // worked with the Kotlin 1.9.x (K1) compiler.
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.21" apply false
-    id("com.google.devtools.ksp") version "2.1.21-1.0.29" apply false
+    id("com.google.devtools.ksp") version "2.1.21-2.0.2" apply false
     id("com.google.gms.google-services") version "4.5.0" apply false
 }
