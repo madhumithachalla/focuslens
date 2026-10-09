@@ -111,6 +111,7 @@ class BlockActivity : ComponentActivity() {
                             limit = limit,
                             skipLimitReached = skipLimitReached,
                             maxSkips = maxSkips,
+                            resetAt = prefs.nextResetAt(),
                             onGiveUp = { goHome(prefs) }
                         )
                     }
@@ -272,18 +273,14 @@ fun LockedScreen(
     limit: Int,
     skipLimitReached: Boolean,
     maxSkips: Int,
+    resetAt: Long,
     onGiveUp: () -> Unit
 ) {
-    val minutesToMidnight = remember {
-        val cal = java.util.Calendar.getInstance()
-        val nowMillis = cal.timeInMillis
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 23)
-        cal.set(java.util.Calendar.MINUTE, 59)
-        cal.set(java.util.Calendar.SECOND, 59)
-        ((cal.timeInMillis - nowMillis) / 60_000L).coerceAtLeast(0L)
+    val minutesToReset = remember {
+        ((resetAt - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0L)
     }
-    val hours = minutesToMidnight / 60
-    val mins = minutesToMidnight % 60
+    val hours = minutesToReset / 60
+    val mins = minutesToReset % 60
 
     Column(
         modifier = Modifier.fillMaxSize().padding(28.dp),
@@ -292,7 +289,7 @@ fun LockedScreen(
     ) {
         Text("🔒", fontSize = 48.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Locked for today", fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("Locked until 6am", fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(
             if (skipLimitReached) {
@@ -305,7 +302,7 @@ fun LockedScreen(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Resets in ${hours}h ${mins}m",
+            "Resets at 6am — in ${hours}h ${mins}m",
             fontSize = 13.sp,
             color = Color.Gray
         )

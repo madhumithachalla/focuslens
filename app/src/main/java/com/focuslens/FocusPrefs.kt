@@ -54,7 +54,33 @@ class FocusPrefs(context: Context) {
         sp.edit().putLong("allow_$pkg", System.currentTimeMillis() + minutes * 60_000L).apply()
     }
 
-    private fun today(): String = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())
+    /**
+     * The "day" for skip counts, limits and locks resets at 6am, not midnight — a 1am
+     * reopen shouldn't quietly count as a fresh day. Shift the clock back 6 hours before
+     * taking the date, so anything before 6am still belongs to the previous day's key.
+     */
+    private fun today(): String {
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.HOUR_OF_DAY, -RESET_HOUR)
+        return SimpleDateFormat("yyyyMMdd", Locale.US).format(cal.time)
+    }
+
+    /** Epoch millis of the next 6am — what a locked app is actually waiting for. */
+    fun nextResetAt(): Long {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, RESET_HOUR)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        if (cal.timeInMillis <= System.currentTimeMillis()) {
+            cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        }
+        return cal.timeInMillis
+    }
+
+    companion object {
+        private const val RESET_HOUR = 6
+    }
 
     fun passesToday(pkg: String): Int = sp.getInt("passes_${pkg}_${today()}", 0)
 
