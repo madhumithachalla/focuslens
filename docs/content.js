@@ -135,6 +135,16 @@ export const PHASE_GUIDANCE = {
   },
 };
 
+// Pre-filled structure, not a question — tapping one fills the textarea with this scaffold.
+// Still plain text underneath: saving/reading an entry never treats a template differently
+// from a blank page.
+export const JOURNAL_TEMPLATES = [
+  { emoji: "🙏", title: "Gratitude list", scaffold: "Three things I'm grateful for today:\n1. \n2. \n3. \n" },
+  { emoji: "✅", title: "Daily reflection", scaffold: "What went well today:\n\nWhat didn't go as planned:\n\nOne thing to try tomorrow:\n" },
+  { emoji: "🧩", title: "Thought record", scaffold: "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nA more balanced way to see it:\n" },
+  { emoji: "🌊", title: "Brain dump", scaffold: "Just getting everything out, no particular order:\n\n" },
+];
+
 // Tracking is opt-in per type — nobody is forced into any one of these; pick whichever apply.
 export const TRACKER_TYPES = [
   { id: "energy", label: "Energy", hint: "1 low – 5 high" },

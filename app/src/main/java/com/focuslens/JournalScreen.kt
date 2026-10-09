@@ -24,6 +24,18 @@ private val PROMPTS = listOf(
 )
 private val MOODS = listOf("😔" to "low", "😐" to "flat", "🙂" to "okay", "😊" to "good", "🤩" to "great")
 
+/** A starting structure, not a question — unlike PROMPTS, these pre-fill the text field so
+ *  there's a shape to write into rather than a blank box. Still just text underneath: nothing
+ *  about saving or reading an entry back treats a template differently from free writing. */
+private data class JournalTemplate(val emoji: String, val title: String, val scaffold: String)
+
+private val TEMPLATES = listOf(
+    JournalTemplate("🙏", "Gratitude list", "Three things I'm grateful for today:\n1. \n2. \n3. \n"),
+    JournalTemplate("✅", "Daily reflection", "What went well today:\n\nWhat didn't go as planned:\n\nOne thing to try tomorrow:\n"),
+    JournalTemplate("🧩", "Thought record", "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nA more balanced way to see it:\n"),
+    JournalTemplate("🌊", "Brain dump", "Just getting everything out, no particular order:\n\n")
+)
+
 @Composable
 fun JournalScreen() {
     val context = LocalContext.current
@@ -35,6 +47,7 @@ fun JournalScreen() {
     var streak by remember { mutableIntStateOf(0) }
     var writing by remember { mutableStateOf(false) }
     var activePrompt by remember { mutableStateOf<String?>(null) }
+    var activeTemplateTitle by remember { mutableStateOf<String?>(null) }
     var text by remember { mutableStateOf("") }
     var mood by remember { mutableStateOf<String?>(null) }
     var celebration by remember { mutableStateOf<Int?>(null) }
@@ -60,6 +73,15 @@ fun JournalScreen() {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text("PROMPT", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(it, fontSize = 14.sp)
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+            activeTemplateTitle?.let {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text("TEMPLATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Text(it, fontSize = 14.sp)
                     }
                 }
@@ -91,6 +113,7 @@ fun JournalScreen() {
                         text = ""
                         mood = null
                         activePrompt = null
+                        activeTemplateTitle = null
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -133,9 +156,31 @@ fun JournalScreen() {
 
         item {
             Button(
-                onClick = { activePrompt = null; writing = true },
+                onClick = { activePrompt = null; activeTemplateTitle = null; text = ""; writing = true },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("✏️ Just write freely") }
+            ) { Text("✏️ Just write freely (blank page)") }
+        }
+
+        item {
+            Spacer(Modifier.height(10.dp))
+            Text("TEMPLATES", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        }
+        items(TEMPLATES) { t ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    activePrompt = null
+                    activeTemplateTitle = t.title
+                    text = t.scaffold
+                    writing = true
+                }
+            ) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(t.emoji, fontSize = 20.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(t.title, fontSize = 13.sp)
+                }
+            }
         }
 
         item {

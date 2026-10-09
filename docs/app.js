@@ -1,7 +1,7 @@
 import {
   LEARN_TOPICS, LEARN_ITEMS, REFLECTION_PROMPTS,
   MEDIA_GENRES, MEDIA_ITEMS, MEDIA_KINDS,
-  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES,
+  REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES, JOURNAL_TEMPLATES,
 } from "./content.js";
 import * as store from "./storage.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
@@ -168,6 +168,24 @@ function renderJournal(container) {
     </div>
   `);
   container.appendChild(card);
+
+  const templatesCard = el(`
+    <div class="card soft">
+      <div class="bold mb-0" style="font-size:13px">Templates</div>
+      <p class="small muted mt-8" style="margin-bottom:8px">Fills in the box above with a starting structure — or just leave it blank and write freely.</p>
+      <div class="chips"></div>
+    </div>
+  `);
+  const templateChips = templatesCard.querySelector(".chips");
+  JOURNAL_TEMPLATES.forEach((t) => {
+    const chip = el(`<button type="button" class="chip">${t.emoji} ${escapeHtml(t.title)}</button>`);
+    chip.onclick = () => {
+      card.querySelector("#journal-text").value = t.scaffold;
+      card.querySelector("#journal-text").focus();
+    };
+    templateChips.appendChild(chip);
+  });
+  container.appendChild(templatesCard);
 
   let selectedMood = todayEntry?.mood || null;
   const moodChips = card.querySelector("#mood-chips");
