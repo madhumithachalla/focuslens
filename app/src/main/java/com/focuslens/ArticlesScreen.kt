@@ -27,7 +27,8 @@ enum class LearnTopic(val label: String) {
     STUDY_SKILLS("Study Skills"),
     RESEARCH("Research & Papers"),
     SEX_ED("Sex Education"),
-    LGBTQ("LGBTQ+ Support")
+    LGBTQ("LGBTQ+ Support"),
+    NEURODIVERGENCE("Neurodivergence & ADHD")
 }
 
 data class LearnItem(
@@ -93,7 +94,20 @@ val LEARN_ITEMS = listOf(
     LearnItem("pflag", "Support for LGBTQ+ people and families", "PFLAG",
         "https://pflag.org/", LearnTopic.LGBTQ, 2, "Org hub"),
     LearnItem("stonewall", "LGBTQ+ rights and resources", "Stonewall",
-        "https://www.stonewall.org.uk/", LearnTopic.LGBTQ, 2, "Org hub")
+        "https://www.stonewall.org.uk/", LearnTopic.LGBTQ, 2, "Org hub"),
+
+    LearnItem("asrs_screener", "Adult ADHD Self-Report Scale (ASRS v1.1)", "Harvard Medical School / WHO",
+        "https://www.hcp.med.harvard.edu/ncs/asrs.php", LearnTopic.NEURODIVERGENCE, 2, "Professional screener"),
+    LearnItem("chadd", "Support and info for ADHD, kids through adults", "CHADD",
+        "https://chadd.org/", LearnTopic.NEURODIVERGENCE, 1, "Org hub"),
+    LearnItem("adda", "Support specifically for adults with ADHD", "ADDA",
+        "https://add.org/", LearnTopic.NEURODIVERGENCE, 1, "Org hub"),
+    LearnItem("additude", "ADHD strategies and expert-reviewed articles", "ADDitude",
+        "https://www.additudemag.com/", LearnTopic.NEURODIVERGENCE, 2, "Article"),
+    LearnItem("cdc_adhd", "ADHD facts and info", "CDC",
+        "https://www.cdc.gov/adhd/", LearnTopic.NEURODIVERGENCE, 1, "Org hub"),
+    LearnItem("asan", "Autistic self-advocacy, run by autistic people", "Autistic Self Advocacy Network",
+        "https://autisticadvocacy.org/", LearnTopic.NEURODIVERGENCE, 1, "Org hub")
 )
 
 private val REFLECTION_PROMPTS = listOf(

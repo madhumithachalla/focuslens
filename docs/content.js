@@ -12,6 +12,7 @@ export const LEARN_TOPICS = [
   { id: "RESEARCH", label: "Research & Papers" },
   { id: "SEX_ED", label: "Sex Education" },
   { id: "LGBTQ", label: "LGBTQ+ Support" },
+  { id: "NEURODIVERGENCE", label: "Neurodivergence & ADHD" },
 ];
 
 export const LEARN_ITEMS = [
@@ -41,6 +42,13 @@ export const LEARN_ITEMS = [
   { id: "qlife", title: "LGBTIQ+ peer support (Australia)", source: "QLife", url: "https://qlife.org.au/", topic: "LGBTQ", complexity: 1, kind: "Org hub" },
   { id: "pflag", title: "Support for LGBTQ+ people and families", source: "PFLAG", url: "https://pflag.org/", topic: "LGBTQ", complexity: 2, kind: "Org hub" },
   { id: "stonewall", title: "LGBTQ+ rights and resources", source: "Stonewall", url: "https://www.stonewall.org.uk/", topic: "LGBTQ", complexity: 2, kind: "Org hub" },
+
+  { id: "asrs_screener", title: "Adult ADHD Self-Report Scale (ASRS v1.1)", source: "Harvard Medical School / WHO", url: "https://www.hcp.med.harvard.edu/ncs/asrs.php", topic: "NEURODIVERGENCE", complexity: 2, kind: "Professional screener" },
+  { id: "chadd", title: "Support and info for ADHD, kids through adults", source: "CHADD", url: "https://chadd.org/", topic: "NEURODIVERGENCE", complexity: 1, kind: "Org hub" },
+  { id: "adda", title: "Support specifically for adults with ADHD", source: "ADDA", url: "https://add.org/", topic: "NEURODIVERGENCE", complexity: 1, kind: "Org hub" },
+  { id: "additude", title: "ADHD strategies and expert-reviewed articles", source: "ADDitude", url: "https://www.additudemag.com/", topic: "NEURODIVERGENCE", complexity: 2, kind: "Article" },
+  { id: "cdc_adhd", title: "ADHD facts and info", source: "CDC", url: "https://www.cdc.gov/adhd/", topic: "NEURODIVERGENCE", complexity: 1, kind: "Org hub" },
+  { id: "asan", title: "Autistic self-advocacy, run by autistic people", source: "Autistic Self Advocacy Network", url: "https://autisticadvocacy.org/", topic: "NEURODIVERGENCE", complexity: 1, kind: "Org hub" },
 ];
 
 export const REFLECTION_PROMPTS = [
@@ -159,7 +167,7 @@ export const ROADMAP = {
     { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts: a rolling-average estimate of your next cycle, current phase (follicular/fertile window/ovulation/luteal) with its own accessible color, an estimated fertile window, and commonly-cited \"what people often do in this phase\" guidance. An estimate from your own data and widely-circulated wellness framing, not a clinical prediction, diagnosis, or contraception method." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
     { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
-    { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education and LGBTQ+ support, gated by a short self-reflection prompt before \"mark as read\" sticks." },
+    { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education, LGBTQ+ support, and neurodivergence/ADHD (including a real symptom screener designed by Harvard Medical School and the WHO), gated by a short self-reflection prompt before \"mark as read\" sticks." },
     { title: "Suggested for you", brief: "On the Mental health page: a simple rule-based pick from Learn based on your own recent mood trend or top missed-task reason — plainly labeled as rules, not AI or a diagnosis." },
     { title: "Account sign-in", brief: "Email sign-up/sign-in via Firebase. Your Journal/Cycle/To-do data doesn't sync to it yet (still local to this browser) — that's next." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },

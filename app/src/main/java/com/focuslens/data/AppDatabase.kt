@@ -35,7 +35,7 @@ class Converters {
         JournalEntryEntity::class,
         DailyUsageEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
