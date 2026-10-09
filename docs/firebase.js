@@ -5,6 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, updateProfile,
+  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc,
@@ -41,6 +42,28 @@ export async function signUp(email, password, displayName) {
 export async function signIn(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+// Redirect (not popup) flow: popups are routinely blocked once this PWA is installed to a
+// homescreen/standalone window, which has no normal browser chrome to host one. Needs the
+// Google provider enabled, and this page's domain added under Authentication > Settings >
+// Authorized domains, in the Firebase console.
+export async function signInWithGoogle() {
+  await signInWithRedirect(auth, new GoogleAuthProvider());
+}
+
+// Call once on page load: resolves the user coming back from signInWithGoogle's redirect.
+// Resolves to null on an ordinary page load with no pending redirect.
+export async function handleGoogleRedirectResult() {
+  const result = await getRedirectResult(auth);
+  if (!result) return null;
+  const { user } = result;
+  await setDoc(doc(db, "users", user.uid), {
+    displayName: user.displayName,
+    email: user.email,
+    createdAt: Date.now(),
+  }, { merge: true });
+  return user;
 }
 
 export async function signOutUser() {
