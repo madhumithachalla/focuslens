@@ -41,6 +41,8 @@ private fun authErrorMessage(e: Exception): String {
         "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> "Email or password is wrong."
         "ERROR_USER_NOT_FOUND" -> "No account with that email — try signing up instead."
         "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts — wait a bit and try again."
+        "ERROR_OPERATION_NOT_ALLOWED" -> "Email sign-in isn't turned on for this project yet — in Firebase console: Authentication → Sign-in method → Email/Password → Enable."
+        "ERROR_USER_DISABLED" -> "This account has been disabled."
         else -> e.message ?: "Something went wrong. Try again."
     }
 }
@@ -103,7 +105,8 @@ fun AccountScreen() {
 
     fun onGoogleClick() {
         if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
-            error = "Google sign-in isn't configured yet — see build.gradle.kts."
+            error = "Google sign-in needs one more setup step (the Web client ID isn't set yet) — " +
+                "use email sign-in below for now, or see the Guide tab's Account entry for what's missing."
             return
         }
         error = null
