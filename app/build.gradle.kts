@@ -2,16 +2,19 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.focuslens"
-    compileSdk = 34
+    // Bumped from 34: androidx.health.connect:connect-client 1.1.0 requires compiling
+    // against at least API 36, which in turn needs AGP 8.9.1+ (see build.gradle.kts).
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.focuslens"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
 
@@ -78,4 +81,10 @@ dependencies {
     // system-level store a watch or health app can write cycle data into). Read-only, never
     // writes anything back, and only runs when the user taps "Import from watch."
     implementation("androidx.health.connect:connect-client:1.1.0")
+
+    // Same Firebase project as the web app (focuslens-8805c) — shares accounts and data
+    // once community/accountability features are built, via app/google-services.json.
+    implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
 }

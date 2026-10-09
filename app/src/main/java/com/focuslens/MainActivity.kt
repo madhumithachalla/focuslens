@@ -141,7 +141,8 @@ fun FocusLensMain(repo: UsageRepository) {
                 Tab(selected = tab == 8, onClick = { tab = 8 }, text = { Text("Explore") })
                 Tab(selected = tab == 9, onClick = { tab = 9 }, text = { Text("Focus Score") })
                 Tab(selected = tab == 10, onClick = { tab = 10 }, text = { Text("Playlists") })
-                Tab(selected = tab == 11, onClick = { tab = 11 }, text = { Text("Guide") })
+                Tab(selected = tab == 11, onClick = { tab = 11 }, text = { Text("Account") })
+                Tab(selected = tab == 12, onClick = { tab = 12 }, text = { Text("Guide") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
@@ -156,6 +157,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     8 -> MediaSuggestionsScreen()
                     9 -> FocusScoreScreen()
                     10 -> FocusPlaylistsScreen()
+                    11 -> AccountScreen()
                     else -> GuideScreen()
                 }
             }
