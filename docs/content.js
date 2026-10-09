@@ -10,6 +10,8 @@ export const LEARN_TOPICS = [
   { id: "HABITS", label: "Habits & Behavior" },
   { id: "STUDY_SKILLS", label: "Study Skills" },
   { id: "RESEARCH", label: "Research & Papers" },
+  { id: "SEX_ED", label: "Sex Education" },
+  { id: "LGBTQ", label: "LGBTQ+ Support" },
 ];
 
 export const LEARN_ITEMS = [
@@ -29,6 +31,16 @@ export const LEARN_ITEMS = [
   { id: "scholar", title: "Search real research papers", source: "Google Scholar", url: "https://scholar.google.com/", topic: "RESEARCH", complexity: 3, kind: "Research hub" },
   { id: "pubmed", title: "Biomedical and life-science research", source: "PubMed", url: "https://pubmed.ncbi.nlm.nih.gov/", topic: "RESEARCH", complexity: 3, kind: "Research hub" },
   { id: "jstor", title: "Academic journals and papers", source: "JSTOR", url: "https://www.jstor.org/", topic: "RESEARCH", complexity: 3, kind: "Research hub" },
+
+  { id: "scarleteen", title: "Sex ed for real life", source: "Scarleteen", url: "https://www.scarleteen.com/", topic: "SEX_ED", complexity: 1, kind: "Org hub" },
+  { id: "amaze", title: "Honest, age-appropriate sex ed", source: "AMAZE", url: "https://amaze.org/", topic: "SEX_ED", complexity: 1, kind: "Org hub" },
+  { id: "planned_parenthood", title: "Sexual health info and services", source: "Planned Parenthood", url: "https://www.plannedparenthood.org/", topic: "SEX_ED", complexity: 2, kind: "Org hub" },
+  { id: "nhs_sexual_health", title: "Sexual health", source: "NHS", url: "https://www.nhs.uk/live-well/sexual-health/", topic: "SEX_ED", complexity: 1, kind: "Org hub" },
+
+  { id: "trevor_project", title: "Crisis support for LGBTQ+ young people", source: "The Trevor Project", url: "https://www.thetrevorproject.org/", topic: "LGBTQ", complexity: 1, kind: "Org hub" },
+  { id: "qlife", title: "LGBTIQ+ peer support (Australia)", source: "QLife", url: "https://qlife.org.au/", topic: "LGBTQ", complexity: 1, kind: "Org hub" },
+  { id: "pflag", title: "Support for LGBTQ+ people and families", source: "PFLAG", url: "https://pflag.org/", topic: "LGBTQ", complexity: 2, kind: "Org hub" },
+  { id: "stonewall", title: "LGBTQ+ rights and resources", source: "Stonewall", url: "https://www.stonewall.org.uk/", topic: "LGBTQ", complexity: 2, kind: "Org hub" },
 ];
 
 export const REFLECTION_PROMPTS = [
@@ -124,14 +136,15 @@ export const ROADMAP = {
     { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts, a rolling-average estimate of your next cycle — your own data, not a clinical prediction." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
     { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
-    { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits and study skills, gated by a short self-reflection prompt before \"mark as read\" sticks." },
+    { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education and LGBTQ+ support, gated by a short self-reflection prompt before \"mark as read\" sticks." },
+    { title: "Suggested for you", brief: "On the Mental health page: a simple rule-based pick from Learn based on your own recent mood trend or top missed-task reason — plainly labeled as rules, not AI or a diagnosis." },
+    { title: "Account sign-in", brief: "Email sign-up/sign-in via Firebase. Your Journal/Cycle/To-do data doesn't sync to it yet (still local to this browser) — that's next." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
     { title: "Mental health trend", brief: "A 14-day mood/energy trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis." },
   ],
   upcoming: [
-    { title: "Account sign-in", brief: "Email sign-in (Firebase) so your data follows you across devices and browsers instead of staying on one phone." },
-    { title: "Cross-device usage sync", brief: "Combine screen-time data reported by your Android app and any other signed-in device into one view." },
+    { title: "Cross-device data sync", brief: "Once signed in, Journal/Cycle/To-do data and screen-time reported by your Android app follow your account across devices instead of staying on one browser." },
     { title: "Community chat", brief: "A shared space for FocusLens users to post and talk." },
     { title: "Achievement sharing", brief: "Share a card of a milestone (a streak, a Focus Score) with other app users." },
     { title: "Accountability partners + dares", brief: "Pick a friend to hold you accountable on tasks; if a task isn't done, a dare gets assigned." },

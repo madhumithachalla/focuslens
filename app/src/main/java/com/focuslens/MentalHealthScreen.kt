@@ -12,7 +12,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
 import com.focuslens.data.AppDatabase
+import com.focuslens.data.MissReason
+import com.focuslens.data.TaskRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -26,6 +29,26 @@ private val MOOD_COLOR = mapOf(
 private data class DayMood(val date: String, val score: Int?)
 
 /**
+ * Picks one Learn topic based on a few plain, inspectable rules — not AI, not a diagnosis.
+ * A low mood/energy average points at Mental Health resources; "tired" as the top reason
+ * for missed tasks this week points at Sleep; "distracted" points at Focus & Productivity.
+ * Falls back to a general pick. Mirrors the same rules in the web app's app.js.
+ */
+private fun pickSuggestion(context: Context, avgMoodScore: Double?, topMissReason: MissReason?): Pair<LearnItem, String>? {
+    val (topic, why) = when {
+        avgMoodScore != null && avgMoodScore < 2.5 -> LearnTopic.MENTAL_HEALTH to "your mood/energy trend has been low lately"
+        topMissReason == MissReason.TIRED -> LearnTopic.SLEEP to "\"tired\" has been your top reason for missed tasks this week"
+        topMissReason == MissReason.DISTRACTED -> LearnTopic.FOCUS_PRODUCTIVITY to "\"distracted\" has been your top reason for missed tasks this week"
+        else -> null to "a pick from Learn"
+    }
+    val prefs = LearnPrefs(context)
+    val pool = if (topic != null) LEARN_ITEMS.filter { it.topic == topic } else LEARN_ITEMS
+    val unread = pool.filter { !prefs.isRead(it.id) }
+    val item = (unread.ifEmpty { pool }).randomOrNull() ?: return null
+    return item to why
+}
+
+/**
  * A plain mood trend over the last 14 days, read from whichever source the user actually
  * logged that day — a journal entry's mood tag, or a cycle-log energy level if no journal
  * entry exists. Not a diagnostic tool; just a visual of the user's own logged pattern.
@@ -36,6 +59,7 @@ fun MentalHealthScreen() {
     val db = remember { AppDatabase.get(context) }
     var days by remember { mutableStateOf<List<DayMood>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var suggestion by remember { mutableStateOf<Pair<LearnItem, String>?>(null) }
 
     LaunchedEffect(Unit) {
         val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
@@ -55,6 +79,10 @@ fun MentalHealthScreen() {
             DayMood(date, journalMood ?: cycleEnergy)
         }
         loading = false
+
+        val avg = days.mapNotNull { it.score }.let { if (it.isEmpty()) null else it.average() }
+        val reflection = TaskRepository(db.taskDao(), db.checkInDao()).weeklyReflection()
+        suggestion = pickSuggestion(context, avg, reflection.topMissReason)
     }
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
@@ -102,5 +130,27 @@ fun MentalHealthScreen() {
             fontSize = 12.sp,
             color = Color.Gray
         )
+
+        suggestion?.let { (item, why) ->
+            Spacer(Modifier.height(20.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3EFE8)),
+                onClick = {
+                    context.startActivity(
+                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.url))
+                    )
+                }
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("SUGGESTED FOR YOU", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D5B))
+                    Spacer(Modifier.height(4.dp))
+                    Text("Based on simple rules (not AI) — $why.", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    Text(item.title, fontWeight = FontWeight.Medium)
+                    Text(item.source, fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        }
     }
 }
