@@ -60,8 +60,10 @@ fun MentalHealthScreen() {
     var days by remember { mutableStateOf<List<DayMood>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var suggestion by remember { mutableStateOf<Pair<LearnItem, String>?>(null) }
+    var hasDisclosedNeurodivergent by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        hasDisclosedNeurodivergent = db.profileDao().get()?.neurodivergentTags?.isNotBlank() == true
         val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
         val cal = Calendar.getInstance()
         val dates = (0 until 14).map {
@@ -149,6 +151,35 @@ fun MentalHealthScreen() {
                     Spacer(Modifier.height(8.dp))
                     Text(item.title, fontWeight = FontWeight.Medium)
                     Text(item.source, fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        }
+
+        if (hasDisclosedNeurodivergent) {
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF6EEDD)),
+                onClick = {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://www.hcp.med.harvard.edu/ncs/asrs.php")
+                        )
+                    )
+                }
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("NEURODIVERGENCE & ADHD", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF8A6D1F))
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "You shared that this is part of your experience during setup. If it's ever useful, the " +
+                            "Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed by Harvard " +
+                            "Medical School and the WHO — not a diagnosis, just a well-regarded starting point if " +
+                            "you're curious. CHADD and ADDA (in Learn) can connect you with real support if you " +
+                            "want it. Entirely up to you — tap to open the screener, or find more under Learn.",
+                        fontSize = 12.sp
+                    )
                 }
             }
         }

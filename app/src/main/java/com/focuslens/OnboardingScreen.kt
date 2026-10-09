@@ -48,6 +48,21 @@ private val TOPIC_OPTIONS = listOf(
 )
 
 /**
+ * Entirely optional, never required to continue, never used to gate any feature — only to
+ * more readily surface the Neurodivergence & ADHD section of Learn (see
+ * MentalHealthScreen.kt). A free-form list, not a diagnosis: anyone can pick whatever
+ * applies, self-identified or diagnosed, or skip this section entirely.
+ */
+private val NEURODIVERGENT_OPTIONS = listOf(
+    "adhd" to "ADHD / ADD",
+    "autism" to "Autism",
+    "dyslexia" to "Dyslexia",
+    "dyspraxia" to "Dyspraxia",
+    "ocd" to "OCD",
+    "tics" to "Tourette's / tic disorder"
+)
+
+/**
  * One-time setup. Age and gender are dropdowns (single-choice, so a dropdown fits better than
  * a long list of rows); gender keeps a self-describe text fallback so the dropdown never
  * becomes a forced fixed list. Cycle tracking and topics stay checklists since both are
@@ -67,6 +82,8 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
     var trackGeneral by remember { mutableStateOf(false) }
     var skipCycle by remember { mutableStateOf(false) }
     var selectedTopics by remember { mutableStateOf(setOf<String>()) }
+    var selectedNeurodivergent by remember { mutableStateOf(setOf<String>()) }
+    var neurodivergentCustom by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
     fun toggleMenstrual() {
@@ -211,6 +228,40 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     )
                 }
 
+                item {
+                    Spacer(Modifier.height(20.dp))
+                    Text("Disability or neurodivergence (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "Completely optional, skippable, and never used to limit anything in the app — just lets us " +
+                            "more readily point you toward the ADHD & neurodivergence resources in Learn, since this " +
+                            "app already builds in things that can help (structured to-dos, gentle reminders, focus " +
+                            "tools). Self-identified or diagnosed, whatever applies to you.",
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                items(NEURODIVERGENT_OPTIONS) { (id, label) ->
+                    ChecklistRow(
+                        label = label,
+                        checked = id in selectedNeurodivergent,
+                        onToggle = {
+                            selectedNeurodivergent = if (id in selectedNeurodivergent) selectedNeurodivergent - id else selectedNeurodivergent + id
+                        }
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = neurodivergentCustom,
+                        onValueChange = { neurodivergentCustom = it },
+                        placeholder = { Text("Something else (optional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 item { Spacer(Modifier.height(16.dp)) }
             }
 
@@ -236,6 +287,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                             gender == "Prefer not to say" -> null
                             else -> gender
                         }
+                        val neurodivergentAll = selectedNeurodivergent + listOfNotNull(neurodivergentCustom.trim().ifBlank { null })
                         onDone(
                             ProfileEntity(
                                 preferredName = name.trim(),
@@ -244,6 +296,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                                 trackMenstrualCycle = trackMenstrual,
                                 trackGeneralEnergy = trackGeneral,
                                 topics = selectedTopics.joinToString(","),
+                                neurodivergentTags = neurodivergentAll.joinToString(","),
                                 onboardedAt = System.currentTimeMillis()
                             )
                         )

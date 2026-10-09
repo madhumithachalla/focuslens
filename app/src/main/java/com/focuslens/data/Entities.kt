@@ -110,5 +110,12 @@ data class ProfileEntity(
     val trackGeneralEnergy: Boolean,
     /** Comma-joined ids from TOPIC_OPTIONS (OnboardingScreen.kt) — free-form tags, not an enum. */
     val topics: String,
+    /**
+     * Comma-joined ids from NEURODIVERGENT_OPTIONS (OnboardingScreen.kt) — entirely optional,
+     * never required to complete onboarding, never used to gate any feature. Only ever used
+     * to surface the Neurodivergence & ADHD section of Learn more readily (see
+     * MentalHealthScreen.kt). Empty string means "skipped / prefer not to say," not "none."
+     */
+    val neurodivergentTags: String,
     val onboardedAt: Long
 )
