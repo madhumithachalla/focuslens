@@ -4,6 +4,7 @@ import {
   REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP,
 } from "./content.js";
 import * as store from "./storage.js";
+import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
 
 const ROUTES = [
   { id: "roadmap", label: "Roadmap" },
@@ -282,15 +283,19 @@ function renderTasks(container) {
   const addCard = el(`
     <div class="card">
       <input type="text" id="task-title" placeholder="What needs doing?" />
+      <label class="field">Schedule it (optional — leave blank for a plain to-do with no time)</label>
+      <input type="datetime-local" id="task-when" />
       <div class="mt-8"><button class="primary" id="task-add">Add task</button></div>
     </div>
   `);
   container.appendChild(addCard);
   addCard.querySelector("#task-add").onclick = () => {
     const input = addCard.querySelector("#task-title");
+    const whenInput = addCard.querySelector("#task-when");
     const title = input.value.trim();
     if (!title) return;
-    store.addTask(title, "ADMIN", Date.now(), null);
+    const scheduledAt = whenInput.value ? new Date(whenInput.value).getTime() : Date.now();
+    store.addTask(title, "ADMIN", scheduledAt, null);
     render();
   };
 
@@ -317,6 +322,7 @@ function renderTasks(container) {
 }
 
 function renderTaskRow(t) {
+  const isScheduled = t.scheduledAt > Date.now();
   const row = el(`
     <div class="card task-item" style="border-radius:14px;border:1px solid var(--border)">
       <div class="row">
@@ -326,9 +332,23 @@ function renderTaskRow(t) {
         </div>
         <button class="text" style="color:var(--danger)">Delete</button>
       </div>
+      ${isScheduled ? `
+        <div class="row mt-8" style="flex-wrap:wrap;gap:8px">
+          <span class="small muted">${new Date(t.scheduledAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+          <div class="row gap-8" style="width:auto">
+            <a class="small" href="${googleCalendarUrl(t.title, t.scheduledAt)}" target="_blank" rel="noopener">Google Calendar</a>
+            <button class="text small mb-0 ics-btn">Download .ics</button>
+          </div>
+        </div>
+      ` : ""}
       <div class="miss-reasons" style="display:none;margin-top:10px"></div>
     </div>
   `);
+  if (isScheduled) {
+    row.querySelector(".ics-btn").onclick = () => {
+      downloadIcs(`focuslens-${t.id}.ics`, buildIcs(t.title, t.scheduledAt));
+    };
+  }
   const checkbox = row.querySelector('input[type="checkbox"]');
   const missBox = row.querySelector(".miss-reasons");
 
