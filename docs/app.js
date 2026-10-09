@@ -276,6 +276,33 @@ function renderCycle(container) {
     render();
   };
 
+  const pastCard = el(`
+    <div class="card">
+      <div class="bold mb-0">Log a different date as period start</div>
+      <p class="small muted mt-8">Forgot to log it on the day, or want to add past cycles to build a steadier average faster.</p>
+      <div class="row gap-8 mt-8">
+        <input type="date" id="past-period-date" style="flex:1" max="${new Date().toISOString().slice(0, 10)}" />
+        <button class="primary" id="past-period-save">Save</button>
+      </div>
+    </div>
+  `);
+  container.appendChild(pastCard);
+  pastCard.querySelector("#past-period-save").onclick = () => {
+    const val = pastCard.querySelector("#past-period-date").value;
+    if (!val) return;
+    const dateKey = val.replace(/-/g, "");
+    store.logCycle("MENSTRUAL", true, null, null, dateKey);
+    render();
+  };
+
+  container.appendChild(el(`
+    <p class="small muted" style="padding:0 2px">
+      No watch-sync option here — pulling cycle data from a watch needs the device's own health
+      platform (Android's Health Connect, Apple Health), which only a native app can access, not a
+      website in any browser. That's available in the Android app's Cycle screen.
+    </p>
+  `));
+
   const recent = store.recentCycleLogs(14);
   container.appendChild(el(`<div class="roadmap-section-title">Last 14 days</div>`));
   if (recent.length === 0) container.appendChild(el(`<p class="muted">No logs yet.</p>`));

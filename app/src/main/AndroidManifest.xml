@@ -16,6 +16,10 @@
     <!-- Spotify's App Remote SDK talks to the installed Spotify app over this. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Optional: reads period-start dates from Health Connect, if the user taps "Import
+         from watch" and a source app (Samsung Health, Fitbit, Flo, etc.) has written any. -->
+    <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
+
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/ic_menu_view"
