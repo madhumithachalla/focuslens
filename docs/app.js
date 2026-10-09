@@ -217,11 +217,17 @@ function renderCycle(container) {
   if (prediction) {
     container.appendChild(el(`
       <div class="card soft">
-        <div class="bold mb-0">Day ${prediction.currentCycleDay} of your cycle</div>
-        <p class="small mt-8" style="margin-bottom:0">
+        <div class="bold mb-0">Day ${prediction.currentCycleDay} of your cycle — ${prediction.phase}</div>
+        <p class="small mt-8" style="margin-bottom:4px">
           ${prediction.isConfident ? "Estimated" : "Early estimate (log a couple more cycles for a steadier average)"}
           next start around <span class="bold">${formatDateKey(prediction.predictedNextStart)}</span>,
           based on an average ${prediction.averageCycleLengthDays}-day cycle from your own logs.
+          Estimated fertile window: day ${prediction.fertileWindowStartDay}–${prediction.fertileWindowEndDay}.
+        </p>
+        <p class="small muted" style="margin-bottom:0">
+          Assumes a standard ~14-day luteal phase (real range ~11-17 days per person) — only basal body
+          temperature, LH strips, or an ultrasound can actually confirm ovulation. Not a diagnosis or a
+          contraception method.
         </p>
       </div>
     `));

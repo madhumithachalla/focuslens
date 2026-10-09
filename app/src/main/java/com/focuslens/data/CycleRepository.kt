@@ -18,8 +18,20 @@ data class CyclePrediction(
     val predictedNextStart: String, // yyyyMMdd
     val currentCycleDay: Int,
     /** True once there are enough logged cycles (3+) to call this a real rolling average. */
-    val isConfident: Boolean
+    val isConfident: Boolean,
+    /** Day-of-cycle estimates below use the standard reproductive-health assumption that the
+     *  luteal phase (after ovulation) is a fairly consistent ~14 days, while the follicular
+     *  phase (before it) is what actually varies cycle to cycle — so ovulation is estimated
+     *  as 14 days before the next predicted start. Real luteal phases range roughly 11-17
+     *  days across people, so treat this as a population-average estimate, not a measurement
+     *  (only basal body temperature, LH strips, or an ultrasound can actually confirm ovulation). */
+    val ovulationDay: Int,
+    val fertileWindowStartDay: Int,
+    val fertileWindowEndDay: Int,
+    val phase: String
 )
+
+private const val LUTEAL_PHASE_DAYS = 14
 
 class CycleRepository(private val dao: CycleLogDao) {
 
@@ -58,11 +70,24 @@ class CycleRepository(private val dao: CycleLogDao) {
         val today = DAY_FORMAT.format(Date())
         val currentDay = (daysBetween(lastStart, today) + 1).coerceAtLeast(1)
 
+        val ovulationDay = (avg - LUTEAL_PHASE_DAYS).coerceAtLeast(7)
+        val fertileStart = (ovulationDay - 5).coerceAtLeast(1)
+        val fertileEnd = ovulationDay + 1
+        val phase = when {
+            currentDay in fertileStart..fertileEnd -> if (currentDay == ovulationDay) "Ovulation" else "Fertile window"
+            currentDay < fertileStart -> "Follicular phase"
+            else -> "Luteal phase"
+        }
+
         return CyclePrediction(
             averageCycleLengthDays = avg,
             predictedNextStart = predicted,
             currentCycleDay = currentDay,
-            isConfident = gaps.size >= 3
+            isConfident = gaps.size >= 3,
+            ovulationDay = ovulationDay,
+            fertileWindowStartDay = fertileStart,
+            fertileWindowEndDay = fertileEnd,
+            phase = phase
         )
     }
 

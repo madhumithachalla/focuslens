@@ -179,7 +179,18 @@ export function recentCycleLogs(days = 30) {
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-/** Rolling average of gaps between the last few logged period starts — your own data, not a clinical model. */
+const LUTEAL_PHASE_DAYS = 14;
+
+/**
+ * Rolling average of gaps between the last few logged period starts — your own data, not a
+ * clinical model. The phase/fertile-window estimate assumes the standard reproductive-health
+ * rule of thumb that the luteal phase (after ovulation) is a fairly consistent ~14 days,
+ * while the follicular phase (before it) is what actually varies — so ovulation is placed 14
+ * days before the next predicted start. Real luteal phases range roughly 11-17 days across
+ * people, so this is a population-average estimate, not a measurement: only basal body
+ * temperature, LH strips, or an ultrasound can actually confirm ovulation. Not a diagnosis
+ * or a contraception method.
+ */
 export function predictNextCycle() {
   const starts = loadAll()
     .cycle.filter((c) => c.periodStart)
@@ -201,7 +212,24 @@ export function predictNextCycle() {
   const today = todayKey();
   const currentDay = Math.max(1, daysBetweenKeys(lastStart, today) + 1);
 
-  return { averageCycleLengthDays: avg, predictedNextStart: predicted, currentCycleDay: currentDay, isConfident: gaps.length >= 3 };
+  const ovulationDay = Math.max(7, avg - LUTEAL_PHASE_DAYS);
+  const fertileStart = Math.max(1, ovulationDay - 5);
+  const fertileEnd = ovulationDay + 1;
+  let phase;
+  if (currentDay >= fertileStart && currentDay <= fertileEnd) phase = currentDay === ovulationDay ? "Ovulation" : "Fertile window";
+  else if (currentDay < fertileStart) phase = "Follicular phase";
+  else phase = "Luteal phase";
+
+  return {
+    averageCycleLengthDays: avg,
+    predictedNextStart: predicted,
+    currentCycleDay: currentDay,
+    isConfident: gaps.length >= 3,
+    ovulationDay,
+    fertileWindowStartDay: fertileStart,
+    fertileWindowEndDay: fertileEnd,
+    phase,
+  };
 }
 
 // ---- Learn read-state ----

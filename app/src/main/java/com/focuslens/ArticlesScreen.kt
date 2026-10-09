@@ -45,7 +45,7 @@ data class LearnItem(
 // confirm a specific deep page resolves from this sandbox (no live browser here) — same
 // policy as the original Reading list: a verified real front page beats a guessed URL
 // that might be dead.
-private val LEARN_ITEMS = listOf(
+val LEARN_ITEMS = listOf(
     LearnItem("who_mental_health", "Mental health of adolescents (fact sheet)", "World Health Organization",
         "https://www.who.int/news-room/fact-sheets/detail/mental-health-of-adolescents", LearnTopic.MENTAL_HEALTH, 1, "Article"),
     LearnItem("nhs_every_mind", "Every Mind Matters", "NHS",

@@ -87,9 +87,11 @@ fun CycleScreen() {
                         )
                         Spacer(Modifier.height(4.dp))
                         Text("Day ${pred.currentCycleDay} · next start around ${formatDate(pred.predictedNextStart)}", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(4.dp))
+                        Text("${pred.phase} · estimated fertile window: day ${pred.fertileWindowStartDay}–${pred.fertileWindowEndDay}", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg) — your own data, not a clinical model. Treat it as a rough guide, not a diagnosis.",
+                            "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg) — your own data, not a clinical model. The phase and fertile window assume a standard ~14-day luteal phase, which varies person to person (roughly 11-17 days) — only basal body temperature, LH strips, or an ultrasound can actually confirm ovulation. Treat all of this as a rough guide, not a diagnosis or contraception method.",
                             fontSize = 11.sp
                         )
                     }
