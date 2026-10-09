@@ -133,7 +133,7 @@ export const MISS_SUGGESTIONS = {
 export const ROADMAP = {
   current: [
     { title: "Journal", brief: "Daily prompts or free writing, one entry per day, with a mood tag and a real streak (celebrates at 3/7/14/30/60/100 days)." },
-    { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts, a rolling-average estimate of your next cycle — your own data, not a clinical prediction." },
+    { title: "Cycle & Energy", brief: "Log a period start or a general energy day. After 2+ logged starts: a rolling-average estimate of your next cycle, current phase (follicular/fertile window/ovulation/luteal), and an estimated fertile window, using the standard ~14-day luteal-phase rule of thumb. An estimate from your own data, not a clinical prediction, diagnosis, or contraception method." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
     { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
     { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education and LGBTQ+ support, gated by a short self-reflection prompt before \"mark as read\" sticks." },
