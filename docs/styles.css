@@ -8,10 +8,22 @@
   --text-muted: #6B6B6B;
   --border: #E3E0D8;
   --danger: #B3261E;
+  /* Cycle phase colors — four distinct hues (not just light/dark of one color), chosen so
+     they stay distinguishable for the common forms of color blindness, and always paired
+     with a text label in the UI, never color alone. */
+  --phase-follicular: #B8872B;
+  --phase-fertile: #C96A3E;
+  --phase-ovulation: #A8336B;
+  --phase-luteal: #4F5584;
   color-scheme: light;
 }
 
 * { box-sizing: border-box; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 html, body {
   margin: 0;
@@ -137,6 +149,7 @@ h1 {
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 13px;
+  font-family: inherit;
   cursor: pointer;
   color: var(--text);
 }
@@ -145,6 +158,7 @@ h1 {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+  font-weight: 700;
 }
 
 button.primary {
@@ -190,7 +204,7 @@ input[type="text"], textarea, select, input[type="number"] {
 
 textarea { resize: vertical; min-height: 70px; }
 
-label.field {
+.field {
   display: block;
   font-size: 12px;
   color: var(--text-muted);

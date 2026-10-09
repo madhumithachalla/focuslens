@@ -1,10 +1,12 @@
 package com.focuslens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -15,6 +17,34 @@ import com.focuslens.data.CyclePrediction
 import com.focuslens.data.CycleRepository
 import com.focuslens.data.ProfileEntity
 import kotlinx.coroutines.launch
+
+/**
+ * Commonly-cited "cycle syncing" guidance — widely circulated wellness framing, not a
+ * clinically proven formula. Everyone's actual experience varies; a starting suggestion to
+ * notice how you feel against, not a rule to follow regardless of how you actually feel.
+ * Colors are four distinct hues (not shades of one color) chosen to stay distinguishable for
+ * common color blindness, and are always shown with the phase name as text, never alone.
+ */
+private data class PhaseGuidance(val color: Color, val text: String)
+
+private val PHASE_GUIDANCE = mapOf(
+    "Follicular phase" to PhaseGuidance(
+        Color(0xFFB8872B),
+        "Energy commonly starts rising through this phase. Often suggested for: starting new projects, planning, brainstorming, and ramping up exercise intensity as you feel able to."
+    ),
+    "Fertile window" to PhaseGuidance(
+        Color(0xFFC96A3E),
+        "Energy and confidence often climb further here. Often suggested for: social plans, presentations, or harder conversations, if that matches how you're feeling."
+    ),
+    "Ovulation" to PhaseGuidance(
+        Color(0xFFA8336B),
+        "Energy often peaks around now for many people. Often suggested for: your most demanding task or a big social event — but only if your own energy actually backs it up today."
+    ),
+    "Luteal phase" to PhaseGuidance(
+        Color(0xFF4F5584),
+        "Energy and focus commonly ease off through this phase, sometimes more sharply near the end. Often suggested for: detail work, wrapping up tasks, gentler exercise, and extra rest."
+    )
+)
 
 @Composable
 fun CycleScreen() {
@@ -78,8 +108,18 @@ fun CycleScreen() {
                     fontSize = 13.sp
                 )
             } else {
+                val guidance = PHASE_GUIDANCE[pred.phase]
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
+                        if (guidance != null) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .background(guidance.color)
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
                         Text(
                             if (pred.isConfident) "ESTIMATED NEXT CYCLE" else "EARLY ESTIMATE (fewer than 3 logged cycles)",
                             fontSize = 11.sp,
@@ -94,6 +134,17 @@ fun CycleScreen() {
                             "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg) — your own data, not a clinical model. The phase and fertile window assume a standard ~14-day luteal phase, which varies person to person (roughly 11-17 days) — only basal body temperature, LH strips, or an ultrasound can actually confirm ovulation. Treat all of this as a rough guide, not a diagnosis or contraception method.",
                             fontSize = 11.sp
                         )
+                        if (guidance != null) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "WHAT PEOPLE COMMONLY DO IN THIS PHASE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = guidance.color
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(guidance.text, fontSize = 12.sp)
+                        }
                     }
                 }
             }
