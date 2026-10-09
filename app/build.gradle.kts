@@ -45,13 +45,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     // No composeOptions{ kotlinCompilerExtensionVersion } block: that mechanism only applied
     // to the old K1 compiler (Kotlin 1.9.x). With Kotlin 2.x, the
     // org.jetbrains.kotlin.plugin.compose plugin applied above handles the Compose compiler,
     // version-aligned with the Kotlin version automatically.
+}
+
+// The old android{ kotlinOptions { jvmTarget = "17" } } (String-typed) is a hard compile
+// error on this Kotlin Gradle plugin version — migrated to the compilerOptions DSL.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {
