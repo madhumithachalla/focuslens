@@ -106,6 +106,27 @@ interface JournalDao {
     suspend fun totalCount(): Int
 }
 
+data class PkgTotal(val pkg: String, val millis: Long, val launches: Int)
+
+@Dao
+interface DailyUsageDao {
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rows: List<DailyUsageEntity>)
+
+    @Query("SELECT * FROM daily_usage WHERE date = :date")
+    suspend fun forDate(date: String): List<DailyUsageEntity>
+
+    /** Every date that has at least one snapshotted row, for checking full coverage of a range. */
+    @Query("SELECT DISTINCT date FROM daily_usage WHERE date BETWEEN :from AND :to")
+    suspend fun datesBetween(from: String, to: String): List<String>
+
+    @Query(
+        "SELECT pkg, SUM(millis) as millis, SUM(launches) as launches FROM daily_usage " +
+            "WHERE date BETWEEN :from AND :to GROUP BY pkg"
+    )
+    suspend fun totals(from: String, to: String): List<PkgTotal>
+}
+
 @Dao
 interface ProfileDao {
     @Insert suspend fun insert(profile: ProfileEntity)

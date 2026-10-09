@@ -32,9 +32,10 @@ class Converters {
         MindfulnessSessionEntity::class,
         WearableSampleEntity::class,
         ProfileEntity::class,
-        JournalEntryEntity::class
+        JournalEntryEntity::class,
+        DailyUsageEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -46,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun wearableDao(): WearableDao
     abstract fun profileDao(): ProfileDao
     abstract fun journalDao(): JournalDao
+    abstract fun dailyUsageDao(): DailyUsageDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
