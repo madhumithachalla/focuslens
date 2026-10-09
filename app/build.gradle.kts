@@ -84,7 +84,9 @@ dependencies {
 
     // Same Firebase project as the web app (focuslens-8805c) — shares accounts and data
     // once community/accountability features are built, via app/google-services.json.
+    // Using the plain (non "-ktx") artifacts: Firebase merged the KTX extensions into the
+    // base libraries a while back, and the BoM no longer manages the old "-ktx" coordinates.
     implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
 }
