@@ -23,12 +23,18 @@ const ROUTES = [
 ];
 
 let currentUser = null;
+let googleRedirectError = null;
 watchAuth((user) => {
   currentUser = user;
   if (currentRoute() === "account") render();
 });
-// Picks up the user coming back from the Google sign-in redirect, if any.
-handleGoogleRedirectResult().catch(() => {});
+// Picks up the user coming back from the Google sign-in redirect, if any. Errors here
+// (unauthorized domain, provider not enabled, etc.) must surface on the Account page, not be
+// swallowed silently — otherwise a failed sign-in just looks like nothing happened.
+handleGoogleRedirectResult().catch((e) => {
+  googleRedirectError = authErrorMessage(e);
+  if (currentRoute() === "account") render();
+});
 
 const nav = document.getElementById("nav");
 const page = document.getElementById("page");
@@ -822,6 +828,10 @@ function renderAccount(container) {
       }
     };
     container.appendChild(googleBtn);
+    if (googleRedirectError) {
+      container.appendChild(el(`<p class="small mt-8" style="color:var(--danger)">${escapeHtml(googleRedirectError)}</p>`));
+      googleRedirectError = null;
+    }
     container.appendChild(el(`
       <div class="small mt-8" style="display:flex;align-items:center;gap:8px;color:var(--text-muted)">
         <span style="flex:1;height:1px;background:currentColor;opacity:0.3"></span>

@@ -84,6 +84,10 @@ export function authErrorMessage(err) {
     "auth/invalid-credential": "Email or password is wrong.",
     "auth/user-not-found": "No account with that email — try signing up instead.",
     "auth/too-many-requests": "Too many attempts — wait a bit and try again.",
+    "auth/operation-not-allowed": "Email sign-in isn't turned on for this project yet — in Firebase console: Authentication → Sign-in method → Email/Password → Enable.",
+    "auth/unauthorized-domain": "This site isn't yet on the allowed list for sign-in — in Firebase console: Authentication → Settings → Authorized domains → add this domain.",
+    "auth/popup-blocked": "The sign-in window was blocked — allow pop-ups for this site and try again.",
+    "auth/user-disabled": "This account has been disabled.",
   };
-  return map[err?.code] || "Something went wrong. Try again.";
+  return map[err?.code] || err?.message || "Something went wrong. Try again.";
 }
