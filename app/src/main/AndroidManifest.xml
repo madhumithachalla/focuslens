@@ -50,6 +50,15 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- Shown for a specific blocked feature (Reels, Shorts) or a blocked site in Chrome. -->
+        <activity
+            android:name=".FeatureBlockedActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
         <!-- Detects which app is in front. Needs the user to switch it on in Accessibility settings. -->
         <service
             android:name=".FocusAccessibilityService"

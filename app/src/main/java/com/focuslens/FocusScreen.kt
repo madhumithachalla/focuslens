@@ -19,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -168,6 +169,100 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            val socialBrowserBlock = remember(rev) { prefs.socialBrowserBlockEnabled() }
+            val academicOnly = remember(rev) { prefs.youtubeAcademicOnly() }
+            val allowlist = remember(rev) { prefs.customAcademicAllowlist() }
+            var newDomain by remember { mutableStateOf("") }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Browser & YouTube content rules", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Block social media in Chrome", fontSize = 14.sp)
+                            Text(
+                                "Blocks the whole site (Instagram, Facebook, X/Twitter, TikTok, Reddit, Snapchat, " +
+                                    "Pinterest, Threads) in Chrome, not just an app. Academic sites (.edu, Google " +
+                                    "Docs/Drive/Classroom, Moodle-style LMS, library/journal sites) are never blocked. " +
+                                    "Reads the address bar only while this is on.",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(checked = socialBrowserBlock, onCheckedChange = {
+                            prefs.setSocialBrowserBlockEnabled(it)
+                            rev++
+                        })
+                    }
+
+                    if (socialBrowserBlock) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Also allow (e.g. a uni portal not on the default list):", fontSize = 12.sp, color = Color.Gray)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = newDomain,
+                                onValueChange = { newDomain = it },
+                                singleLine = true,
+                                placeholder = { Text("example.edu.au", fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(onClick = {
+                                if (newDomain.isNotBlank()) {
+                                    prefs.addAcademicAllow(newDomain)
+                                    newDomain = ""
+                                    rev++
+                                }
+                            }) { Text("Add") }
+                        }
+                        allowlist.forEach { d ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(d, fontSize = 13.sp)
+                                OutlinedButton(onClick = { prefs.removeAcademicAllow(d); rev++ }) { Text("Remove") }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("YouTube: academic/podcast only", fontSize = 14.sp)
+                            Text(
+                                "Blocks anything in YouTube that doesn't look academic or like a podcast " +
+                                    "(a keyword check on the title/channel text on screen — best-effort, not a real " +
+                                    "content check, so it will get some wrong in both directions).",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(checked = academicOnly, onCheckedChange = {
+                            prefs.setYoutubeAcademicOnly(it)
+                            rev++
+                        })
+                    }
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -246,6 +341,28 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
+                }
+
+                val featureName = when (app.packageName) {
+                    SectionDetector.INSTAGRAM -> "Reels"
+                    SectionDetector.YOUTUBE -> "Shorts"
+                    else -> null
+                }
+                if (featureName != null) {
+                    val featureBlocked = remember(rev, app.packageName) {
+                        prefs.isSectionBlocked(app.packageName, featureName)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Block $featureName only (rest of ${app.label} still works)", fontSize = 12.sp, color = Color.Gray)
+                        Switch(checked = featureBlocked, onCheckedChange = {
+                            prefs.setSectionBlocked(app.packageName, featureName, it)
+                            rev++
+                        })
+                    }
                 }
             }
         }

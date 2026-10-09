@@ -185,4 +185,50 @@ class FocusPrefs(context: Context) {
         if (allowed) s.add(pkg) else s.remove(pkg)
         sp.edit().putStringSet("hyperfocus_allow", s).apply()
     }
+
+    // ---- Feature-level blocking: a specific section of an app (Reels, Shorts), not the
+    // whole app. Independent of the daily-limit/skip system above — while this is on,
+    // opening that section is a flat rule with no challenge to beat. ----
+
+    fun blockedSections(pkg: String): Set<String> =
+        sp.getStringSet("blocksec_$pkg", emptySet())?.toSet() ?: emptySet()
+
+    fun isSectionBlocked(pkg: String, section: String) = section in blockedSections(pkg)
+
+    fun setSectionBlocked(pkg: String, section: String, blocked: Boolean) {
+        val s = blockedSections(pkg).toMutableSet()
+        if (blocked) s.add(section) else s.remove(section)
+        sp.edit().putStringSet("blocksec_$pkg", s).apply()
+    }
+
+    // ---- Chrome: block social media domains entirely, never academic ones. Off by default. ----
+
+    fun socialBrowserBlockEnabled(): Boolean = sp.getBoolean("browser_block_social", false)
+
+    fun setSocialBrowserBlockEnabled(on: Boolean) {
+        sp.edit().putBoolean("browser_block_social", on).apply()
+    }
+
+    /** Extra sites the user has personally added to the academic allowlist, on top of the defaults. */
+    fun customAcademicAllowlist(): Set<String> =
+        sp.getStringSet("academic_allow", emptySet())?.toSet() ?: emptySet()
+
+    fun addAcademicAllow(domain: String) {
+        val d = domain.trim().lowercase().removePrefix("https://").removePrefix("http://").removePrefix("www.")
+        if (d.isEmpty()) return
+        sp.edit().putStringSet("academic_allow", customAcademicAllowlist() + d).apply()
+    }
+
+    fun removeAcademicAllow(domain: String) {
+        sp.edit().putStringSet("academic_allow", customAcademicAllowlist() - domain).apply()
+    }
+
+    // ---- YouTube: "academic/podcast only" mode. Off by default; a best-effort keyword
+    // check, not real content classification. ----
+
+    fun youtubeAcademicOnly(): Boolean = sp.getBoolean("yt_academic_only", false)
+
+    fun setYoutubeAcademicOnly(on: Boolean) {
+        sp.edit().putBoolean("yt_academic_only", on).apply()
+    }
 }

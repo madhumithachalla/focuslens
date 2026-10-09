@@ -7,10 +7,15 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 
 /**
- * Watches which app comes to the front. It only reads the app's package name, never
- * what is on the screen. When a blocked app opens, it shows the BlockActivity.
+ * Watches which app comes to the front. By default it only reads the app's package name,
+ * never what is on the screen. Two opt-in settings change that, and only while turned on:
+ * the Chrome social-media block reads the address bar, and YouTube's academic/podcast-only
+ * mode reads on-screen text for a keyword check — both held in memory for one comparison
+ * and discarded. When a blocked app, feature, or site opens, it shows the matching block
+ * screen.
  */
 class FocusAccessibilityService : AccessibilityService() {
 
@@ -48,7 +53,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun sample() {
         val pkg = current
-        if (pkg == null || pkg !in SectionDetector.tracked) {
+        if (pkg == null) {
             lastSampleT = 0L
             return
         }
@@ -59,11 +64,79 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         val root = rootInActiveWindow ?: return
         if (root.packageName?.toString() != pkg) return
+
+        when {
+            pkg in SectionDetector.tracked -> sampleSocialApp(pkg, root)
+            pkg == BrowserDetector.CHROME -> sampleBrowser(root)
+            else -> lastSampleT = 0L
+        }
+    }
+
+    /** Logs time-in-section as before, plus the two feature-level block rules (Reels/Shorts, academic-only YouTube). */
+    private fun sampleSocialApp(pkg: String, root: AccessibilityNodeInfo) {
         val now = System.currentTimeMillis()
         val section = SectionDetector.detect(pkg, root, prefs)
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
+
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        if (now - lastLaunch < 3_000L) return
+
+        val blockedFeature = when {
+            pkg == SectionDetector.INSTAGRAM && section == "Reels" -> "Reels"
+            pkg == SectionDetector.YOUTUBE && section == "Shorts" -> "Shorts"
+            else -> null
+        }
+        if (blockedFeature != null && prefs.isSectionBlocked(pkg, blockedFeature)) {
+            val appName = if (pkg == SectionDetector.INSTAGRAM) "Instagram" else "YouTube"
+            launchFeatureBlock(
+                "$blockedFeature is blocked",
+                "You've turned off $blockedFeature specifically — the rest of $appName still works."
+            )
+            return
+        }
+
+        if (pkg == SectionDetector.YOUTUBE && prefs.youtubeAcademicOnly() &&
+            (section == "Watching a video" || section == "Shorts")
+        ) {
+            val text = YoutubeContent.visibleText(root)
+            if (!YoutubeContent.looksAcademic(text)) {
+                launchFeatureBlock(
+                    "Entertainment is off",
+                    "Academic/podcast-only mode is on for YouTube, and this doesn't look like either. " +
+                        "Best-effort keyword check, not a real content check — turn it off in Focus settings if it's wrong."
+                )
+            }
+        }
+    }
+
+    /** Chrome's own address bar, read only while the social-media browser block is on. */
+    private fun sampleBrowser(root: AccessibilityNodeInfo) {
+        lastSampleT = 0L
+        if (!prefs.socialBrowserBlockEnabled()) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        val now = System.currentTimeMillis()
+        if (now - lastLaunch < 3_000L) return
+        val urlText = BrowserDetector.currentUrl(root) ?: return
+        val host = BrowserDetector.hostOf(urlText)
+        if (BrowserDetector.isSocial(host) && !BrowserDetector.isAcademic(host, prefs.customAcademicAllowlist())) {
+            launchFeatureBlock(
+                "Blocked in Chrome",
+                "$host is on your social media block list. Academic sites are never blocked by this rule."
+            )
+        }
+    }
+
+    private fun launchFeatureBlock(title: String, message: String) {
+        lastLaunch = System.currentTimeMillis()
+        startActivity(
+            Intent(this, FeatureBlockedActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                putExtra("title", title)
+                putExtra("message", message)
+            }
+        )
     }
 
     override fun onServiceConnected() {
@@ -92,7 +165,7 @@ class FocusAccessibilityService : AccessibilityService() {
             ?.defaultDialerPackage
 
     private fun check(pkg: String) {
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
         val now = System.currentTimeMillis()
 
         if (prefs.isHyperFocusActive()) {
