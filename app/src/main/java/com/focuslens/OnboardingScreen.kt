@@ -24,9 +24,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class AgeOption(val bracket: AgeBracket, val label: String)
+// Not private: SettingsScreen.kt reuses these same option lists and ChecklistRow so editing
+// a profile after onboarding shows identical choices, not a second, divergent copy of them.
+data class AgeOption(val bracket: AgeBracket, val label: String)
 
-private val AGE_OPTIONS = listOf(
+val AGE_OPTIONS = listOf(
     AgeOption(AgeBracket.UNDER_18, "Under 18"),
     AgeOption(AgeBracket.AGE_18_24, "18–24"),
     AgeOption(AgeBracket.AGE_25_34, "25–34"),
@@ -36,11 +38,11 @@ private val AGE_OPTIONS = listOf(
 )
 
 /** A dropdown with a real escape hatch — never force someone into a fixed gender list. */
-private const val SELF_DESCRIBE = "Prefer to self-describe"
-private val GENDER_OPTIONS = listOf("Woman", "Man", "Non-binary", SELF_DESCRIBE, "Prefer not to say")
+const val SELF_DESCRIBE = "Prefer to self-describe"
+val GENDER_OPTIONS = listOf("Woman", "Man", "Non-binary", SELF_DESCRIBE, "Prefer not to say")
 
 /** Free-form life-context tags, not a fixed identity — used later to tailor journal prompts and suggestions. */
-private val TOPIC_OPTIONS = listOf(
+val TOPIC_OPTIONS = listOf(
     "student" to "Student",
     "working" to "Working professional",
     "parent" to "Parent / caregiver",
@@ -58,7 +60,7 @@ private val TOPIC_OPTIONS = listOf(
  * (e.g. doom-scrolling → Focus tips first) instead of showing everything with equal weight.
  * "Prefer not to say" is its own exclusive option, same pattern as the cycle-tracking skip.
  */
-private val MOTIVATION_OPTIONS = listOf(
+val MOTIVATION_OPTIONS = listOf(
     "reduce_scrolling" to "Reduce doom-scrolling / social media use",
     "focus" to "Improve focus & productivity",
     "cycle_tracking" to "Track my cycle or energy",
@@ -78,7 +80,7 @@ private val MOTIVATION_OPTIONS = listOf(
  * as elsewhere in this screen; "Not sure" additionally flags MentalHealthScreen to offer real
  * screeners rather than a diagnosis of its own.
  */
-private val NEURODIVERGENT_OPTIONS = listOf(
+val NEURODIVERGENT_OPTIONS = listOf(
     "adhd" to "ADHD / ADD",
     "autism" to "Autism",
     "dyslexia" to "Dyslexia",
@@ -427,7 +429,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
     }
 }
 
-private fun formatYyyyMmDd(date: String): String {
+fun formatYyyyMmDd(date: String): String {
     if (date.length != 8) return date
     val month = date.substring(4, 6).toInt()
     val day = date.substring(6, 8).toInt()
@@ -463,7 +465,7 @@ private fun ScrollThumb(state: androidx.compose.foundation.lazy.LazyListState, m
 }
 
 @Composable
-private fun ChecklistRow(label: String, checked: Boolean, onToggle: () -> Unit, radio: Boolean = false) {
+fun ChecklistRow(label: String, checked: Boolean, onToggle: () -> Unit, radio: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
