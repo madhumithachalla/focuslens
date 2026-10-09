@@ -209,6 +209,54 @@ class UsageRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Per-hour-of-day totals (device local time) for the single calendar day [dayStart,
+     * dayEnd). A session that crosses an hour boundary is split across both hours by actual
+     * overlap, so summing every hour's totals equals the same total [usageBetween] would give
+     * for the same window. Only meaningful while Android's raw event log still covers this
+     * day (about a week) — same constraint as [usageBetween], which is why
+     * UsageHistoryRepository snapshots this before it ages out.
+     */
+    @Suppress("DEPRECATION")
+    fun hourlyBreakdown(dayStart: Long, dayEnd: Long): Map<Int, Map<String, Long>> {
+        val events = usm.queryEvents(dayStart, dayEnd)
+        val event = UsageEvents.Event()
+        val resumedAt = HashMap<String, Long>()
+        val totals = HashMap<Int, HashMap<String, Long>>()
+        val cal = Calendar.getInstance()
+
+        fun addSplitByHour(pkg: String, from: Long, to: Long) {
+            var cursor = from
+            while (cursor < to) {
+                cal.timeInMillis = cursor
+                val hour = cal.get(Calendar.HOUR_OF_DAY)
+                cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+                val hourEnd = cal.timeInMillis + 3_600_000L
+                val sliceEnd = minOf(to, hourEnd)
+                val bucket = totals.getOrPut(hour) { HashMap() }
+                bucket[pkg] = (bucket[pkg] ?: 0L) + (sliceEnd - cursor)
+                cursor = sliceEnd
+            }
+        }
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> resumedAt.putIfAbsent(pkg, event.timeStamp)
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val from = resumedAt.remove(pkg)
+                    if (from != null && event.timeStamp > from) addSplitByHour(pkg, from, event.timeStamp)
+                }
+            }
+        }
+        for ((pkg, from) in resumedAt) if (dayEnd > from) addSplitByHour(pkg, from, dayEnd)
+
+        return totals.mapValues { (_, m) ->
+            m.filter { (pkg, ms) -> ms > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg) }
+        }.filterValues { it.isNotEmpty() }
+    }
+
     private fun isUserApp(pkg: String): Boolean =
         pm.getLaunchIntentForPackage(pkg) != null
 

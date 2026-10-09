@@ -214,8 +214,14 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     val history = remember { UsageHistoryRepository(context, repo) }
     val scope = rememberCoroutineScope()
 
+    var hourlyToday by remember { mutableStateOf<List<com.focuslens.data.HourTotal>>(emptyList()) }
+
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) { history.catchUp() }
+        withContext(Dispatchers.IO) {
+            history.catchUp()
+            history.catchUpHourly()
+        }
+        hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
     }
 
     var customStart by remember { mutableStateOf<Long?>(null) }
@@ -264,6 +270,9 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             } catch (e: Exception) {
                 emptyMap()
             }
+        }
+        if (range == Range.TODAY) {
+            hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
         }
         loading = false
     }
@@ -341,6 +350,10 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {
+                    item { HourlyUsageCard(hourlyToday) }
+                }
+                item { WeeklyReportCard(repo, history) }
                 item { InsightsCard(rows, breakdown, range) }
                 items(rows, key = { it.packageName }) { app ->
                     Column(

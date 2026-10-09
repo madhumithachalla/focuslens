@@ -3,6 +3,8 @@ package com.focuslens
 import android.content.Context
 import com.focuslens.data.AppDatabase
 import com.focuslens.data.DailyUsageEntity
+import com.focuslens.data.HourTotal
+import com.focuslens.data.HourlyUsageEntity
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -22,6 +24,7 @@ import java.util.Locale
 class UsageHistoryRepository(context: Context, private val usage: UsageRepository) {
 
     private val dao = AppDatabase.get(context).dailyUsageDao()
+    private val hourlyDao = AppDatabase.get(context).hourlyUsageDao()
     private val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
 
     /** Snapshots any finished day in the last [daysBack] days that isn't already stored. Call once per app open. */
@@ -37,6 +40,43 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
                 dao.upsertAll(rows.map { DailyUsageEntity(date, it.packageName, it.millis, it.launches) })
             }
         }
+    }
+
+    /** Same idea as [catchUp] but hour-of-day granularity — Android itself never keeps this
+     *  for more than about a week, so capturing it before then is the only way an hourly view
+     *  can ever cover days further back than that. */
+    suspend fun catchUpHourly(daysBack: Int = 7) {
+        val todayStart = startOfDay(System.currentTimeMillis())
+        for (back in 1..daysBack) {
+            val dayStart = todayStart - back * DAY_MS
+            val dayEnd = dayStart + DAY_MS
+            val date = fmt.format(Date(dayStart))
+            if (hourlyDao.hasDate(date) != null) continue
+            val breakdown = usage.hourlyBreakdown(dayStart, dayEnd)
+            val rows = breakdown.flatMap { (hour, byPkg) -> byPkg.map { (pkg, ms) -> HourlyUsageEntity(date, hour, pkg, ms) } }
+            if (rows.isNotEmpty()) hourlyDao.upsertAll(rows)
+        }
+    }
+
+    /** Today's hour-by-hour totals (0-23), always computed live since today isn't a
+     *  "finished" day yet and so is never snapshotted. */
+    suspend fun hourlyTotalsForToday(): List<HourTotal> {
+        val todayStart = startOfDay(System.currentTimeMillis())
+        val breakdown = usage.hourlyBreakdown(todayStart, System.currentTimeMillis())
+        return (0..23).map { h -> HourTotal(h, breakdown[h]?.values?.sum() ?: 0L) }
+    }
+
+    /** Hour-of-day totals summed across the last [days] finished days (from snapshotted Room
+     *  data) plus today so far (computed live) — an approximate "when do I usually use my
+     *  phone" read, not an exact one. */
+    suspend fun hourlyTotalsRecent(days: Int): Map<Int, Long> {
+        val todayStart = startOfDay(System.currentTimeMillis())
+        val from = fmt.format(Date(todayStart - days * DAY_MS))
+        val to = fmt.format(Date(todayStart - DAY_MS))
+        val totals = HashMap<Int, Long>()
+        hourlyDao.hourTotals(from, to).forEach { totals[it.hour] = (totals[it.hour] ?: 0L) + it.millis }
+        hourlyTotalsForToday().forEach { totals[it.hour] = (totals[it.hour] ?: 0L) + it.millis }
+        return totals
     }
 
     /**

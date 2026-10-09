@@ -59,11 +59,13 @@ private fun formatMmdd(mmdd: String): String {
 private fun importBirthdaysFromContacts(context: Context): List<Pair<String, String>> {
     val results = mutableListOf<Pair<String, String>>()
     val resolver = context.contentResolver
+    // Event has no CONTENT_URI of its own (unlike Phone/Email) — birthdays live in the
+    // generic Data table, filtered down to just the Event/birthday rows.
     val cursor = resolver.query(
-        ContactsContract.CommonDataKinds.Event.CONTENT_URI,
+        ContactsContract.Data.CONTENT_URI,
         arrayOf(ContactsContract.CommonDataKinds.Event.DISPLAY_NAME, ContactsContract.CommonDataKinds.Event.START_DATE),
-        "${ContactsContract.CommonDataKinds.Event.TYPE} = ?",
-        arrayOf(ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()),
+        "${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.CommonDataKinds.Event.TYPE} = ?",
+        arrayOf(ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE, ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()),
         null
     )
     cursor?.use {

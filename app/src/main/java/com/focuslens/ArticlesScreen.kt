@@ -49,6 +49,12 @@ data class LearnItem(
 val LEARN_ITEMS = listOf(
     LearnItem("who_mental_health", "Mental health of adolescents (fact sheet)", "World Health Organization",
         "https://www.who.int/news-room/fact-sheets/detail/mental-health-of-adolescents", LearnTopic.MENTAL_HEALTH, 1, "Article"),
+    LearnItem("nimh_anxiety", "Anxiety Disorders", "NIMH (National Institute of Mental Health)",
+        "https://www.nimh.nih.gov/health/topics/anxiety-disorders", LearnTopic.MENTAL_HEALTH, 1, "Article"),
+    LearnItem("nimh_depression", "Depression", "NIMH (National Institute of Mental Health)",
+        "https://www.nimh.nih.gov/health/topics/depression", LearnTopic.MENTAL_HEALTH, 1, "Article"),
+    LearnItem("mha_screening", "Free, confidential mental health screening (anxiety, depression and more)", "Mental Health America",
+        "https://screening.mhanational.org/", LearnTopic.MENTAL_HEALTH, 2, "Professional screener"),
     LearnItem("nhs_every_mind", "Every Mind Matters", "NHS",
         "https://www.nhs.uk/every-mind-matters/", LearnTopic.MENTAL_HEALTH, 1, "Org hub"),
     LearnItem("mind_uk", "Information and support", "Mind (UK mental health charity)",

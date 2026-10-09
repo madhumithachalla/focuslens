@@ -35,9 +35,10 @@ class Converters {
         JournalEntryEntity::class,
         DailyUsageEntity::class,
         PersonEntity::class,
-        BirthdayWishEntity::class
+        BirthdayWishEntity::class,
+        HourlyUsageEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -52,6 +53,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dailyUsageDao(): DailyUsageDao
     abstract fun personDao(): PersonDao
     abstract fun birthdayWishDao(): BirthdayWishDao
+    abstract fun hourlyUsageDao(): HourlyUsageDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null

@@ -127,6 +127,20 @@ interface DailyUsageDao {
     suspend fun totals(from: String, to: String): List<PkgTotal>
 }
 
+data class HourTotal(val hour: Int, val millis: Long)
+
+@Dao
+interface HourlyUsageDao {
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rows: List<HourlyUsageEntity>)
+
+    @Query("SELECT DISTINCT date FROM hourly_usage WHERE date = :date LIMIT 1")
+    suspend fun hasDate(date: String): String?
+
+    @Query("SELECT hour, SUM(millis) as millis FROM hourly_usage WHERE date BETWEEN :from AND :to GROUP BY hour")
+    suspend fun hourTotals(from: String, to: String): List<HourTotal>
+}
+
 @Dao
 interface PersonDao {
     @Insert suspend fun insert(person: PersonEntity): Long

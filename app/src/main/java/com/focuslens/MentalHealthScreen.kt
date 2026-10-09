@@ -36,6 +36,8 @@ private data class DayMood(val date: String, val score: Int?)
  * Falls back to a general pick. Mirrors the same rules in the web app's app.js.
  */
 private val STUDY_RELATED_TOPIC_IDS = setOf("student", "reading", "writing", "other_activities")
+private val NEURODIVERGENT_TAG_IDS = setOf("adhd", "autism", "dyslexia", "dyspraxia", "ocd", "tics")
+private val MENTAL_HEALTH_TAG_IDS = setOf("anxiety", "depression", "other_health_condition")
 
 /**
  * Mood/energy and missed-task signals take priority since they're acute (something's off
@@ -70,11 +72,19 @@ fun MentalHealthScreen() {
     var days by remember { mutableStateOf<List<DayMood>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var suggestion by remember { mutableStateOf<Pair<LearnItem, String>?>(null) }
-    var hasDisclosedNeurodivergent by remember { mutableStateOf(false) }
+    var showNeurodivergentCard by remember { mutableStateOf(false) }
+    var showMentalHealthScreenerCard by remember { mutableStateOf(false) }
+    var disclosureWasNotSure by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val profile = db.profileDao().get()
-        hasDisclosedNeurodivergent = profile?.neurodivergentTags?.isNotBlank() == true
+        // STRICT: "prefer_not_to_say" is mutually exclusive with every other tag at entry
+        // (OnboardingScreen.kt), so if it's set, tags contains nothing else and neither card
+        // below can trigger — the disclosure is respected by construction, not a special case.
+        val healthTags = profile?.neurodivergentTags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+        disclosureWasNotSure = "not_sure" in healthTags
+        showNeurodivergentCard = disclosureWasNotSure || healthTags.any { it in NEURODIVERGENT_TAG_IDS }
+        showMentalHealthScreenerCard = disclosureWasNotSure || healthTags.any { it in MENTAL_HEALTH_TAG_IDS }
         val topics = profile?.topics?.split(",")?.toSet() ?: emptySet()
         val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
         val cal = Calendar.getInstance()
@@ -169,7 +179,7 @@ fun MentalHealthScreen() {
             }
         }
 
-        if (hasDisclosedNeurodivergent) {
+        if (showNeurodivergentCard) {
             Spacer(Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -187,11 +197,53 @@ fun MentalHealthScreen() {
                     Text("NEURODIVERGENCE & ADHD", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF8A6D1F))
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "You shared that this is part of your experience during setup. If it's ever useful, the " +
-                            "Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed by Harvard " +
-                            "Medical School and the WHO — not a diagnosis, just a well-regarded starting point if " +
-                            "you're curious. CHADD and ADDA (in Learn) can connect you with real support if you " +
-                            "want it. Entirely up to you — tap to open the screener, or find more under Learn.",
+                        if (disclosureWasNotSure)
+                            "You said you're not sure during setup — completely fine, that's exactly what a screener " +
+                                "is for. The Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed " +
+                                "by Harvard Medical School and the WHO — not a diagnosis, just a starting point if " +
+                                "you're curious. CHADD and ADDA (in Learn) can connect you with real support. " +
+                                "Entirely optional — tap to open the screener, or find more under Learn."
+                        else
+                            "You shared that this is part of your experience during setup. If it's ever useful, the " +
+                                "Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed by Harvard " +
+                                "Medical School and the WHO — not a diagnosis, just a well-regarded starting point if " +
+                                "you're curious. CHADD and ADDA (in Learn) can connect you with real support if you " +
+                                "want it. Entirely up to you — tap to open the screener, or find more under Learn.",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        if (showMentalHealthScreenerCard) {
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEDE3EC)),
+                onClick = {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://screening.mhanational.org/")
+                        )
+                    )
+                }
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("ANXIETY, DEPRESSION & OTHER HEALTH CONDITIONS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6B3F66))
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (disclosureWasNotSure)
+                            "You said you're not sure during setup — Mental Health America's free, confidential " +
+                                "screening covers anxiety, depression and more, built from the same real clinical " +
+                                "questionnaires (GAD-7, PHQ-9) clinicians use. Not a diagnosis — just a real, quick " +
+                                "way to check if you're curious. Entirely optional — tap to open it, or find more " +
+                                "under Learn."
+                        else
+                            "You shared that this is part of your experience during setup. Mental Health America's " +
+                                "free, confidential screening (the same GAD-7/PHQ-9 questionnaires clinicians use) " +
+                                "is a real starting point, not a diagnosis — and NIMH's own pages on anxiety and " +
+                                "depression (in Learn) are a grounded place to read more. Entirely up to you.",
                         fontSize = 12.sp
                     )
                 }
