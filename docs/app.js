@@ -5,7 +5,10 @@ import {
 } from "./content.js";
 import * as store from "./storage.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
-import { watchAuth, signUp, signIn, signOutUser, authErrorMessage } from "./firebase.js";
+import {
+  watchAuth, signUp, signIn, signOutUser, authErrorMessage,
+  signInWithGoogle, handleGoogleRedirectResult,
+} from "./firebase.js";
 
 const ROUTES = [
   { id: "roadmap", label: "Roadmap" },
@@ -23,6 +26,8 @@ watchAuth((user) => {
   currentUser = user;
   if (currentRoute() === "account") render();
 });
+// Picks up the user coming back from the Google sign-in redirect, if any.
+handleGoogleRedirectResult().catch(() => {});
 
 const nav = document.getElementById("nav");
 const page = document.getElementById("page");
@@ -681,7 +686,24 @@ function renderAccount(container) {
       </div>
     `));
 
-    const tabs = el(`<div class="chips"></div>`);
+    const googleBtn = el(`<button type="button" class="outline" style="width:100%">Continue with Google</button>`);
+    googleBtn.onclick = async () => {
+      try {
+        await signInWithGoogle();
+      } catch (e) {
+        alert(authErrorMessage(e));
+      }
+    };
+    container.appendChild(googleBtn);
+    container.appendChild(el(`
+      <div class="small mt-8" style="display:flex;align-items:center;gap:8px;color:var(--text-muted)">
+        <span style="flex:1;height:1px;background:currentColor;opacity:0.3"></span>
+        or use email
+        <span style="flex:1;height:1px;background:currentColor;opacity:0.3"></span>
+      </div>
+    `));
+
+    const tabs = el(`<div class="chips mt-8"></div>`);
     ["signin", "signup"].forEach((m) => {
       const chip = el(`<button type="button" class="chip${mode === m ? " active" : ""}" aria-pressed="${mode === m}">${m === "signin" ? "Sign in" : "Sign up"}</button>`);
       chip.onclick = () => { mode = m; draw(); };

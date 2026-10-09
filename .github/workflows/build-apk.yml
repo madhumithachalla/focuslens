@@ -45,6 +45,13 @@ jobs:
         # Playlists tab just shows "no Spotify Client ID configured".
         run: echo "SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}" >> local.properties
 
+      - name: Write Google Web Client ID
+        # GOOGLE_WEB_CLIENT_ID is a repo secret (Settings > Secrets and variables >
+        # Actions) — the "Web client ID" shown in Firebase console > Authentication >
+        # Sign-in method > Google, once that provider is enabled. Without it, the build
+        # still succeeds — the Account screen's Google button just shows "not configured".
+        run: echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> local.properties
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
 

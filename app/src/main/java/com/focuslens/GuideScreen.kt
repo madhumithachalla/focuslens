@@ -38,7 +38,7 @@ private val SECTIONS = listOf(
     GuideSection("🎬", "Explore", "A short curated list of real books, movies and series, filterable by interest. Not a live catalog and not linked to a specific streaming service — availability changes too often and by region to point at honestly."),
     GuideSection("🎁", "Reward suggestions", "After you resist opening a blocked app, or finish a Study Mode session, FocusLens offers one small, real-world thing to do with the moment — a stretch, a message to a friend, a glass of water. Plain curated list, no points or levels to chase."),
     GuideSection("🎧", "Playlists", "Connects to your own installed Spotify app (not a separate login) and plays curated focus playlists — lo-fi, deep focus, rain."),
-    GuideSection("👤", "Account", "Optional email sign-in, same Firebase project as the web app — one account either way. Doesn't sync Journal/Cycle/To-do data yet (still local to this device); it's the foundation the community, achievement-sharing, and accountability-partner features will build on.")
+    GuideSection("👤", "Account", "Optional sign-in with Google or email, same Firebase project as the web app — one account either way. Doesn't sync Journal/Cycle/To-do data yet (still local to this device); it's the foundation the community, achievement-sharing, and accountability-partner features will build on.")
 )
 
 @Composable

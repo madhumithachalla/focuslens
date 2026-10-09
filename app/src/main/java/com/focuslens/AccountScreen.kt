@@ -5,13 +5,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.gms.tasks.Task
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -38,6 +46,42 @@ private fun authErrorMessage(e: Exception): String {
 }
 
 /**
+ * Credential Manager is the current (non-deprecated) Android API for "Sign in with Google" —
+ * it replaces the old GoogleSignInClient SDK. Needs BuildConfig.GOOGLE_WEB_CLIENT_ID (the
+ * "Web client ID" Firebase shows once Google sign-in is enabled for this project) and the
+ * app's signing-certificate SHA-1 registered in the Firebase console, or it fails with a
+ * DEVELOPER_ERROR-style exception.
+ */
+private suspend fun signInWithGoogle(context: android.content.Context, auth: FirebaseAuth, db: FirebaseFirestore) {
+    val option = GetGoogleIdOption.Builder()
+        .setFilterByAuthorizedAccounts(false)
+        .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+        .build()
+    val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+    val result = CredentialManager.create(context).getCredential(context, request)
+    val credential = result.credential
+    if (credential is CustomCredential &&
+        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+    ) {
+        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+        val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+        val authResult = auth.signInWithCredential(firebaseCredential).awaitResult()
+        val signedInUser = authResult.user!!
+        // merge: true so a returning user's doc isn't clobbered, just kept current.
+        db.collection("users").document(signedInUser.uid).set(
+            mapOf(
+                "displayName" to signedInUser.displayName,
+                "email" to signedInUser.email,
+                "createdAt" to System.currentTimeMillis()
+            ),
+            com.google.firebase.firestore.SetOptions.merge()
+        ).awaitResult()
+    } else {
+        throw IllegalStateException("Unexpected credential type from Google sign-in.")
+    }
+}
+
+/**
  * Email sign-in via the same Firebase project as the web app (focuslens-8805c) — same
  * accounts, same Firestore `users` collection, so a future community/sharing/accountability
  * feature works identically on both. Doesn't sync Journal/Cycle/To-do data to the account
@@ -45,6 +89,7 @@ private fun authErrorMessage(e: Exception): String {
  */
 @Composable
 fun AccountScreen() {
+    val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
     val db = remember { FirebaseFirestore.getInstance() }
     val scope = rememberCoroutineScope()
@@ -55,6 +100,27 @@ fun AccountScreen() {
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+
+    fun onGoogleClick() {
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
+            error = "Google sign-in isn't configured yet — see build.gradle.kts."
+            return
+        }
+        error = null
+        loading = true
+        scope.launch {
+            try {
+                signInWithGoogle(context, auth, db)
+                user = auth.currentUser
+            } catch (e: GetCredentialException) {
+                error = "Google sign-in was cancelled or unavailable."
+            } catch (e: Exception) {
+                error = authErrorMessage(e)
+            } finally {
+                loading = false
+            }
+        }
+    }
 
     val current = user
     if (current != null) {
@@ -89,6 +155,20 @@ fun AccountScreen() {
                 "features once they're live.",
             fontSize = 13.sp
         )
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(
+            enabled = !loading,
+            onClick = ::onGoogleClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Continue with Google")
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            HorizontalDivider(modifier = Modifier.weight(1f))
+            Text("  or use email  ", fontSize = 12.sp, color = Color.Gray)
+            HorizontalDivider(modifier = Modifier.weight(1f))
+        }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = mode == "signin", onClick = { mode = "signin"; error = null }, label = { Text("Sign in") })

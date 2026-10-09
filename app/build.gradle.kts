@@ -24,11 +24,33 @@ android {
         // local.properties as SPOTIFY_CLIENT_ID=... (gitignored, so it's never committed).
         val spotifyClientId = project.findProperty("SPOTIFY_CLIENT_ID") as String? ?: ""
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
+
+        // Firebase console → Authentication → Sign-in method → Google → "Web SDK
+        // configuration" shows a Web client ID once Google sign-in is enabled. Paste it into
+        // local.properties as GOOGLE_WEB_CLIENT_ID=... (gitignored). Needed as the
+        // serverClientId for Credential Manager's Google ID flow in AccountScreen.kt.
+        val googleWebClientId = project.findProperty("GOOGLE_WEB_CLIENT_ID") as String? ?: ""
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    signingConfigs {
+        // A fixed, checked-in debug keystore (app/debug.keystore) instead of Gradle's default
+        // per-machine one (~/.android/debug.keystore). Google Sign-In validates the app's
+        // signing-certificate SHA-1 against what's registered in the Firebase console — with
+        // the default keystore, CI would regenerate a different one (and a different SHA-1)
+        // on every run, permanently breaking that validation. This keystore's passwords are
+        // the well-known Android debug defaults; it signs debug builds only, never release.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -100,4 +122,10 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:35.0.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+
+    // "Continue with Google" on the Account screen: Credential Manager is the current
+    // (non-deprecated) Android API for this, replacing the old Google Sign-In SDK.
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }
