@@ -75,6 +75,18 @@ export async function getUserProfile(uid) {
   return snap.exists() ? snap.data() : null;
 }
 
+// Journal/Cycle/To-do/etc. — the whole local app-state blob, mirrored one document per user so
+// it follows the account across browsers/devices. Needs a Firestore rule letting a signed-in
+// user read/write only their own users/{uid}/data/state document (see firestore.rules.md).
+export async function pushAppState(uid, state) {
+  await setDoc(doc(db, "users", uid, "data", "state"), state);
+}
+
+export async function pullAppState(uid) {
+  const snap = await getDoc(doc(db, "users", uid, "data", "state"));
+  return snap.exists() ? snap.data() : null;
+}
+
 export function authErrorMessage(err) {
   const map = {
     "auth/email-already-in-use": "That email already has an account — try signing in instead.",

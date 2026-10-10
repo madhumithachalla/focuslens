@@ -27,6 +27,11 @@ let googleRedirectError = null;
 watchAuth((user) => {
   currentUser = user;
   updateAuthTrigger();
+  if (user) {
+    store.syncOnSignIn(user.uid).then(render);
+  } else {
+    store.clearSyncUser();
+  }
   if (currentRoute() === "account") render();
 });
 // Picks up the user coming back from the Google sign-in redirect, if any. Errors here
@@ -975,7 +980,7 @@ function renderAccount(container) {
     `));
     container.appendChild(el(`
       <div class="card soft">
-        <p class="small" style="margin-bottom:0">Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built. Your Journal/Cycle/To-do data on this page stays in this browser for now, not yet synced to this account.</p>
+        <p class="small" style="margin-bottom:0">Journal/Cycle/To-do/Birthdays data now follows this account — sign in on another browser or device and it syncs automatically. Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built.</p>
       </div>
     `));
     const out = el(`<button class="outline mt-8">Sign out</button>`);

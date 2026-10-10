@@ -2,8 +2,13 @@
 // written so swapping the body for a Firestore read/write later doesn't change any caller —
 // this is the seam where cross-device sync will plug in once the Firebase web app exists.
 import { MISS_SUGGESTIONS } from "./content.js";
+import { pushAppState, pullAppState } from "./firebase.js";
 
 const KEY = "focuslens_web_v1";
+
+// Set once signed in (see syncOnSignIn/clearSyncUser) so every local save also mirrors to
+// Firestore. null while signed out — saves stay local-only, same as before accounts existed.
+let syncUid = null;
 
 function loadAll() {
   try {
@@ -15,11 +20,39 @@ function loadAll() {
 }
 
 function saveAll(state) {
+  state.updatedAt = Date.now();
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch (e) {
     // Private browsing / full storage: the app still works for this session, just doesn't persist.
   }
+  if (syncUid) {
+    // Fire-and-forget: a failed push (offline, rules not set up yet) shouldn't block local use.
+    pushAppState(syncUid, state).catch(() => {});
+  }
+}
+
+// Called once on sign-in. Pulls whichever copy (this browser's or the account's) is newer and
+// makes that the local copy, then starts mirroring future saves to Firestore. Last-write-wins
+// by timestamp — fine for one person's own data across their own devices, not a real-time merge.
+export async function syncOnSignIn(uid) {
+  syncUid = uid;
+  const local = loadAll();
+  let remote = null;
+  try {
+    remote = await pullAppState(uid);
+  } catch (e) {
+    return; // offline, or Firestore rules not set up yet — keep working locally
+  }
+  if (remote && (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+    saveAll(remote);
+  } else {
+    pushAppState(uid, local).catch(() => {});
+  }
+}
+
+export function clearSyncUser() {
+  syncUid = null;
 }
 
 function defaultState() {
