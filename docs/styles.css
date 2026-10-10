@@ -94,8 +94,17 @@ html, body {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 20px;
   font-weight: 700;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 25px;
+  flex: 0 0 auto;
 }
 
 .brand-sub {

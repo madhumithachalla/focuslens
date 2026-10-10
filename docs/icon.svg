@@ -1,4 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
   <rect width="192" height="192" rx="36" fill="#1F3A34"/>
-  <text x="96" y="124" font-family="Georgia, serif" font-size="92" font-weight="700" fill="#F7F5F0" text-anchor="middle">FL</text>
+  <g transform="translate(26.88,39.73) scale(0.6284)">
+    <path d="M 5 80
+    C 10 68, 22 58, 40 56
+    C 55 54, 62 46, 72 36
+    C 95 16, 135 10, 168 22
+    C 198 33, 210 58, 200 82
+    C 193 98, 175 110, 155 113
+    C 130 117, 100 115, 78 104
+    C 58 95, 42 88, 30 86
+    C 20 85, 11 84, 5 80
+    Z" fill="#4EA8F7"/>
+    <path d="M 70 40 C 80 32, 95 28, 108 30" fill="none" stroke="#4EA8F7" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="92" cy="52" r="14" fill="#102420"/>
+    <circle cx="95" cy="54" r="8.2" fill="#F7F5F0"/>
+    <circle cx="98.5" cy="50.5" r="2.4" fill="#102420"/>
+  </g>
 </svg>
