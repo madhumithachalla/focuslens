@@ -88,6 +88,7 @@ export function authErrorMessage(err) {
     "auth/unauthorized-domain": "This site isn't yet on the allowed list for sign-in — in Firebase console: Authentication → Settings → Authorized domains → add this domain.",
     "auth/popup-blocked": "The sign-in window was blocked — allow pop-ups for this site and try again.",
     "auth/user-disabled": "This account has been disabled.",
+    "auth/configuration-not-found": "Authentication hasn't been turned on for this Firebase project yet — in Firebase console: Authentication → click \"Get started\" (this is a one-time setup step, separate from enabling any specific provider). Until that's done, every sign-in method — Google and email both — will fail with this same error.",
   };
   return map[err?.code] || err?.message || "Something went wrong. Try again.";
 }
