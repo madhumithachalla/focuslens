@@ -14,10 +14,28 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <div class="brand">FocusLens <span class="brand-sub">web</span></div>
+      <div class="topbar-top">
+        <button type="button" id="nav-toggle" class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav">☰</button>
+        <div class="brand">FocusLens <span class="brand-sub">web</span></div>
+        <div class="get-app" id="get-app">
+          <button type="button" id="auth-trigger">Sign in</button>
+          <button type="button" id="install-btn" hidden>Install app</button>
+          <a id="android-link" class="get-app-link" href="https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk" target="_blank" rel="noopener">Android APK ↓</a>
+        </div>
+      </div>
       <nav id="nav" class="nav"></nav>
     </header>
+    <div id="ios-install-tip" class="ios-install-tip" hidden>
+      <p>Add FocusLens to your home screen: tap the Share icon, then "Add to Home Screen".</p>
+      <button type="button" id="ios-install-dismiss">Got it</button>
+    </div>
     <main id="page" class="page"></main>
+  </div>
+  <div id="auth-modal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <button type="button" id="auth-modal-close" class="modal-close" aria-label="Close">×</button>
+      <div id="auth-modal-body"></div>
+    </div>
   </div>
   <script type="module" src="app.js"></script>
 </body>

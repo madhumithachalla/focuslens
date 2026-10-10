@@ -50,6 +50,49 @@ html, body {
   z-index: 10;
 }
 
+.topbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 18px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .nav-toggle { display: inline-flex; order: -1; }
+  .topbar { position: sticky; }
+  .nav {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--primary);
+    padding: 4px 16px 16px;
+    overflow-x: visible;
+  }
+  .nav.open { display: flex; }
+  .nav button {
+    width: 100%;
+    text-align: left;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+}
+
 .brand {
   font-size: 20px;
   font-weight: 700;
@@ -59,6 +102,86 @@ html, body {
   font-weight: 400;
   opacity: 0.7;
   font-size: 14px;
+}
+
+.get-app {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.get-app button,
+.get-app-link {
+  background: #fff;
+  color: var(--primary);
+  border: none;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ios-install-tip {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 11;
+  background: var(--primary-soft);
+  color: var(--text);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.ios-install-tip button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 20;
+}
+
+.modal-card {
+  position: relative;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 8px;
 }
 
 .nav {

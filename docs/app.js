@@ -26,6 +26,7 @@ let currentUser = null;
 let googleRedirectError = null;
 watchAuth((user) => {
   currentUser = user;
+  updateAuthTrigger();
   if (currentRoute() === "account") render();
 });
 // Picks up the user coming back from the Google sign-in redirect, if any. Errors here
@@ -39,10 +40,64 @@ handleGoogleRedirectResult().catch((e) => {
 const nav = document.getElementById("nav");
 const page = document.getElementById("page");
 
+// ---------------------------------------------------------------- Install / Add to Home Screen
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
+const installBtn = document.getElementById("install-btn");
+let deferredInstallPrompt = null;
+
+// Chrome/Edge/Android fire this when the page meets their installability criteria (manifest +
+// service worker + HTTPS). Capturing it lets a real button trigger the native prompt, instead
+// of relying on whatever each browser's own menu happens to call it.
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtn.hidden = false;
+});
+
+installBtn.onclick = async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.hidden = true;
+};
+
+window.addEventListener("appinstalled", () => {
+  installBtn.hidden = true;
+});
+
+// iOS Safari never fires beforeinstallprompt and has no programmatic install API — the only
+// way to add to the home screen there is the manual Share-sheet step, so show instructions
+// instead of a non-functional button. Skipped if already running standalone (already added).
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+let iosTipDismissed = false;
+try { iosTipDismissed = !!localStorage.getItem("focuslens_ios_tip_dismissed"); } catch (e) {}
+if (isIos && !isStandalone && !iosTipDismissed) {
+  const tip = document.getElementById("ios-install-tip");
+  tip.hidden = false;
+  document.getElementById("ios-install-dismiss").onclick = () => {
+    tip.hidden = true;
+    try { localStorage.setItem("focuslens_ios_tip_dismissed", "1"); } catch (e) {}
+  };
+}
+
 function currentRoute() {
   const hash = location.hash.replace("#", "");
   return ROUTES.some((r) => r.id === hash) ? hash : "roadmap";
 }
+
+const navToggle = document.getElementById("nav-toggle");
+navToggle.onclick = () => {
+  const isOpen = nav.classList.toggle("open");
+  navToggle.setAttribute("aria-expanded", String(isOpen));
+};
 
 function renderNav() {
   const active = currentRoute();
@@ -51,10 +106,56 @@ function renderNav() {
     const btn = document.createElement("button");
     btn.textContent = r.label;
     btn.className = r.id === active ? "active" : "";
-    btn.onclick = () => { location.hash = r.id; };
+    btn.onclick = () => {
+      location.hash = r.id;
+      // Only relevant on the narrow/hamburger layout — harmless no-op otherwise.
+      nav.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+    };
     nav.appendChild(btn);
   });
 }
+
+// ---------------------------------------------------------------- Sign-in popup
+
+const authModal = document.getElementById("auth-modal");
+const authModalBody = document.getElementById("auth-modal-body");
+const authTrigger = document.getElementById("auth-trigger");
+
+function updateAuthTrigger() {
+  authTrigger.textContent = currentUser ? (currentUser.displayName || currentUser.email || "Account") : "Sign in";
+}
+
+function openAuthModal() {
+  authModalBody.innerHTML = "";
+  authModalBody.appendChild(el(`<h2 style="margin-top:0;margin-bottom:4px">Sign in</h2>`));
+  const formContainer = el(`<div></div>`);
+  authModalBody.appendChild(formContainer);
+  renderAuthForm(formContainer, () => {
+    closeAuthModal();
+    updateAuthTrigger();
+    if (currentRoute() === "account") render();
+  });
+  authModal.hidden = false;
+}
+
+function closeAuthModal() {
+  authModal.hidden = true;
+}
+
+document.getElementById("auth-modal-close").onclick = closeAuthModal;
+authModal.addEventListener("click", (e) => {
+  if (e.target === authModal) closeAuthModal();
+});
+
+authTrigger.onclick = () => {
+  if (currentUser) {
+    location.hash = "account";
+    nav.classList.remove("open");
+  } else {
+    openAuthModal();
+  }
+};
 
 function render() {
   renderNav();
@@ -790,34 +891,12 @@ function renderBirthdays(container) {
 
 // ---------------------------------------------------------------- Account
 
-function renderAccount(container) {
-  if (currentUser) {
-    container.appendChild(el(`
-      <div>
-        <h1>Account</h1>
-        <p class="subtitle">Signed in as <span class="bold">${escapeHtml(currentUser.displayName || currentUser.email)}</span>.</p>
-      </div>
-    `));
-    container.appendChild(el(`
-      <div class="card soft">
-        <p class="small" style="margin-bottom:0">Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built. Your Journal/Cycle/To-do data on this page stays in this browser for now, not yet synced to this account.</p>
-      </div>
-    `));
-    const out = el(`<button class="outline mt-8">Sign out</button>`);
-    out.onclick = async () => { await signOutUser(); render(); };
-    container.appendChild(out);
-    return;
-  }
-
+// Shared by the Account page and the header's sign-in popup, so there's one real
+// implementation of the form instead of two copies that could drift apart.
+function renderAuthForm(container, onSuccess) {
   let mode = "signin";
   function draw() {
     container.innerHTML = "";
-    container.appendChild(el(`
-      <div>
-        <h1>Account</h1>
-        <p class="subtitle">Sign in so your data can eventually follow you across devices, and so you can use community features once they're live.</p>
-      </div>
-    `));
 
     const googleBtn = el(`<button type="button" class="outline" style="width:100%">Continue with Google</button>`);
     googleBtn.onclick = async () => {
@@ -876,7 +955,7 @@ function renderAccount(container) {
         } else {
           await signIn(email, password);
         }
-        render();
+        onSuccess();
       } catch (e) {
         errorEl.textContent = authErrorMessage(e);
         errorEl.style.display = "block";
@@ -884,6 +963,36 @@ function renderAccount(container) {
     };
   }
   draw();
+}
+
+function renderAccount(container) {
+  if (currentUser) {
+    container.appendChild(el(`
+      <div>
+        <h1>Account</h1>
+        <p class="subtitle">Signed in as <span class="bold">${escapeHtml(currentUser.displayName || currentUser.email)}</span>.</p>
+      </div>
+    `));
+    container.appendChild(el(`
+      <div class="card soft">
+        <p class="small" style="margin-bottom:0">Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built. Your Journal/Cycle/To-do data on this page stays in this browser for now, not yet synced to this account.</p>
+      </div>
+    `));
+    const out = el(`<button class="outline mt-8">Sign out</button>`);
+    out.onclick = async () => { await signOutUser(); render(); };
+    container.appendChild(out);
+    return;
+  }
+
+  container.appendChild(el(`
+    <div>
+      <h1>Account</h1>
+      <p class="subtitle">Sign in so your data can eventually follow you across devices, and so you can use community features once they're live.</p>
+    </div>
+  `));
+  const formContainer = el(`<div></div>`);
+  container.appendChild(formContainer);
+  renderAuthForm(formContainer, () => render());
 }
 
 function renderRewardCard(title) {
