@@ -43,7 +43,9 @@ private fun authErrorMessage(e: Exception): String {
         "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts — wait a bit and try again."
         "ERROR_OPERATION_NOT_ALLOWED" -> "Email sign-in isn't turned on for this project yet — in Firebase console: Authentication → Sign-in method → Email/Password → Enable."
         "ERROR_USER_DISABLED" -> "This account has been disabled."
-        else -> e.message ?: "Something went wrong. Try again."
+        else -> if (e.message?.contains("CONFIGURATION_NOT_FOUND") == true)
+            "Authentication hasn't been turned on for this Firebase project yet — in Firebase console: Authentication → click \"Get started\" (a one-time setup step, separate from enabling any specific provider). Until that's done, every sign-in method — Google and email both — fails with this same error."
+        else e.message ?: "Something went wrong. Try again."
     }
 }
 
