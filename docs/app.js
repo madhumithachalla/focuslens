@@ -15,6 +15,7 @@ const ROUTES = [
   { id: "journal", label: "Journal" },
   { id: "cycle", label: "Tracking" },
   { id: "tasks", label: "To-do" },
+  { id: "alarms", label: "Alarms" },
   { id: "mental-health", label: "Mental health" },
   { id: "learn", label: "Learn" },
   { id: "explore", label: "Explore" },
@@ -24,6 +25,11 @@ const ROUTES = [
 
 let currentUser = null;
 let googleRedirectError = null;
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+let alarmAudioCtx = null;
+let alarmLoopId = null;
+let alarmWakeLock = null;
+let firingAlarm = null;
 watchAuth((user) => {
   currentUser = user;
   updateAuthTrigger();
@@ -171,6 +177,7 @@ function render() {
     journal: renderJournal,
     cycle: renderCycle,
     tasks: renderTasks,
+    alarms: renderAlarms,
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
@@ -619,6 +626,189 @@ function renderTaskRow(t) {
     render();
   };
 
+  return row;
+}
+
+// ---------------------------------------------------------------- Alarms
+//
+// Honest limits, stated here once instead of re-derived at every call site: a browser tab can
+// play a loud looping sound and vibrate reliably while it stays open (including with the
+// screen locked on many Android phones, as long as the browser/PWA process itself hasn't been
+// killed) — but no website on any platform can fire anything after the tab or app is fully
+// closed, or the phone is powered off. That's a platform limit, not a bug here. The Android
+// app's own alarm (AlarmManager) is the one that survives being closed — this is the web
+// best-effort version, with that caveat shown directly in the UI so it never looks "broken."
+
+function minuteKey(d = new Date()) {
+  return `${d.getFullYear()}${d.getMonth()}${d.getDate()}-${d.getHours()}:${d.getMinutes()}`;
+}
+
+function checkAlarms() {
+  if (firingAlarm) return;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const key = minuteKey(now);
+  for (const a of store.listAlarms()) {
+    if (!a.enabled || a.time !== hhmm || a.lastFiredKey === key) continue;
+    if (a.days.length > 0 && !a.days.includes(now.getDay())) continue;
+    store.markAlarmFired(a.id, key);
+    triggerAlarm(a);
+    break;
+  }
+}
+setInterval(checkAlarms, 1000);
+
+async function armWakeLock() {
+  try {
+    if ("wakeLock" in navigator) alarmWakeLock = await navigator.wakeLock.request("screen");
+  } catch (e) { /* not supported, or page not visible — alarm still checks via setInterval */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && store.listAlarms().some((a) => a.enabled)) armWakeLock();
+});
+
+function triggerAlarm(alarm) {
+  firingAlarm = alarm;
+  if (Notification && Notification.permission === "granted") {
+    try { new Notification("Alarm: " + alarm.label, { body: "Tap to open FocusLens", tag: "focuslens-alarm" }); } catch (e) {}
+  }
+  if (navigator.vibrate) {
+    try { navigator.vibrate([600, 300, 600, 300, 600, 300, 600]); } catch (e) {}
+  }
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    alarmAudioCtx = new Ctx();
+    const beep = () => {
+      if (!alarmAudioCtx) return;
+      const osc = alarmAudioCtx.createOscillator();
+      const gain = alarmAudioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      gain.gain.value = 1; // max — this needs to actually wake someone up
+      osc.connect(gain).connect(alarmAudioCtx.destination);
+      osc.start();
+      osc.stop(alarmAudioCtx.currentTime + 0.35);
+    };
+    beep();
+    alarmLoopId = setInterval(beep, 600);
+  } catch (e) { /* Web Audio unavailable — vibration/notification are the fallback */ }
+
+  const overlay = el(`
+    <div id="alarm-overlay" style="position:fixed;inset:0;background:#B3261E;color:#fff;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px">
+      <div style="font-size:48px">⏰</div>
+      <div style="font-size:28px;font-weight:700">${escapeHtml(alarm.label)}</div>
+      <div style="font-size:16px;opacity:.85">${alarm.time}</div>
+      <div style="display:flex;gap:12px;margin-top:10px">
+        <button id="alarm-snooze" class="outline" style="background:transparent;border:1px solid #fff;color:#fff;padding:12px 20px;border-radius:10px;font-size:15px">Snooze 5 min</button>
+        <button id="alarm-dismiss" class="primary" style="background:#fff;color:#B3261E;border:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:15px">Dismiss</button>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(overlay);
+
+  const stop = () => {
+    if (alarmLoopId) clearInterval(alarmLoopId);
+    if (alarmAudioCtx) { alarmAudioCtx.close().catch(() => {}); alarmAudioCtx = null; }
+    if (navigator.vibrate) navigator.vibrate(0);
+    overlay.remove();
+    firingAlarm = null;
+  };
+  overlay.querySelector("#alarm-dismiss").onclick = stop;
+  overlay.querySelector("#alarm-snooze").onclick = () => {
+    stop();
+    const snoozeAt = new Date(Date.now() + 5 * 60 * 1000);
+    store.addAlarm(
+      `${String(snoozeAt.getHours()).padStart(2, "0")}:${String(snoozeAt.getMinutes()).padStart(2, "0")}`,
+      alarm.label + " (snoozed)",
+      []
+    );
+    if (currentRoute() === "alarms") render();
+  };
+}
+
+function renderAlarms(container) {
+  container.appendChild(el(`
+    <div>
+      <h1>Alarms</h1>
+      <p class="subtitle">A loud alarm, right from this page — no app install needed.</p>
+    </div>
+  `));
+
+  container.appendChild(el(`
+    <div class="card soft">
+      <p class="small" style="margin:0">Works while this tab (or the installed app) stays open — including with your screen locked on most Android phones. No website can ring after the tab is fully closed or the phone is off; that's a browser/OS limit on every site, not just this one. For an alarm that survives closing the app entirely, use the FocusLens Android app's own alarm instead.</p>
+    </div>
+  `));
+
+  const addCard = el(`
+    <div class="card">
+      <label class="field" for="alarm-time">Time</label>
+      <input type="time" id="alarm-time" />
+      <label class="field" for="alarm-label">Label (optional)</label>
+      <input type="text" id="alarm-label" placeholder="Wake up, Take a break…" />
+      <label class="field" style="margin-bottom:6px">Repeat (leave all off for a one-time alarm)</label>
+      <div class="chips" id="alarm-days" style="margin-bottom:0"></div>
+      <div class="mt-8"><button class="primary" id="alarm-add">Add alarm</button></div>
+    </div>
+  `);
+  container.appendChild(addCard);
+
+  const selectedDays = new Set();
+  const dayChips = addCard.querySelector("#alarm-days");
+  DAY_LABELS.forEach((label, idx) => {
+    const chip = el(`<button type="button" class="chip">${label}</button>`);
+    chip.onclick = () => {
+      if (selectedDays.has(idx)) { selectedDays.delete(idx); chip.classList.remove("active"); }
+      else { selectedDays.add(idx); chip.classList.add("active"); }
+    };
+    dayChips.appendChild(chip);
+  });
+
+  addCard.querySelector("#alarm-add").onclick = () => {
+    const time = addCard.querySelector("#alarm-time").value;
+    if (!time) return;
+    const label = addCard.querySelector("#alarm-label").value.trim();
+    store.addAlarm(time, label, [...selectedDays].sort());
+    if (Notification && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+    armWakeLock();
+    render();
+  };
+
+  const alarms = store.listAlarms();
+  if (alarms.length === 0) {
+    container.appendChild(el(`<p class="muted">No alarms set yet.</p>`));
+  } else {
+    alarms
+      .slice()
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .forEach((a) => container.appendChild(renderAlarmRow(a)));
+  }
+}
+
+function renderAlarmRow(a) {
+  const daysText = a.days.length === 0 ? "Once" : a.days.map((d) => DAY_LABELS[d]).join(" ");
+  const row = el(`
+    <div class="card row">
+      <div>
+        <div class="bold">${a.time} — ${escapeHtml(a.label)}</div>
+        <div class="small muted">${daysText}${a.enabled ? "" : " · off"}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="alarm-toggle-${a.id}" ${a.enabled ? "checked" : ""} />
+        <button class="text" id="alarm-del-${a.id}">Delete</button>
+      </div>
+    </div>
+  `);
+  row.querySelector(`#alarm-toggle-${a.id}`).onchange = (e) => {
+    store.toggleAlarm(a.id, e.target.checked);
+    if (e.target.checked) armWakeLock();
+  };
+  row.querySelector(`#alarm-del-${a.id}`).onclick = () => {
+    store.deleteAlarm(a.id);
+    render();
+  };
   return row;
 }
 

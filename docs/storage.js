@@ -56,7 +56,7 @@ export function clearSyncUser() {
 }
 
 function defaultState() {
-  return { tasks: [], checkIns: [], journal: [], cycle: [], learnRead: {}, nextId: 1 };
+  return { tasks: [], checkIns: [], journal: [], cycle: [], learnRead: {}, alarms: [], nextId: 1 };
 }
 
 function todayKey(d = new Date()) {
@@ -359,6 +359,53 @@ export function wishedThisYear(year) {
       .filter((k) => k.startsWith(prefix))
       .map((k) => parseInt(k.slice(prefix.length), 10))
   );
+}
+
+// --------------------------------------------------------------------- Alarms
+// time: "HH:MM" (24h, local). days: array of 0(Sun)-6(Sat) to repeat on, or [] for a one-off
+// that fires once then disables itself. lastFiredKey guards against re-firing twice in the
+// same minute while the check loop is running.
+export function listAlarms() {
+  const state = loadAll();
+  return state.alarms || [];
+}
+
+export function addAlarm(time, label, days) {
+  const state = loadAll();
+  if (!state.alarms) state.alarms = [];
+  const alarm = {
+    id: state.nextId++,
+    time,
+    label: label || "Alarm",
+    days: days || [],
+    enabled: true,
+    lastFiredKey: null,
+  };
+  state.alarms.push(alarm);
+  saveAll(state);
+  return alarm;
+}
+
+export function deleteAlarm(id) {
+  const state = loadAll();
+  state.alarms = (state.alarms || []).filter((a) => a.id !== id);
+  saveAll(state);
+}
+
+export function toggleAlarm(id, enabled) {
+  const state = loadAll();
+  const a = (state.alarms || []).find((a) => a.id === id);
+  if (a) a.enabled = enabled;
+  saveAll(state);
+}
+
+export function markAlarmFired(id, firedKey) {
+  const state = loadAll();
+  const a = (state.alarms || []).find((a) => a.id === id);
+  if (!a) return;
+  a.lastFiredKey = firedKey;
+  if (a.days.length === 0) a.enabled = false; // one-off: don't fire again
+  saveAll(state);
 }
 
 export { todayKey, addDaysToKey };
