@@ -10,11 +10,11 @@
     C 58 95, 42 88, 30 86
     C 20 85, 11 84, 5 80
     Z
-  " fill="#4EA8F7"/>
+  " fill="#E6392B"/>
   <!-- small brow ridge for a sterner, corvid look -->
-  <path d="M 70 40 C 80 32, 95 28, 108 30" fill="none" stroke="#4EA8F7" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 70 40 C 80 32, 95 28, 108 30" fill="none" stroke="#E6392B" stroke-width="10" stroke-linecap="round"/>
   <!-- eye -->
-  <circle cx="92" cy="52" r="14" fill="#102420"/>
-  <circle cx="95" cy="54" r="8.2" fill="#4EA8F7"/>
-  <circle cx="98.5" cy="50.5" r="2.4" fill="#102420"/>
+  <circle cx="92" cy="52" r="14" fill="#1A0805"/>
+  <circle cx="95" cy="54" r="8.2" fill="#E6392B"/>
+  <circle cx="98.5" cy="50.5" r="2.4" fill="#1A0805"/>
 </svg>

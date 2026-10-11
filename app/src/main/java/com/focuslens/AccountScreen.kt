@@ -96,7 +96,7 @@ private suspend fun signInWithGoogle(context: android.content.Context, auth: Fir
  * yet (still local-only, same as the web app) — this just establishes who's signed in.
  */
 @Composable
-fun AccountScreen() {
+fun AccountScreen(onSignedIn: () -> Unit = {}) {
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
     val db = remember { FirebaseFirestore.getInstance() }
@@ -121,6 +121,7 @@ fun AccountScreen() {
             try {
                 signInWithGoogle(context, auth, db)
                 user = auth.currentUser
+                onSignedIn()
             } catch (e: GetCredentialException) {
                 error = "Google sign-in was cancelled or unavailable."
             } catch (e: Exception) {
@@ -246,9 +247,11 @@ fun AccountScreen() {
                                 )
                             ).awaitResult()
                             user = auth.currentUser
+                            onSignedIn()
                         } else {
                             auth.signInWithEmailAndPassword(email.trim(), password).awaitResult()
                             user = auth.currentUser
+                            onSignedIn()
                         }
                     } catch (e: Exception) {
                         error = authErrorMessage(e)

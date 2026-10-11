@@ -1,16 +1,12 @@
 // Firebase via the CDN-hosted modular SDK (not npm) — this app has no build step by
 // design, so it can deploy straight to GitHub Pages with nothing to compile. Functionally
 // identical to the npm package, just loaded as a plain ES module.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {
-  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile,
-  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {
-  getFirestore, doc, setDoc, getDoc,
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
+//
+// Loaded lazily via dynamic import(), not a static top-level import: a static import of a
+// CDN URL makes the whole module graph fail to instantiate if that one request is blocked or
+// slow (ad blocker, firewall, flaky network) — which took down the ENTIRE app (every tab, not
+// just sign-in) with a blank page and no error. Account features are optional; the rest of the
+// app must not depend on Firebase's CDN being reachable.
 const firebaseConfig = {
   apiKey: "AIzaSyBha4K2rRyuboD2C0uG9aJ0QAREXR-oEs0",
   authDomain: "focuslens-8805c.firebaseapp.com",
@@ -20,18 +16,41 @@ const firebaseConfig = {
   appId: "1:637478613261:web:49e130e823a9c7e0d68044",
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+let sdk = null; // { app, auth, db, fns: {...} } once loaded, or a rejected promise's error
+let loadPromise = null;
+
+function loadSdk() {
+  if (!loadPromise) {
+    loadPromise = Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"),
+    ]).then(([appMod, authMod, storeMod]) => {
+      const app = appMod.initializeApp(firebaseConfig);
+      const auth = authMod.getAuth(app);
+      const db = storeMod.getFirestore(app);
+      sdk = { app, auth, db, appMod, authMod, storeMod };
+      return sdk;
+    });
+  }
+  return loadPromise;
+}
+
+const UNAVAILABLE = "Account features need an internet connection to Google's servers — check your connection and try again.";
 
 export function watchAuth(callback) {
-  return onAuthStateChanged(auth, callback);
+  let unsub = () => {};
+  loadSdk().then(({ auth, authMod }) => {
+    unsub = authMod.onAuthStateChanged(auth, callback);
+  }).catch(() => callback(null)); // treat "Firebase unreachable" as "signed out", not a crash
+  return () => unsub();
 }
 
 export async function signUp(email, password, displayName) {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(cred.user, { displayName });
-  await setDoc(doc(db, "users", cred.user.uid), {
+  const { auth, db, authMod, storeMod } = await loadSdk();
+  const cred = await authMod.createUserWithEmailAndPassword(auth, email, password);
+  await authMod.updateProfile(cred.user, { displayName });
+  await storeMod.setDoc(storeMod.doc(db, "users", cred.user.uid), {
     displayName,
     email,
     createdAt: Date.now(),
@@ -40,7 +59,8 @@ export async function signUp(email, password, displayName) {
 }
 
 export async function signIn(email, password) {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const { auth, authMod } = await loadSdk();
+  const cred = await authMod.signInWithEmailAndPassword(auth, email, password);
   return cred.user;
 }
 
@@ -49,16 +69,25 @@ export async function signIn(email, password) {
 // Google provider enabled, and this page's domain added under Authentication > Settings >
 // Authorized domains, in the Firebase console.
 export async function signInWithGoogle() {
-  await signInWithRedirect(auth, new GoogleAuthProvider());
+  const { auth, authMod } = await loadSdk();
+  await authMod.signInWithRedirect(auth, new authMod.GoogleAuthProvider());
 }
 
 // Call once on page load: resolves the user coming back from signInWithGoogle's redirect.
-// Resolves to null on an ordinary page load with no pending redirect.
+// Resolves to null on an ordinary page load with no pending redirect, or if Firebase's CDN
+// couldn't be reached at all.
 export async function handleGoogleRedirectResult() {
-  const result = await getRedirectResult(auth);
+  let sdkRef;
+  try {
+    sdkRef = await loadSdk();
+  } catch {
+    return null;
+  }
+  const { auth, db, authMod, storeMod } = sdkRef;
+  const result = await authMod.getRedirectResult(auth);
   if (!result) return null;
   const { user } = result;
-  await setDoc(doc(db, "users", user.uid), {
+  await storeMod.setDoc(storeMod.doc(db, "users", user.uid), {
     displayName: user.displayName,
     email: user.email,
     createdAt: Date.now(),
@@ -67,11 +96,13 @@ export async function handleGoogleRedirectResult() {
 }
 
 export async function signOutUser() {
-  await signOut(auth);
+  const { auth, authMod } = await loadSdk();
+  await authMod.signOut(auth);
 }
 
 export async function getUserProfile(uid) {
-  const snap = await getDoc(doc(db, "users", uid));
+  const { db, storeMod } = await loadSdk();
+  const snap = await storeMod.getDoc(storeMod.doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
 }
 
@@ -79,15 +110,20 @@ export async function getUserProfile(uid) {
 // it follows the account across browsers/devices. Needs a Firestore rule letting a signed-in
 // user read/write only their own users/{uid}/data/state document (see firestore.rules.md).
 export async function pushAppState(uid, state) {
-  await setDoc(doc(db, "users", uid, "data", "state"), state);
+  const { db, storeMod } = await loadSdk();
+  await storeMod.setDoc(storeMod.doc(db, "users", uid, "data", "state"), state);
 }
 
 export async function pullAppState(uid) {
-  const snap = await getDoc(doc(db, "users", uid, "data", "state"));
+  const { db, storeMod } = await loadSdk();
+  const snap = await storeMod.getDoc(storeMod.doc(db, "users", uid, "data", "state"));
   return snap.exists() ? snap.data() : null;
 }
 
 export function authErrorMessage(err) {
+  if (err instanceof TypeError || /fetch|network|Failed to fetch/i.test(err?.message || "")) {
+    return UNAVAILABLE;
+  }
   const map = {
     "auth/email-already-in-use": "That email already has an account — try signing in instead.",
     "auth/invalid-email": "That doesn't look like a valid email address.",

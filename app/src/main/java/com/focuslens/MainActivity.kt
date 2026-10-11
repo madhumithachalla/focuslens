@@ -104,7 +104,38 @@ fun FocusLensApp(repo: UsageRepository) {
         return
     }
 
+    val authPrompt = remember { AuthPromptPrefs(context) }
+    var authPromptSeen by remember { mutableStateOf(authPrompt.isSeen()) }
+
+    if (!authPromptSeen) {
+        WelcomeAuthScreen(onContinue = {
+            authPrompt.setSeen()
+            authPromptSeen = true
+        })
+        return
+    }
+
     FocusLensMain(repo)
+}
+
+/**
+ * First thing a new user sees after onboarding: sign in with Google or email, or skip and use
+ * the app without an account (everything works locally either way — this is just the one place
+ * that was missing, since AccountScreen itself was previously reachable only via the last tab).
+ */
+@Composable
+fun WelcomeAuthScreen(onContinue: () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) {
+            AccountScreen(onSignedIn = onContinue)
+        }
+        OutlinedButton(
+            onClick = onContinue,
+            modifier = Modifier.fillMaxWidth().padding(24.dp)
+        ) {
+            Text("Skip for now — I'll sign in later")
+        }
+    }
 }
 
 @Composable
