@@ -94,16 +94,8 @@ fun FocusLensApp(repo: UsageRepository) {
 
     if (!profileChecked) return
 
-    if (profile == null) {
-        OnboardingScreen(onDone = { newProfile ->
-            scope.launch {
-                db.profileDao().insert(newProfile)
-                profile = newProfile
-            }
-        })
-        return
-    }
-
+    // Sign-in comes first, before the setup quiz: it's the very first thing a new install
+    // shows, not something buried after onboarding or behind a tab.
     val authPrompt = remember { AuthPromptPrefs(context) }
     var authPromptSeen by remember { mutableStateOf(authPrompt.isSeen()) }
 
@@ -115,13 +107,24 @@ fun FocusLensApp(repo: UsageRepository) {
         return
     }
 
+    if (profile == null) {
+        OnboardingScreen(onDone = { newProfile ->
+            scope.launch {
+                db.profileDao().insert(newProfile)
+                profile = newProfile
+            }
+        })
+        return
+    }
+
     FocusLensMain(repo)
 }
 
 /**
- * First thing a new user sees after onboarding: sign in with Google or email, or skip and use
- * the app without an account (everything works locally either way — this is just the one place
- * that was missing, since AccountScreen itself was previously reachable only via the last tab).
+ * The very first screen on a fresh install, before the setup quiz: sign in with Google or
+ * email, or skip and use the app without an account (everything works locally either way —
+ * this is just the one place that was missing, since AccountScreen itself was previously
+ * reachable only via the last tab).
  */
 @Composable
 fun WelcomeAuthScreen(onContinue: () -> Unit) {
