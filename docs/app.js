@@ -183,6 +183,36 @@ function render() {
 
 window.addEventListener("hashchange", render);
 render();
+showAgreementOnce();
+
+// ---------------------------------------------------------------- First-run agreement
+
+function showAgreementOnce() {
+  let seen = false;
+  try { seen = !!localStorage.getItem("focuslens_agreement_seen"); } catch (e) {}
+  if (seen) return;
+  const overlay = el(`
+    <div class="modal-overlay">
+      <div class="modal-card">
+        <h2 style="margin-top:0">Before you start</h2>
+        <p class="small">FocusLens is a personal project, not a medical or clinical product. Journal, Tracking (cycle/energy) and Mental health are self-reflection tools built from your own logged data — not a diagnosis, treatment, or contraception method. If you sign in, only the account data described on the Account page is synced; nothing is shared with anyone else or used for any purpose beyond running the app.</p>
+        <label class="field" style="display:flex;align-items:center;gap:8px;font-weight:400">
+          <input type="checkbox" id="agree-check" style="width:auto" />
+          I understand this is self-reflection support, not medical advice.
+        </label>
+        <div class="mt-8"><button class="primary" id="agree-continue" disabled>Continue</button></div>
+      </div>
+    </div>
+  `);
+  document.body.appendChild(overlay);
+  const check = overlay.querySelector("#agree-check");
+  const btn = overlay.querySelector("#agree-continue");
+  check.onchange = () => { btn.disabled = !check.checked; };
+  btn.onclick = () => {
+    try { localStorage.setItem("focuslens_agreement_seen", "1"); } catch (e) {}
+    overlay.remove();
+  };
+}
 
 // ---------------------------------------------------------------- helpers
 
@@ -203,6 +233,10 @@ function renderRoadmap(container) {
     <div>
       <h1>FocusLens — Web</h1>
       <p class="subtitle">Everything here works in any browser, on any device, including iPhone (no App Store needed — add this page to your home screen for an app-like icon). App/feature blocking stays on the native Android app, explained below.</p>
+      <div class="card" style="display:flex;gap:14px;align-items:center">
+        <img src="site-qr.png" width="84" height="84" alt="QR code for this FocusLens web app" style="border-radius:8px;flex:0 0 auto" />
+        <p class="small muted" style="margin:0">Scan to open this page on another device.</p>
+      </div>
     </div>
   `));
 
