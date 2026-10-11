@@ -20,6 +20,11 @@
 
 * { box-sizing: border-box; }
 
+/* The browser's default [hidden]{display:none} only wins when nothing else sets display on the
+   same element. .modal-overlay sets display:flex unconditionally, which otherwise beats the
+   hidden attribute and leaves an empty modal showing on every page load. This re-asserts it. */
+[hidden] { display: none !important; }
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
