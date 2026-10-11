@@ -16,6 +16,12 @@
     <!-- Spotify's App Remote SDK talks to the installed Spotify app over this. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Alarms: vibration when one rings, and re-arming every alarm after the phone reboots
+         (AlarmManager entries don't survive a restart on their own). setAlarmClock itself
+         needs no special permission on any API level. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Optional: reads period-start dates from Health Connect, if the user taps "Import
          from watch" and a source app (Samsung Health, Fitbit, Flo, etc.) has written any. -->
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
@@ -68,6 +74,25 @@
             android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <!-- The real, survives-closing-the-app alarm screen (see AlarmRingActivity). -->
+        <activity
+            android:name=".AlarmRingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <!-- Fired by AlarmManager when a scheduled alarm's time arrives. -->
+        <receiver android:name=".AlarmReceiver" android:exported="false" />
+
+        <!-- Re-arms every enabled alarm after the phone reboots. -->
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Detects which app is in front. Needs the user to switch it on in Accessibility settings. -->
         <service
