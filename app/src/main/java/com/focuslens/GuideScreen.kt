@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private const val GITHUB_URL = "https://github.com/madhumithachalla/focuslens"
-private const val APK_URL = "https://github.com/madhumithachalla/focuslens/releases/download/debug-build/focuslens-debug.apk"
+private const val APK_URL = "https://madhumithachalla.github.io/focuslens/focuslens-debug.apk"
 
 private data class GuideSection(val emoji: String, val title: String, val body: String)
 

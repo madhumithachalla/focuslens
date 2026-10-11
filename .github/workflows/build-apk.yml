@@ -1,8 +1,10 @@
 name: Build debug APK
 
 # Builds an installable (sideload) debug APK on every push to main and
-# publishes it to a "latest" GitHub Release — the actual real Android
-# download link, since there's no Play Store listing. This is a debug
+# publishes it as a static file under docs/ (served by GitHub Pages) —
+# the actual real Android download link, since there's no Play Store
+# listing and this repo is private (GitHub Release assets need a
+# logged-in collaborator, so they 404 for anyone else). This is a debug
 # build (unsigned release signing isn't set up), which is the honest
 # thing to ship without a managed keystore.
 on:
@@ -58,15 +60,20 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk focuslens-debug.apk
 
-      - name: Publish to the "debug-build" release
-        # The tag must NOT be literally "latest": GitHub's /releases/latest/download/
-        # convenience redirect gets ambiguous and 404s when a real tag is also named
-        # "latest" (seen in production — this is the fix). Use a different tag name and
-        # link to it directly with /releases/download/<tag>/<file>, which always resolves.
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: debug-build
-          name: Latest build
-          body: Automatically built from the latest commit on main. Debug build — unsigned, for sideloading only.
-          files: focuslens-debug.apk
-          make_latest: "true"
+      # GitHub Releases require the visitor to be authenticated to this repo — this repo is
+      # private, so the public /releases/.../download/ links 404 for anyone but a logged-in
+      # collaborator (that's what was actually happening, not a tag-name collision). Pages
+      # (docs/) is the one thing here that's already reachable by a plain visitor, so ship the
+      # APK as a plain static file there instead of as a Release asset.
+      - name: Publish APK into docs/ (served by GitHub Pages, no auth needed)
+        run: |
+          cp focuslens-debug.apk docs/focuslens-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/focuslens-debug.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged, nothing to commit"
+          else
+            git commit -m "Publish latest debug APK to docs/ [skip ci]"
+            git push origin HEAD:main
+          fi
