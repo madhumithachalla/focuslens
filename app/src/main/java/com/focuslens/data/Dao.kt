@@ -173,3 +173,19 @@ interface ProfileDao {
     @Query("SELECT * FROM profile WHERE id = 0")
     suspend fun get(): ProfileEntity?
 }
+
+@Dao
+interface AlarmDao {
+    @Insert suspend fun insert(alarm: AlarmEntity): Long
+    @Update suspend fun update(alarm: AlarmEntity)
+    @Query("DELETE FROM alarms WHERE id = :id") suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM alarms ORDER BY hour, minute")
+    fun all(): Flow<List<AlarmEntity>>
+
+    @Query("SELECT * FROM alarms WHERE enabled = 1")
+    suspend fun allEnabledOnce(): List<AlarmEntity>
+
+    @Query("UPDATE alarms SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+}

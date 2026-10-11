@@ -171,3 +171,19 @@ data class ProfileEntity(
     val birthday: String? = null,
     val onboardedAt: Long
 )
+
+/**
+ * A real alarm, scheduled via AlarmManager (see AlarmScheduler.kt) so it fires even if the app
+ * is fully closed or the phone is locked — unlike the web app's best-effort tab-open version.
+ * days is a comma-joined set of 0(Sun)-6(Sat) to repeat on; empty means a one-off alarm that
+ * disables itself after firing once.
+ */
+@Entity(tableName = "alarms")
+data class AlarmEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val hour: Int,
+    val minute: Int,
+    val label: String,
+    val days: String = "",
+    val enabled: Boolean = true
+)
