@@ -1,9 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.gms.google-services")
+}
+
+// Gradle does NOT automatically expose custom local.properties keys via project.findProperty()
+// — that only works for real Gradle/system properties. AGP itself only reads local.properties
+// for sdk.dir/ndk.dir internally. Without this explicit load, SPOTIFY_CLIENT_ID and
+// GOOGLE_WEB_CLIENT_ID were silently always empty in every build, CI included, regardless of
+// what the CI step wrote into the file or what secret was configured — which is why Google
+// sign-in always hit the "needs one more setup step" branch no matter what.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
 android {
@@ -22,14 +36,14 @@ android {
         // From the Spotify Developer Dashboard (developer.spotify.com/dashboard) — create an
         // app there, add redirect URI focuslens://auth, and paste the Client ID into
         // local.properties as SPOTIFY_CLIENT_ID=... (gitignored, so it's never committed).
-        val spotifyClientId = project.findProperty("SPOTIFY_CLIENT_ID") as String? ?: ""
+        val spotifyClientId = localProperties.getProperty("SPOTIFY_CLIENT_ID") ?: ""
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
 
         // Firebase console → Authentication → Sign-in method → Google → "Web SDK
         // configuration" shows a Web client ID once Google sign-in is enabled. Paste it into
         // local.properties as GOOGLE_WEB_CLIENT_ID=... (gitignored). Needed as the
         // serverClientId for Credential Manager's Google ID flow in AccountScreen.kt.
-        val googleWebClientId = project.findProperty("GOOGLE_WEB_CLIENT_ID") as String? ?: ""
+        val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: ""
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
