@@ -237,10 +237,13 @@ function renderRoadmap(container) {
   });
 
   container.appendChild(el(`
-    <div class="card dark mt-8">
-      <div class="bold" style="margin-bottom:6px">Get the Android app</div>
-      <p class="small" style="opacity:0.85;margin-bottom:10px">Every push to main auto-builds a real, installable APK.</p>
-      <a href="https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk" style="color:#fff;font-weight:600">Download latest APK →</a>
+    <div class="card dark mt-8" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <img src="apk-qr.png" alt="QR code that opens the FocusLens Android APK download link" width="96" height="96" style="border-radius:8px;flex:0 0 auto" />
+      <div style="flex:1;min-width:180px">
+        <div class="bold" style="margin-bottom:6px">Get the Android app</div>
+        <p class="small" style="opacity:0.85;margin-bottom:10px">Every push to main auto-builds a real, installable APK. Scan the code on your phone, or tap the link below.</p>
+        <a href="https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk" style="color:#fff;font-weight:600">Download latest APK →</a>
+      </div>
     </div>
   `));
 }
