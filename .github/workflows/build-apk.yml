@@ -58,10 +58,14 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk focuslens-debug.apk
 
-      - name: Publish to the "latest" release
+      - name: Publish to the "debug-build" release
+        # The tag must NOT be literally "latest": GitHub's /releases/latest/download/
+        # convenience redirect gets ambiguous and 404s when a real tag is also named
+        # "latest" (seen in production — this is the fix). Use a different tag name and
+        # link to it directly with /releases/download/<tag>/<file>, which always resolves.
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
+          tag_name: debug-build
           name: Latest build
           body: Automatically built from the latest commit on main. Debug build — unsigned, for sideloading only.
           files: focuslens-debug.apk

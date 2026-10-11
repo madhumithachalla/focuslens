@@ -71,11 +71,15 @@ private suspend fun signInWithGoogle(context: android.content.Context, auth: Fir
         val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
         val authResult = auth.signInWithCredential(firebaseCredential).awaitResult()
         val signedInUser = authResult.user!!
-        // merge: true so a returning user's doc isn't clobbered, just kept current.
+        // merge: true so a returning user's doc isn't clobbered, just kept current. This is the
+        // "auto-fetch" path: name, email and photo come straight from the Google account the
+        // person just chose to sign in with — the email form below is the manual alternative.
         db.collection("users").document(signedInUser.uid).set(
             mapOf(
                 "displayName" to signedInUser.displayName,
                 "email" to signedInUser.email,
+                "photoUrl" to signedInUser.photoUrl?.toString(),
+                "source" to "google",
                 "createdAt" to System.currentTimeMillis()
             ),
             com.google.firebase.firestore.SetOptions.merge()
@@ -161,17 +165,25 @@ fun AccountScreen() {
             fontSize = 13.sp
         )
         Spacer(Modifier.height(16.dp))
+        Text(
+            "Choose how: \"Continue with Google\" auto-fetches your name, email and photo from the " +
+                "Google account you pick — nothing else on that account is touched. Prefer not to share " +
+                "it? Skip straight to email below and type everything in yourself.",
+            fontSize = 12.sp,
+            color = Color.Gray
+        )
+        Spacer(Modifier.height(10.dp))
         OutlinedButton(
             enabled = !loading,
             onClick = ::onGoogleClick,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Continue with Google")
+            Text("Continue with Google (auto-fetch)")
         }
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             HorizontalDivider(modifier = Modifier.weight(1f))
-            Text("  or use email  ", fontSize = 12.sp, color = Color.Gray)
+            Text("  or enter manually  ", fontSize = 12.sp, color = Color.Gray)
             HorizontalDivider(modifier = Modifier.weight(1f))
         }
         Spacer(Modifier.height(16.dp))
@@ -229,6 +241,7 @@ fun AccountScreen() {
                                 mapOf(
                                     "displayName" to displayName,
                                     "email" to email.trim(),
+                                    "source" to "manual",
                                     "createdAt" to System.currentTimeMillis()
                                 )
                             ).awaitResult()

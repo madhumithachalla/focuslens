@@ -276,7 +276,7 @@ function renderRoadmap(container) {
       <div style="flex:1;min-width:180px">
         <div class="bold" style="margin-bottom:6px">Get the Android app</div>
         <p class="small" style="opacity:0.85;margin-bottom:10px">Every push to main auto-builds a real, installable APK. Scan the code on your phone, or tap the link below.</p>
-        <a href="https://github.com/madhumithachalla/focuslens/releases/latest/download/focuslens-debug.apk" style="color:#fff;font-weight:600">Download latest APK →</a>
+        <a href="https://github.com/madhumithachalla/focuslens/releases/download/debug-build/focuslens-debug.apk" style="color:#fff;font-weight:600">Download latest APK →</a>
       </div>
     </div>
   `));
