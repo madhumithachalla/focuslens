@@ -188,6 +188,11 @@ export const ROADMAP = {
     { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education, LGBTQ+ support, and neurodivergence/ADHD (including a real symptom screener designed by Harvard Medical School and the WHO), gated by a short self-reflection prompt before \"mark as read\" sticks." },
     { title: "Suggested for you", brief: "On the Mental health page: a simple rule-based pick from Learn based on your own recent mood trend or top missed-task reason — plainly labeled as rules, not AI or a diagnosis." },
     { title: "Account sign-in + cross-device sync", brief: "Email or Google sign-in via Firebase. Journal/Cycle/To-do/Birthdays data now follows your account — sign in on another browser or device and it pulls down automatically (newest edit wins if you changed both offline)." },
+    { title: "Focus timer", brief: "Pomodoro (25/5), 52/17 and 90-minute sprint blocks with breaks, a sound + notification when a block ends, and a count of the minutes you've actually focused today and this week. Keeps running if you switch pages." },
+    { title: "Sleep", brief: "Bedtime planner built on 90-minute sleep cycles, a nightly sleep log, a 7-day sleep-debt figure against your own target, and a body-clock (lark / in-between / owl) tip. Based on what you enter — no phone or watch sensors on the web." },
+    { title: "Wellness", brief: "Habit tracker with a 7-day grid and streaks, a water counter with your own daily target, a self-written medication / supplement checklist, life pillars, and a 5-4-3-2-1 grounding exercise plus box breathing for when your mind is racing." },
+    { title: "Screeners", brief: "PHQ-9, GAD-7 and the WHO ASRS v1.1 Part A in their standard published wording, with saved results over time and crisis-support numbers always one tap away. Screening aids only, not a diagnosis." },
+    { title: "Glossary", brief: "Searchable plain-language definitions of the sleep, focus, cycle and screener terms used in the app, each with its primary source." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
     { title: "Mental health trend", brief: "A 14-day mood/energy trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis." },
@@ -200,6 +205,100 @@ export const ROADMAP = {
     { title: "Native iOS app", brief: "On hold until there's a Mac + Apple Developer account. Blocking features would need a redesign around Apple's narrower Screen Time framework — some current Android capabilities (Reels/Shorts-only blocking, Chrome domain detection) have no iOS equivalent at all." },
   ],
   androidOnly: [
+    { title: "Screen time, usage reports and Focus Score", brief: "Per-app and hourly usage, category breakdown and your Focus Score come from Android's usage-access data. A website can't read what other apps you use, so these live in the Android app only." },
+    { title: "Wearable heart rate & HRV", brief: "Live pulse and heart-rate variability need a watch or band connected through Health Connect on Android. The web app does not show simulated vitals." },
     { title: "App & feature blocking", brief: "Per-app daily limits, hard 6am locks, Reels/Shorts-only blocking, Chrome social-media domain blocking, Hyper Focus, Study Mode device-wide lock. These need OS-level permissions no website in any browser can ever be granted — they stay native-app-only by design, not by oversight." },
   ],
 };
+
+// ---------------------------------------------------------------- Glossary ("What is what")
+// Plain-language definitions with the primary source each one rests on. Wellness framing,
+// not clinical guidance.
+export const GLOSSARY = [
+  { term: "Sleep cycle (ultradian rhythm)", group: "Sleep", def: "Sleep moves through light sleep, deep sleep and REM in repeating loops of roughly 90 minutes (anywhere from ~70 to ~120 between people and nights). The bedtime calculator uses 90 as an average, so treat its times as a starting point.", cite: "Kleitman, N. (1963). Sleep and Wakefulness. University of Chicago Press." },
+  { term: "REM sleep", group: "Sleep", def: "Rapid-eye-movement sleep: vivid dreaming, a brain that looks nearly awake, and a body that is temporarily paralysed. Linked to memory and emotional processing. Longer REM periods come later in the night.", cite: "Carskadon, M.A. & Dement, W.C. (2011). Normal human sleep: an overview. In Principles and Practice of Sleep Medicine (5th ed.)." },
+  { term: "Slow-wave (deep) sleep, N3", group: "Sleep", def: "The deepest non-REM stage, dominated by slow delta waves. Most of it happens in the first half of the night. Hardest stage to wake from.", cite: "Carskadon & Dement (2011), as above." },
+  { term: "Sleep latency", group: "Sleep", def: "How long it takes you to fall asleep after lying down. The bedtime calculator assumes about 14 minutes; yours may differ.", cite: "Carskadon & Dement (2011), as above." },
+  { term: "Sleep inertia", group: "Sleep", def: "The groggy, impaired stretch right after waking, especially when woken from deep sleep. It usually fades within 15-30 minutes but can last longer after short or disrupted sleep.", cite: "Tassi, P. & Muzet, A. (2000). Sleep inertia. Sleep Medicine Reviews, 4(4), 341-353." },
+  { term: "Sleep debt", group: "Sleep", def: "The gap between the sleep you need and the sleep you get, added up over days. Here it is the minutes short of your nightly target across the last 7 logged nights. Repeated short nights build up measurable attention lapses even when you feel fine.", cite: "Van Dongen, H.P.A. et al. (2003). The cumulative cost of additional wakefulness. Sleep, 26(2), 117-126." },
+  { term: "Chronotype", group: "Sleep", def: "Your natural lean toward mornings or evenings (\"lark\" to \"owl\"). Partly genetic and shifts with age. The three options here are a simplification of a spectrum.", cite: "Horne, J.A. & Ostberg, O. (1976). A self-assessment questionnaire to determine morningness-eveningness. International Journal of Chronobiology, 4, 97-110." },
+  { term: "Circadian rhythm", group: "Sleep", def: "The roughly 24-hour internal clock that times sleepiness, alertness, body temperature and hormones. Morning light is its strongest reset signal.", cite: "Borbely, A.A. (1982). A two process model of sleep regulation. Human Neurobiology, 1, 195-204." },
+  { term: "Pomodoro technique", group: "Focus", def: "Work in fixed blocks (traditionally 25 minutes) separated by short breaks. The value is the fixed start/stop boundary, which lowers the effort of beginning.", cite: "Cirillo, F. (2006). The Pomodoro Technique." },
+  { term: "Time blindness", group: "Focus", def: "Difficulty sensing how much time has passed or how long a task will take, common with ADHD. External timers and visible clocks compensate for it.", cite: "Barkley, R.A. (1997). Behavioral inhibition, sustained attention, and executive functions. Psychological Bulletin, 121(1), 65-94." },
+  { term: "Heart rate variability (HRV)", group: "Body", def: "The small beat-to-beat variation in your heart rate. Often used as a rough marker of recovery and stress. Only a wearable or chest strap can measure it; this web app does not.", cite: "Task Force of the ESC and NASPE (1996). Heart rate variability: standards of measurement. Circulation, 93(5), 1043-1065." },
+  { term: "Fertile window", group: "Cycle", def: "In a typical cycle, the roughly six days ending on the day of ovulation. The Tracking page estimates it from your own logged starts; an estimate is not a contraception method.", cite: "Wilcox, A.J., Weinberg, C.R. & Baird, D.D. (1995). Timing of sexual intercourse in relation to ovulation. New England Journal of Medicine, 333, 1517-1521." },
+  { term: "PHQ-9", group: "Screeners", def: "A nine-question self-report questionnaire about low mood over the last two weeks. A screening aid that suggests when to talk to a clinician. It cannot diagnose depression.", cite: "Kroenke, K., Spitzer, R.L. & Williams, J.B.W. (2001). The PHQ-9. Journal of General Internal Medicine, 16(9), 606-613." },
+  { term: "GAD-7", group: "Screeners", def: "A seven-question self-report questionnaire about anxiety over the last two weeks. Screening only, not a diagnosis.", cite: "Spitzer, R.L. et al. (2006). A brief measure for assessing generalized anxiety disorder: the GAD-7. Archives of Internal Medicine, 166(10), 1092-1097." },
+  { term: "ASRS v1.1", group: "Screeners", def: "The World Health Organization's adult ADHD self-report scale. Part A (six questions) is the short screener; four or more flagged answers suggests it is worth discussing with a clinician. Screening only.", cite: "Kessler, R.C. et al. (2005). The World Health Organization Adult ADHD Self-Report Scale (ASRS). Psychological Medicine, 35(2), 245-256." },
+  { term: "5-4-3-2-1 grounding", group: "Calm", def: "Name 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste. Pulls attention from a worry loop back to the present senses. A common coping skill in CBT-style programmes.", cite: "Widely used in cognitive-behavioural and trauma-informed practice; no single primary source." },
+  { term: "Box breathing", group: "Calm", def: "Breathe in 4 seconds, hold 4, out 4, hold 4. Slow, even breathing is a simple way to settle a racing pulse.", cite: "Slow-paced breathing review: Zaccaro, A. et al. (2018). How breath-control can change your life. Frontiers in Human Neuroscience, 12, 353." },
+];
+
+// ---------------------------------------------------------------- Screeners
+// Questionnaires reproduced in their standard published form. Scores are self-report screening
+// results, never a diagnosis; the UI says so wherever a result is shown.
+const FREQ_4 = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+
+export const SCREENERS = {
+  PHQ9: {
+    title: "PHQ-9 (low mood)",
+    intro: "Over the last 2 weeks, how often have you been bothered by any of the following problems?",
+    options: FREQ_4,
+    questions: [
+      "Little interest or pleasure in doing things",
+      "Feeling down, depressed, or hopeless",
+      "Trouble falling or staying asleep, or sleeping too much",
+      "Feeling tired or having little energy",
+      "Poor appetite or overeating",
+      "Feeling bad about yourself, or that you are a failure or have let yourself or your family down",
+      "Trouble concentrating on things, such as reading the newspaper or watching television",
+      "Moving or speaking so slowly that other people could have noticed, or the opposite: being so fidgety or restless that you have been moving around a lot more than usual",
+      "Thoughts that you would be better off dead, or of hurting yourself in some way",
+    ],
+    safetyItem: 8, // any answer above "Not at all" shows the support panel
+    bands: [
+      [0, 4, "Minimal"], [5, 9, "Mild"], [10, 14, "Moderate"], [15, 19, "Moderately severe"], [20, 27, "Severe"],
+    ],
+    max: 27,
+  },
+  GAD7: {
+    title: "GAD-7 (anxiety)",
+    intro: "Over the last 2 weeks, how often have you been bothered by the following problems?",
+    options: FREQ_4,
+    questions: [
+      "Feeling nervous, anxious, or on edge",
+      "Not being able to stop or control worrying",
+      "Worrying too much about different things",
+      "Trouble relaxing",
+      "Being so restless that it is hard to sit still",
+      "Becoming easily annoyed or irritable",
+      "Feeling afraid as if something awful might happen",
+    ],
+    bands: [[0, 4, "Minimal"], [5, 9, "Mild"], [10, 14, "Moderate"], [15, 21, "Severe"]],
+    max: 21,
+  },
+  ASRS: {
+    title: "ASRS v1.1 Part A (ADHD)",
+    intro: "Please answer the questions, rating yourself on each criterion using the scale. Think about how you have felt and conducted yourself over the past 6 months.",
+    options: ["Never", "Rarely", "Sometimes", "Often", "Very often"],
+    questions: [
+      "How often do you have trouble wrapping up the final details of a project, once the challenging parts have been done?",
+      "How often do you have difficulty getting things in order when you have to do a task that requires organization?",
+      "How often do you have problems remembering appointments or obligations?",
+      "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?",
+      "How often do you fidget or squirm with your hands or feet when you have to sit down for a long time?",
+      "How often do you feel overly active and compelled to do things, like you were driven by a motor?",
+    ],
+    // A question counts as flagged at "Sometimes" or above for the first three, "Often" or above for the last three.
+    flagAt: [2, 2, 2, 3, 3, 3],
+    flagThreshold: 4,
+    max: 6,
+  },
+};
+
+export const CRISIS_RESOURCES = [
+  { region: "Australia", text: "Lifeline 13 11 14 (24/7) or Beyond Blue 1300 22 4636" },
+  { region: "United States", text: "Call or text 988 (Suicide & Crisis Lifeline)" },
+  { region: "United Kingdom & Ireland", text: "Samaritans 116 123 (free, 24/7)" },
+  { region: "Elsewhere", text: "findahelpline.com lists free local services by country. In immediate danger, call your local emergency number." },
+];
