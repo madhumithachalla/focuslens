@@ -140,3 +140,169 @@ export function authErrorMessage(err) {
   };
   return map[err?.code] || err?.message || "Something went wrong. Try again.";
 }
+
+// ---------------------------------------------------------------- Community + accountability
+// All of this talks to Firestore collections guarded by firestore.rules (profiles, posts,
+// pacts). The rules, not this code, are what keep people out of each other's private data —
+// see the comments in firestore.rules for exactly what each collection allows.
+
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O/1/I/L: easy to read out loud
+
+function randomInviteCode() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+}
+
+// Returns this user's public profile ({displayName, inviteCode}), creating it on first use.
+// Calls are shared per uid: signing in re-renders the page twice in quick succession, and two
+// racing first-time creates would each pick a different invite code (the rules, correctly,
+// refuse to let an invite code change once set).
+const profilePromises = new Map();
+
+export function ensureProfile(user) {
+  if (!profilePromises.has(user.uid)) {
+    const p = createProfileIfMissing(user).catch((e) => { profilePromises.delete(user.uid); throw e; });
+    profilePromises.set(user.uid, p);
+  }
+  return profilePromises.get(user.uid);
+}
+
+async function createProfileIfMissing(user) {
+  const { db, storeMod: s } = await loadSdk();
+  const ref = s.doc(db, "profiles", user.uid);
+  const snap = await s.getDoc(ref);
+  if (snap.exists()) return snap.data();
+  const fallback = (user.displayName || (user.email || "").split("@")[0] || "FocusLens user").slice(0, 40);
+  const profile = { displayName: fallback, inviteCode: randomInviteCode(), updatedAt: s.serverTimestamp() };
+  try {
+    await s.setDoc(ref, profile);
+  } catch (e) {
+    // Another device created it first: use theirs rather than fail.
+    const again = await s.getDoc(ref);
+    if (again.exists()) return again.data();
+    throw e;
+  }
+  return { displayName: fallback, inviteCode: profile.inviteCode };
+}
+
+export async function renameProfile(uid, displayName) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.updateDoc(s.doc(db, "profiles", uid), { displayName, updatedAt: s.serverTimestamp() });
+}
+
+export async function findProfileByCode(code) {
+  const { db, storeMod: s } = await loadSdk();
+  const snap = await s.getDocs(s.query(s.collection(db, "profiles"), s.where("inviteCode", "==", code)));
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { uid: d.id, displayName: d.data().displayName };
+}
+
+// Live feed. Ordered by time only and filtered by room in the app, so no composite Firestore
+// index has to be created by hand. Returns an unsubscribe function.
+export function watchPosts(onData, onError) {
+  let unsub = () => {};
+  loadSdk().then(({ db, storeMod: s }) => {
+    const q = s.query(s.collection(db, "posts"), s.orderBy("createdAt", "desc"), s.limit(100));
+    unsub = s.onSnapshot(q, (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+  }).catch(onError);
+  return () => unsub();
+}
+
+export async function createPost(user, authorName, text, room) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.addDoc(s.collection(db, "posts"), { authorUid: user.uid, authorName, text, room, createdAt: s.serverTimestamp() });
+}
+
+export async function deletePost(postId) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.deleteDoc(s.doc(db, "posts", postId));
+}
+
+export async function listLikes(postId) {
+  const { db, storeMod: s } = await loadSdk();
+  const snap = await s.getDocs(s.collection(db, "posts", postId, "likes"));
+  return snap.docs.map((d) => d.id);
+}
+
+export async function setLike(postId, uid, liked) {
+  const { db, storeMod: s } = await loadSdk();
+  const ref = s.doc(db, "posts", postId, "likes", uid);
+  if (liked) await s.setDoc(ref, { createdAt: s.serverTimestamp() });
+  else await s.deleteDoc(ref);
+}
+
+export async function listComments(postId) {
+  const { db, storeMod: s } = await loadSdk();
+  const snap = await s.getDocs(s.query(s.collection(db, "posts", postId, "comments"), s.orderBy("createdAt", "asc"), s.limit(50)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addComment(postId, user, authorName, text) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.addDoc(s.collection(db, "posts", postId, "comments"), { authorUid: user.uid, authorName, text, createdAt: s.serverTimestamp() });
+}
+
+export async function deleteComment(postId, commentId) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.deleteDoc(s.doc(db, "posts", postId, "comments", commentId));
+}
+
+export async function reportPost(user, postId, reason) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.addDoc(s.collection(db, "reports"), { reporterUid: user.uid, postId, reason, createdAt: s.serverTimestamp() });
+}
+
+// ---- Pacts ----
+
+export function watchPacts(uid, onData, onError) {
+  let unsub = () => {};
+  loadSdk().then(({ db, storeMod: s }) => {
+    const q = s.query(s.collection(db, "pacts"), s.where("memberUids", "array-contains", uid));
+    unsub = s.onSnapshot(q, (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+  }).catch(onError);
+  return () => unsub();
+}
+
+export async function requestPact(me, myName, partner) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.addDoc(s.collection(db, "pacts"), {
+    memberUids: [me.uid, partner.uid],
+    names: { [me.uid]: myName, [partner.uid]: partner.displayName },
+    requesterUid: me.uid,
+    status: "pending",
+    createdAt: s.serverTimestamp(),
+  });
+}
+
+export async function setPactStatus(pactId, status) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.updateDoc(s.doc(db, "pacts", pactId), { status });
+}
+
+export function watchPactTasks(pactId, onData, onError) {
+  let unsub = () => {};
+  loadSdk().then(({ db, storeMod: s }) => {
+    const q = s.query(s.collection(db, "pacts", pactId, "tasks"), s.orderBy("dueAt", "desc"), s.limit(50));
+    unsub = s.onSnapshot(q, (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+  }).catch(onError);
+  return () => unsub();
+}
+
+export async function addPactTask(pactId, uid, title, dueAtMs) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.addDoc(s.collection(db, "pacts", pactId, "tasks"), {
+    ownerUid: uid, title, dueAt: dueAtMs, status: "open", verified: false, createdAt: s.serverTimestamp(),
+  });
+}
+
+export async function updatePactTask(pactId, taskId, fields) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.updateDoc(s.doc(db, "pacts", pactId, "tasks", taskId), fields);
+}
+
+export async function deletePactTask(pactId, taskId) {
+  const { db, storeMod: s } = await loadSdk();
+  await s.deleteDoc(s.doc(db, "pacts", pactId, "tasks", taskId));
+}
