@@ -182,6 +182,7 @@ fun FocusLensMain(repo: UsageRepository) {
                 Tab(selected = tab == 15, onClick = { tab = 15 }, text = { Text("Alarms") })
                 Tab(selected = tab == 16, onClick = { tab = 16 }, text = { Text("Schedules") })
                 Tab(selected = tab == 17, onClick = { tab = 17 }, text = { Text("Watch & vitals") })
+                Tab(selected = tab == 18, onClick = { tab = 18 }, text = { Text("Coach") })
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
@@ -202,7 +203,8 @@ fun FocusLensMain(repo: UsageRepository) {
                     14 -> GuideScreen()
                     15 -> AlarmScreen()
                     16 -> BlockSchedulesScreen()
-                    else -> VitalsScreen()
+                    17 -> VitalsScreen()
+                    else -> CoachScreen()
                 }
             }
         }
