@@ -1,13 +1,193 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only ever read/write their own profile doc and their own
-    // mirrored app-state doc — never another uid's.
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function nowMs() {
+      return request.time.toMillis();
+    }
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    // ---- Private account data: only ever readable/writable by its owner ----
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isUser(uid);
 
       match /data/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read, write: if isUser(uid);
+      }
+    }
+
+    // ---- Public community profile ----
+    // Deliberately holds NO email: just a display name and an invite code. The invite code is
+    // how someone is found for an accountability pact (nobody can look people up by email).
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'inviteCode', 'updatedAt'])
+        && str(request.resource.data.displayName, 1, 40)
+        && str(request.resource.data.inviteCode, 8, 8)
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isUser(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'inviteCode', 'updatedAt'])
+        && str(request.resource.data.displayName, 1, 40)
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isUser(uid);
+    }
+
+    // ---- Community chat ----
+    // Posts are immutable once written (no edits); the author can delete their own.
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'text', 'room', 'createdAt'])
+        && request.resource.data.authorUid == request.auth.uid
+        && str(request.resource.data.authorName, 1, 40)
+        && str(request.resource.data.text, 1, 500)
+        && request.resource.data.room in ['general', 'focus']
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isUser(resource.data.authorUid);
+
+      // One like per person: the document id IS the liker's uid, so a second like can't exist.
+      match /likes/{likerUid} {
+        allow read: if signedIn();
+        allow create: if isUser(likerUid)
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow delete: if isUser(likerUid);
+        allow update: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'text', 'createdAt'])
+          && request.resource.data.authorUid == request.auth.uid
+          && str(request.resource.data.authorName, 1, 40)
+          && str(request.resource.data.text, 1, 300)
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        // The commenter, or the author of the post being commented on, can remove a comment.
+        allow delete: if isUser(resource.data.authorUid)
+          || isUser(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid);
+      }
+    }
+
+    // Write-only: anyone signed in can report a post; nobody can read reports through the app
+    // (review them in the Firebase console).
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporterUid', 'postId', 'reason', 'createdAt'])
+        && request.resource.data.reporterUid == request.auth.uid
+        && str(request.resource.data.postId, 1, 40)
+        && str(request.resource.data.reason, 1, 200)
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
+    // ---- Accountability pacts: exactly two people ----
+    match /pacts/{pactId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberUids;
+
+      // The requester starts a pact in "pending"; the other person must accept it.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['memberUids', 'names', 'requesterUid', 'status', 'createdAt'])
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.memberUids is list
+        && request.resource.data.memberUids.size() == 2
+        && request.resource.data.memberUids[0] != request.resource.data.memberUids[1]
+        && request.auth.uid in request.resource.data.memberUids
+        && request.resource.data.names is map
+        && request.resource.data.createdAt == request.time;
+
+      // Only the status can change: the invited person accepts, either person can end it.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberUids
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && (
+          (resource.data.status == 'pending'
+            && request.resource.data.status == 'active'
+            && request.auth.uid != resource.data.requesterUid)
+          || (resource.data.status in ['pending', 'active']
+            && request.resource.data.status == 'ended')
+        );
+      allow delete: if false;
+
+      match /tasks/{taskId} {
+        function pact() {
+          return get(/databases/$(database)/documents/pacts/$(pactId)).data;
+        }
+        function inPact() {
+          return signedIn() && request.auth.uid in pact().memberUids;
+        }
+        function changed() {
+          return request.resource.data.diff(resource.data).affectedKeys();
+        }
+
+        allow read: if inPact();
+
+        // You can only pledge a task for yourself, in an active pact, due in the future.
+        allow create: if inPact()
+          && pact().status == 'active'
+          && request.resource.data.keys().hasOnly(['ownerUid', 'title', 'dueAt', 'status', 'verified', 'createdAt'])
+          && request.resource.data.ownerUid == request.auth.uid
+          && str(request.resource.data.title, 1, 120)
+          && request.resource.data.dueAt is int
+          && request.resource.data.dueAt > nowMs()
+          && request.resource.data.status == 'open'
+          && request.resource.data.verified == false
+          && request.resource.data.createdAt == request.time;
+
+        allow update: if inPact() && pact().status == 'active' && (
+          // Owner marks their own open task done.
+          (request.auth.uid == resource.data.ownerUid
+            && resource.data.status == 'open'
+            && request.resource.data.status == 'done'
+            && changed().hasOnly(['status']))
+          // Owner submits proof for the dare they were assigned.
+          || (request.auth.uid == resource.data.ownerUid
+            && resource.data.status == 'missed'
+            && resource.data.dareStatus in ['assigned', 'rejected']
+            && request.resource.data.dareStatus == 'proof_submitted'
+            && str(request.resource.data.proof, 1, 300)
+            && changed().hasOnly(['dareStatus', 'proof']))
+          // The partner (never the owner) verifies a finished task.
+          || (request.auth.uid != resource.data.ownerUid
+            && resource.data.status == 'done'
+            && resource.data.verified == false
+            && request.resource.data.verified == true
+            && changed().hasOnly(['verified']))
+          // Either person can mark a task missed, but only once its due time has passed.
+          // The dare is a number into a fixed list in the app, never free text, so a partner
+          // can't write an abusive dare.
+          || (resource.data.status == 'open'
+            && nowMs() > resource.data.dueAt
+            && request.resource.data.status == 'missed'
+            && request.resource.data.dareId is int
+            && request.resource.data.dareId >= 0
+            && request.resource.data.dareId < 12
+            && request.resource.data.dareStatus == 'assigned'
+            && changed().hasOnly(['status', 'dareId', 'dareStatus']))
+          // The partner accepts or sends back the owner's proof.
+          || (request.auth.uid != resource.data.ownerUid
+            && resource.data.dareStatus == 'proof_submitted'
+            && request.resource.data.dareStatus in ['accepted', 'rejected']
+            && changed().hasOnly(['dareStatus']))
+        );
+
+        // Owner can withdraw a task that is still open.
+        allow delete: if inPact()
+          && request.auth.uid == resource.data.ownerUid
+          && resource.data.status == 'open';
       }
     }
   }
