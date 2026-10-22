@@ -4,7 +4,7 @@
 // simulated — wearable heart-rate/HRV and app-usage data need the Android app and are not
 // faked on the web.
 import * as store from "./storage.js";
-import { GLOSSARY, SCREENERS, CRISIS_RESOURCES } from "./content.js";
+import { GLOSSARY, SCREENERS, CRISIS_RESOURCES, HABIT_LIBRARY, VISION_AREAS, EXERCISES, HELPLINES, CARE_GUIDE, JOURNAL_TEMPLATES } from "./content.js";
 
 function el(html) {
   const t = document.createElement("template");
@@ -140,6 +140,7 @@ export function renderFocus(container, rerender) {
       <div class="small muted">${store.focusMinutesLast7()} min over the last 7 days. Only completed focus blocks count, not breaks.</div>
     </div>
   `));
+  renderMatrix(container, rerender);
   container.appendChild(el(`<p class="small muted">Blocking distracting apps and sites needs OS-level permissions a website can't get — use the Android app for that.</p>`));
 }
 
@@ -342,6 +343,19 @@ export function renderWellness(container, rerender) {
     if (v) { store.addHabit(v); rerender(); }
   };
   habitsCard.appendChild(addHabit);
+  const lib = el(`<details class="mt-8"><summary class="small bold" style="cursor:pointer">Habit library (tap to add)</summary></details>`);
+  const have = new Set(habits.map((h) => h.title));
+  HABIT_LIBRARY.forEach((g) => {
+    lib.appendChild(el(`<div class="small muted mt-8">${g.group}</div>`));
+    const chips = el(`<div class="chips" style="margin-bottom:0"></div>`);
+    g.items.forEach((t) => {
+      const chip = el(`<button type="button" class="chip"${have.has(t) ? " disabled" : ""}>${have.has(t) ? "✓ " : "+ "}${escapeHtml(t)}</button>`);
+      chip.onclick = () => { store.addHabit(t); rerender(); };
+      chips.appendChild(chip);
+    });
+    lib.appendChild(chips);
+  });
+  habitsCard.appendChild(lib);
   container.appendChild(habitsCard);
 
   // Hydration
@@ -417,43 +431,116 @@ export function renderWellness(container, rerender) {
     const t = addP.querySelector("#pil-title").value.trim();
     if (t) { store.addPillar(t, addP.querySelector("#pil-goal").value.trim()); rerender(); }
   };
+  const areaChips = el(`<div class="chips mt-8" style="margin-bottom:0"></div>`);
+  VISION_AREAS.forEach((a) => {
+    const chip = el(`<button type="button" class="chip">${a}</button>`);
+    chip.onclick = () => { addP.querySelector("#pil-title").value = a; addP.querySelector("#pil-goal").focus(); };
+    areaChips.appendChild(chip);
+  });
+  pCard.appendChild(areaChips);
   pCard.appendChild(addP);
   container.appendChild(pCard);
 
+  renderActivity(container, rerender);
+  renderNutrition(container, rerender);
   renderGrounding(container);
 }
 
-// 5-4-3-2-1 grounding + box breathing. The breathing loop stops itself when its card leaves the page.
-function renderGrounding(container) {
-  const STEPS = [
-    "Name 5 things you can see.",
-    "Name 4 things you can feel (feet on the floor, fabric, air on your skin).",
-    "Name 3 things you can hear.",
-    "Name 2 things you can smell.",
-    "Name 1 thing you can taste.",
-  ];
+function renderActivity(container, rerender) {
+  const t = store.activityToday();
+  const goal = store.getStepGoal();
+  const pct = Math.min(100, Math.round((t.steps / goal) * 100));
   const card = el(`
     <div class="card">
-      <div class="bold">Calm down now</div>
-      <p class="small muted">For when your mind is racing. Try one, or both.</p>
-      <div id="ground-step" class="mt-8"></div>
+      <div class="bold">Activity</div>
+      <p class="small muted">Typed in by you, since a website can't read your phone's step counter. The Android app reads it automatically.</p>
+      <div class="row" style="margin:6px 0"><span>${t.steps} / ${goal} steps</span><span class="small muted">${t.minutes} active min · ${t.calories} kcal</span></div>
+      <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div style="height:100%;width:${pct}%;background:var(--accent)"></div></div>
+      <label class="field" for="act-kind">Activity</label>
+      <input type="text" id="act-kind" placeholder="Brisk walk, yoga, gym…" />
+      <label class="field" for="act-min">Minutes</label>
+      <input type="number" id="act-min" min="0" value="20" />
+      <label class="field" for="act-steps">Steps (optional)</label>
+      <input type="number" id="act-steps" min="0" value="0" />
+      <label class="field" for="act-cal">Calories burned (optional, your own estimate)</label>
+      <input type="number" id="act-cal" min="0" value="0" />
+      <div class="mt-8"><button class="primary" id="act-add">Log activity</button></div>
+      <label class="field" for="act-goal">Daily step goal</label>
+      <input type="number" id="act-goal" min="1000" step="500" value="${goal}" />
+    </div>`);
+  card.querySelector("#act-add").onclick = () => {
+    const kind = card.querySelector("#act-kind").value.trim() || "Activity";
+    store.logActivity(kind, Number(card.querySelector("#act-min").value) || 0, Number(card.querySelector("#act-steps").value) || 0, Number(card.querySelector("#act-cal").value) || 0);
+    rerender();
+  };
+  card.querySelector("#act-goal").onchange = (e) => { const v = Number(e.target.value); if (v >= 1000) { store.setStepGoal(v); rerender(); } };
+  t.rows.forEach((r) => {
+    const row = el(`<div class="row task-item"><div>${escapeHtml(r.kind)} <span class="small muted">· ${r.minutes} min${r.steps ? ` · ${r.steps} steps` : ""}</span></div><button class="text">Delete</button></div>`);
+    row.querySelector("button").onclick = () => { store.deleteActivity(r.id); rerender(); };
+    card.appendChild(row);
+  });
+  container.appendChild(card);
+}
+
+function renderNutrition(container, rerender) {
+  const meals = store.mealsToday();
+  const card = el(`
+    <div class="card">
+      <div class="bold">Nutrition</div>
+      <p class="small muted">Write your own plan and log meals as you go. If you want a plan built for a health condition, a dietitian or doctor is the right person.</p>
+      <label class="field" for="diet-plan">My plan / reminders</label>
+      <textarea id="diet-plan" placeholder="e.g. Protein at breakfast, veg at lunch and dinner, water before coffee">${escapeHtml(store.getDietPlan())}</textarea>
+      <div class="mt-8"><button class="outline" id="diet-save">Save plan</button></div>
+      <div class="bold mt-8" style="margin-top:16px">Today's meals</div>
+    </div>`);
+  card.querySelector("#diet-save").onclick = () => { store.setDietPlan(card.querySelector("#diet-plan").value); rerender(); };
+  if (!meals.length) card.appendChild(el(`<p class="muted">Nothing logged yet today.</p>`));
+  meals.forEach((m) => {
+    const row = el(`<div class="row task-item"><div><span class="small muted">${escapeHtml(m.slot)}</span> ${escapeHtml(m.text)}</div><button class="text">Delete</button></div>`);
+    row.querySelector("button").onclick = () => { store.deleteMeal(m.id); rerender(); };
+    card.appendChild(row);
+  });
+  const add = el(`
+    <div class="mt-8">
+      <select id="meal-slot"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+      <input type="text" id="meal-text" class="mt-8" placeholder="What did you eat?" />
+      <div class="mt-8"><button class="primary" id="meal-add">Add meal</button></div>
+    </div>`);
+  add.querySelector("#meal-add").onclick = () => {
+    const v = add.querySelector("#meal-text").value.trim();
+    if (v) { store.logMeal(add.querySelector("#meal-slot").value, v); rerender(); }
+  };
+  card.appendChild(add);
+  container.appendChild(card);
+}
+
+// Step-through exercises (grounding, 20-20-20 eye rest, neck release) plus box breathing.
+// The breathing loop stops itself when its card leaves the page.
+function renderGrounding(container) {
+  const card = el(`
+    <div class="card">
+      <div class="bold">Calm down &amp; reset</div>
+      <p class="small muted">Short exercises for a racing mind, tired eyes or a stiff neck. Try one when you've been on screens a while.</p>
+      <div class="chips" id="ex-chips"></div>
+      <div id="ex-step"></div>
       <div id="breath" class="center" style="margin-top:14px"></div>
     </div>`);
-  const stepBox = card.querySelector("#ground-step");
-  let i = -1;
-  const drawStep = () => {
-    if (i < 0) {
-      stepBox.innerHTML = `<button class="primary" id="g-start">5-4-3-2-1 grounding</button>`;
-      stepBox.querySelector("#g-start").onclick = () => { i = 0; drawStep(); };
-    } else if (i < STEPS.length) {
-      stepBox.innerHTML = `<div style="font-size:18px;margin-bottom:8px">${STEPS[i]}</div><button class="primary" id="g-next">${i === STEPS.length - 1 ? "Done" : "Next"}</button>`;
-      stepBox.querySelector("#g-next").onclick = () => { i++; drawStep(); };
+  const stepBox = card.querySelector("#ex-step");
+  const chipBox = card.querySelector("#ex-chips");
+  Object.values(EXERCISES).forEach((ex) => {
+    const chip = el(`<button type="button" class="chip">${ex.title}</button>`);
+    chip.onclick = () => run(ex, 0);
+    chipBox.appendChild(chip);
+  });
+  function run(ex, i) {
+    if (i < ex.steps.length) {
+      stepBox.innerHTML = `<div class="small muted">${ex.title} — step ${i + 1} of ${ex.steps.length}</div><div style="font-size:18px;margin:6px 0 10px">${escapeHtml(ex.steps[i])}</div><button class="primary" id="ex-next">${i === ex.steps.length - 1 ? "Done" : "Next"}</button>`;
+      stepBox.querySelector("#ex-next").onclick = () => run(ex, i + 1);
     } else {
-      stepBox.innerHTML = `<div style="margin-bottom:8px">Well done. Notice how your body feels now.</div><button class="text" id="g-again">Again</button>`;
-      stepBox.querySelector("#g-again").onclick = () => { i = 0; drawStep(); };
+      stepBox.innerHTML = `<div style="margin-bottom:8px">Well done. Notice how your body feels now.</div><button class="text" id="ex-again">Again</button>`;
+      stepBox.querySelector("#ex-again").onclick = () => run(ex, 0);
     }
-  };
-  drawStep();
+  }
 
   const breath = card.querySelector("#breath");
   const PHASES = ["Breathe in", "Hold", "Breathe out", "Hold"];
@@ -612,4 +699,253 @@ export function renderGlossary(container) {
   };
   search.oninput = paint;
   paint();
+}
+
+// ---------------------------------------------------------------- Eisenhower matrix (Focus page)
+
+export function renderMatrix(container, rerender) {
+  const items = store.listMatrix();
+  const QUADS = [
+    { u: true, i: true, title: "Do now", hint: "Urgent + important" },
+    { u: false, i: true, title: "Schedule", hint: "Important, not urgent" },
+    { u: true, i: false, title: "Delegate / shrink", hint: "Urgent, not important" },
+    { u: false, i: false, title: "Drop", hint: "Neither" },
+  ];
+  const card = el(`<div class="card"><div class="bold">Eisenhower matrix</div><p class="small muted">Sort what's on your plate by urgency and importance, then work top-left first.</p></div>`);
+  QUADS.forEach((q) => {
+    const box = el(`<div class="task-item"><div class="bold">${q.title} <span class="small muted">· ${q.hint}</span></div></div>`);
+    const mine = items.filter((m) => m.urgent === q.u && m.important === q.i);
+    if (!mine.length) box.appendChild(el(`<div class="small muted">—</div>`));
+    mine.forEach((m) => {
+      const row = el(`<div class="row"><span>${escapeHtml(m.text)}</span><button class="text">Remove</button></div>`);
+      row.querySelector("button").onclick = () => { store.deleteMatrixItem(m.id); rerender(); };
+      box.appendChild(row);
+    });
+    card.appendChild(box);
+  });
+  const add = el(`
+    <div class="mt-8">
+      <input type="text" id="mx-text" placeholder="Something on your plate" />
+      <div class="chips mt-8" style="margin-bottom:0">
+        <label class="chip"><input type="checkbox" id="mx-u" /> Urgent</label>
+        <label class="chip"><input type="checkbox" id="mx-i" /> Important</label>
+      </div>
+      <div class="mt-8"><button class="primary" id="mx-add">Add</button></div>
+    </div>`);
+  add.querySelector("#mx-add").onclick = () => {
+    const v = add.querySelector("#mx-text").value.trim();
+    if (v) { store.addMatrixItem(v, add.querySelector("#mx-u").checked, add.querySelector("#mx-i").checked); rerender(); }
+  };
+  card.appendChild(add);
+  container.appendChild(card);
+}
+
+// ---------------------------------------------------------------- Progress (XP, quests, boss, share card)
+
+const BADGES = [
+  { id: "streak7", label: "7-day habit streak", test: (p) => p.bestStreak >= 7 },
+  { id: "streak30", label: "30-day habit streak", test: (p) => p.bestStreak >= 30 },
+  { id: "focus100", label: "100 focus minutes", test: (p) => p.focus >= 100 },
+  { id: "focus1000", label: "1,000 focus minutes", test: (p) => p.focus >= 1000 },
+  { id: "journal7", label: "7 journal entries", test: (p) => p.journal >= 7 },
+  { id: "journal30", label: "30 journal entries", test: (p) => p.journal >= 30 },
+  { id: "jstreak", label: "7-day journal streak", test: (p) => p.journalStreak >= 7 },
+];
+
+function drawShareCard(title, big, sub) {
+  const c = document.createElement("canvas");
+  c.width = 1080; c.height = 1080;
+  const g = c.getContext("2d");
+  g.fillStyle = "#1F3A34"; g.fillRect(0, 0, 1080, 1080);
+  g.fillStyle = "#E3EFE8"; g.textAlign = "center";
+  g.font = "600 44px sans-serif"; g.fillText("FocusLens", 540, 140);
+  g.font = "500 56px sans-serif"; g.fillText(title, 540, 420);
+  g.fillStyle = "#FFFFFF"; g.font = "700 220px sans-serif"; g.fillText(big, 540, 660);
+  g.fillStyle = "#E3EFE8"; g.font = "400 48px sans-serif"; g.fillText(sub, 540, 780);
+  g.font = "400 34px sans-serif"; g.globalAlpha = 0.7; g.fillText("madhumithachalla.github.io/focuslens", 540, 990);
+  return c;
+}
+
+export function renderProgress(container, rerender) {
+  const p = store.progressSummary();
+  p.bestStreak = store.bestHabitStreak();
+  p.journalStreak = store.journalStreak();
+  const pct = Math.round(((p.xp - p.levelStart) / (p.levelEnd - p.levelStart)) * 100);
+  container.appendChild(el(`
+    <div>
+      <h1>Progress</h1>
+      <p class="subtitle">XP is worked out from what you actually log (focus minutes, journal entries, habit ticks, completed tasks, sleep logs), so it can't be inflated.</p>
+    </div>`));
+
+  container.appendChild(el(`
+    <div class="card">
+      <div class="row"><span class="bold" style="font-size:22px">Level ${p.level}</span><span class="small muted">${p.xp} XP</span></div>
+      <div style="height:10px;border-radius:5px;background:var(--border);overflow:hidden;margin:8px 0" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div style="height:100%;width:${pct}%;background:var(--accent)"></div></div>
+      <div class="small muted">${p.levelEnd - p.xp} XP to level ${p.level + 1}. 1 XP per focus minute · 20 per journal entry · 10 per task or sleep log · 5 per habit tick.</div>
+    </div>`));
+
+  const quests = store.dailyQuests();
+  const qCard = el(`<div class="card"><div class="bold">Today's quests · ${quests.filter((q) => q.done).length}/${quests.length}</div></div>`);
+  quests.forEach((q) => qCard.appendChild(el(`<div class="task-item">${q.done ? "✅" : "⬜"} ${q.label}</div>`)));
+  container.appendChild(qCard);
+
+  const boss = store.bossStatus();
+  const hpPct = Math.round((boss.left / boss.hp) * 100);
+  container.appendChild(el(`
+    <div class="card">
+      <div class="bold">🐍 Doomscroll Serpent</div>
+      <p class="small muted">Weekly boss. Every completed focus minute in the last 7 days is one point of damage.</p>
+      <div class="row small"><span>${boss.defeated ? "Defeated!" : `${boss.left} HP left`}</span><span class="muted">${boss.dealt} / ${boss.hp} min</span></div>
+      <div style="height:10px;border-radius:5px;background:var(--border);overflow:hidden" role="progressbar" aria-valuenow="${hpPct}" aria-valuemin="0" aria-valuemax="100"><div style="height:100%;width:${hpPct}%;background:var(--danger)"></div></div>
+    </div>`));
+
+  const bCard = el(`<div class="card"><div class="bold">Badges</div><div class="chips mt-8" style="margin-bottom:0"></div></div>`);
+  BADGES.forEach((b) => {
+    const ok = b.test(p);
+    bCard.querySelector(".chips").appendChild(el(`<span class="chip${ok ? " active" : ""}" style="${ok ? "" : "opacity:.5"}">${ok ? "🏅" : "🔒"} ${b.label}</span>`));
+  });
+  container.appendChild(bCard);
+
+  // Share card — made in your browser; you choose where it goes. Nothing is uploaded.
+  const share = el(`
+    <div class="card">
+      <div class="bold">Share a milestone</div>
+      <p class="small muted">Creates an image on your device to save or send. Nothing is posted anywhere.</p>
+      <select id="share-kind">
+        <option value="level">Level ${p.level}</option>
+        <option value="focus">${p.focus} focus minutes</option>
+        <option value="streak">${p.journalStreak}-day journal streak</option>
+        <option value="habit">${p.bestStreak}-day habit streak</option>
+      </select>
+      <div class="mt-8"><button class="primary" id="share-make">Create image</button></div>
+      <div id="share-out" class="mt-8"></div>
+    </div>`);
+  share.querySelector("#share-make").onclick = () => {
+    const k = share.querySelector("#share-kind").value;
+    const spec = {
+      level: ["Reached level", String(p.level), `${p.xp} XP earned`],
+      focus: ["Focused for", String(p.focus), "minutes in total"],
+      streak: ["Journal streak", String(p.journalStreak), "days in a row"],
+      habit: ["Habit streak", String(p.bestStreak), "days in a row"],
+    }[k];
+    const canvas = drawShareCard(...spec);
+    const out = share.querySelector("#share-out");
+    out.innerHTML = "";
+    canvas.style.cssText = "width:100%;max-width:320px;border-radius:12px;display:block";
+    out.appendChild(canvas);
+    const dl = el(`<a class="get-app-link" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600" download="focuslens-milestone.png">Download PNG</a>`);
+    dl.href = canvas.toDataURL("image/png");
+    out.appendChild(dl);
+  };
+  container.appendChild(share);
+
+  container.appendChild(el(`<p class="small muted">Sharing with other FocusLens users (community, accountability partners, dares) is still upcoming: it needs server-side rules so that people only ever see what you choose to share.</p>`));
+}
+
+// ---------------------------------------------------------------- Help & accessibility
+
+const A11Y_KEY = "focuslens_a11y";
+
+function readA11y() {
+  try { return JSON.parse(localStorage.getItem(A11Y_KEY)) || {}; } catch (e) { return {}; }
+}
+
+function writeA11y(v) {
+  try { localStorage.setItem(A11Y_KEY, JSON.stringify(v)); } catch (e) {}
+}
+
+export function applyA11y() {
+  const a = readA11y();
+  const root = document.documentElement;
+  const theme = a.theme || "auto";
+  const dark = theme === "dark" || (theme === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.dataset.theme = dark ? "dark" : "light";
+  root.dataset.contrast = a.contrast ? "high" : "normal";
+  root.dataset.text = a.large ? "large" : "normal";
+  root.dataset.motion = a.reduceMotion ? "reduce" : "normal";
+}
+
+function openSummary() {
+  const d = store.summaryData();
+  const rows = d.screeners.map((s) => {
+    const sc = SCREENERS[s.type];
+    return `<tr><td>${escapeHtml(sc.title)}</td><td>${s.latest ? `${s.latest.score}/${sc.max} — ${escapeHtml(s.latest.band)} (${new Date(s.latest.at).toLocaleDateString()})` : "Not taken"}</td></tr>`;
+  }).join("");
+  const moodMap = { low: 1, flat: 2, okay: 3, good: 4, great: 5 };
+  const moods = d.moodEntries.map((m) => moodMap[m.mood]).filter(Boolean);
+  const avgMood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1) : null;
+  const html = `<!doctype html><meta charset="utf-8"><title>FocusLens summary</title>
+<style>body{font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;max-width:700px;margin:24px auto;padding:0 16px;color:#111}table{border-collapse:collapse;width:100%}td{border:1px solid #ccc;padding:6px 8px}h1{font-size:22px}.n{color:#555;font-size:13px}</style>
+<h1>FocusLens self-report summary</h1><p class="n">Prepared ${new Date().toLocaleDateString()} by the person it describes. Self-reported screening scores and logs, not a diagnosis or clinical assessment.</p>
+<h2>Screeners (latest)</h2><table>${rows}</table>
+<h2>Mood (journal, last ${d.moodEntries.length} tagged entries)</h2><p>${avgMood ? `Average ${avgMood} / 5 (1 = low, 5 = great)` : "No tagged entries."}</p>
+<h2>Sleep</h2><p>${d.avgSleepMin != null ? `Average ${(d.avgSleepMin / 60).toFixed(1)} hours across ${d.sleepNights} logged nights (last 14 days).` : "No sleep logged."}</p>
+<h2>Medication / supplements I listed</h2><p>${d.meds.length ? d.meds.map(escapeHtml).join("; ") : "None listed."}</p>
+<h2>What I'd like to talk about</h2><p>&nbsp;</p><p>&nbsp;</p>
+<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>`;
+  const w = window.open("", "_blank");
+  if (!w) { alert("Please allow pop-ups to open the printable summary."); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+export function renderHelp(container, rerender) {
+  container.appendChild(el(`
+    <div>
+      <h1>Help &amp; accessibility</h1>
+      <p class="subtitle">Where to find support, how to get a proper assessment, and how to make the app comfortable to use.</p>
+    </div>`));
+
+  // Directory with region filter
+  const regions = ["All", ...new Set(HELPLINES.map((h) => h.region))];
+  const dir = el(`<div class="card"><div class="bold">Helplines &amp; finding care</div><p class="small muted">Free or public services. Check hours and eligibility with each service.</p><div class="chips" id="reg-chips"></div><div id="reg-list"></div></div>`);
+  let region = "All";
+  const paint = () => {
+    dir.querySelectorAll("#reg-chips .chip").forEach((c) => c.classList.toggle("active", c.textContent === region));
+    const list = dir.querySelector("#reg-list");
+    list.innerHTML = "";
+    HELPLINES.filter((h) => region === "All" || h.region === region).forEach((h) => {
+      list.appendChild(el(`<div class="task-item"><div class="bold">${escapeHtml(h.name)} <span class="small muted">· ${escapeHtml(h.region)}</span></div><div class="small">${escapeHtml(h.detail)}</div><div class="small"><span class="bold">${escapeHtml(h.contact)}</span> · <a href="${h.url}" target="_blank" rel="noopener noreferrer">${h.url.replace("https://", "")}</a></div></div>`));
+    });
+  };
+  regions.forEach((r) => {
+    const chip = el(`<button type="button" class="chip">${r}</button>`);
+    chip.onclick = () => { region = r; paint(); };
+    dir.querySelector("#reg-chips").appendChild(chip);
+  });
+  container.appendChild(dir);
+  paint();
+  container.appendChild(el(`<div class="card soft"><p class="small" style="margin:0">A website can't see where you are, so there's no live "near me" map here. Use the healthdirect, NHS or SAMHSA finders above, or ask your GP for a referral.</p></div>`));
+
+  const guide = el(`<div class="card"><div class="bold">Not sure what's going on?</div></div>`);
+  CARE_GUIDE.forEach((g) => guide.appendChild(el(`<details class="task-item"><summary class="bold" style="cursor:pointer">${escapeHtml(g.q)}</summary><p class="small" style="margin:6px 0 0">${escapeHtml(g.a)}</p></details>`)));
+  const printBtn = el(`<div class="mt-8"><button class="primary" id="print-summary">Print a summary for an appointment</button></div>`);
+  printBtn.querySelector("button").onclick = openSummary;
+  guide.appendChild(printBtn);
+  container.appendChild(guide);
+
+  // Accessibility
+  const a = readA11y();
+  const card = el(`
+    <div class="card">
+      <div class="bold">Display &amp; accessibility</div>
+      <label class="field" for="a-theme">Theme</label>
+      <select id="a-theme"><option value="auto">Match my device</option><option value="light">Light</option><option value="dark">Dark (OLED)</option></select>
+      <label class="field" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="a-contrast" ${a.contrast ? "checked" : ""} /> High contrast</label>
+      <label class="field" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="a-large" ${a.large ? "checked" : ""} /> Larger text</label>
+      <label class="field" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="a-motion" ${a.reduceMotion ? "checked" : ""} /> Reduce motion</label>
+      <p class="small muted" style="margin-bottom:0">Saved on this device. Every control in the app can be used with a keyboard or a screen reader.</p>
+    </div>`);
+  card.querySelector("#a-theme").value = a.theme || "auto";
+  const save = () => {
+    writeA11y({
+      theme: card.querySelector("#a-theme").value,
+      contrast: card.querySelector("#a-contrast").checked,
+      large: card.querySelector("#a-large").checked,
+      reduceMotion: card.querySelector("#a-motion").checked,
+    });
+    applyA11y();
+  };
+  ["#a-theme", "#a-contrast", "#a-large", "#a-motion"].forEach((id) => { card.querySelector(id).onchange = save; });
+  container.appendChild(card);
 }
