@@ -38,6 +38,9 @@ interface CheckInDao {
     @Query("SELECT * FROM check_ins WHERE taskId = :taskId ORDER BY createdAt DESC LIMIT 1")
     suspend fun latestFor(taskId: Long): CheckInEntity?
 
+    @Query("SELECT * FROM check_ins")
+    suspend fun allOnce(): List<CheckInEntity>
+
     /** Every missed check-in grouped by reason, used to tune which suggestion actually helps this user. */
     @Query("SELECT reason, COUNT(*) as count FROM check_ins WHERE completed = 0 AND reason IS NOT NULL GROUP BY reason")
     suspend fun missReasonCounts(): List<ReasonCount>
