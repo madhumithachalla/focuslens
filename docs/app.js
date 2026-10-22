@@ -6,6 +6,7 @@ import {
 import * as store from "./storage.js";
 import { renderScreenTime } from "./screentime.js";
 import { renderBody } from "./body.js";
+import { renderCoach } from "./coach.js";
 import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
@@ -35,6 +36,7 @@ const ROUTES = [
   { id: "progress", label: "Progress" },
   { id: "community", label: "Community" },
   { id: "partners", label: "Accountability" },
+  { id: "coach", label: "Coach" },
   { id: "body", label: "Body" },
   { id: "care", label: "Care near me" },
   { id: "help", label: "Help" },
@@ -205,6 +207,7 @@ function render() {
     glossary: renderGlossary,
     progress: (c) => renderProgress(c, render),
     help: (c) => renderHelp(c, render),
+    coach: (c) => renderCoach(c),
     body: (c) => renderBody(c, render),
     care: (c) => renderCare(c, render),
     screentime: (c) => renderScreenTime(c, { user: currentUser, openSignIn: openAuthModal }),
@@ -1312,6 +1315,38 @@ function renderAccount(container) {
         <p class="small" style="margin-bottom:0">Journal/Cycle/To-do/Birthdays data now follows this account — sign in on another browser or device and it syncs automatically. Community posts, achievement sharing and accountability partners aren't wired up yet — this account will unlock them once they're built.</p>
       </div>
     `));
+    const syncCard = el(`
+      <div class="card">
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+          <input type="checkbox" id="sync-toggle" ${store.getSyncEnabled() ? "checked" : ""} style="width:auto;margin-top:4px" />
+          <span><span class="bold">Sync across my devices</span><br />
+          <span class="small">When on, your journal, cycle logs, tasks, habits, sleep, medication list and other entries are saved to your account so they follow you to other devices. When off, data stays on this device only and nothing further is uploaded. Data already in your account stays there until you delete it.</span></span>
+        </label>
+        <p class="small mt-8" id="sync-status" role="status" style="margin-bottom:0"></p>
+        <div class="mt-8"><button class="outline" id="sync-now">Sync now</button></div>
+      </div>
+    `);
+    const syncToggle = syncCard.querySelector("#sync-toggle");
+    const syncStatus = syncCard.querySelector("#sync-status");
+    const syncNow = syncCard.querySelector("#sync-now");
+    const syncRefresh = () => {
+      syncNow.disabled = !syncToggle.checked;
+      syncStatus.textContent = syncToggle.checked ? "Sync is on." : "Sync is off: this device only.";
+    };
+    syncToggle.onchange = () => { store.setSyncEnabled(syncToggle.checked); syncRefresh(); };
+    syncNow.onclick = async () => {
+      syncNow.disabled = true;
+      syncStatus.textContent = "Syncing...";
+      try {
+        await store.syncOnSignIn(currentUser.uid);
+        syncStatus.textContent = "Synced just now.";
+      } catch (e) {
+        syncStatus.textContent = "Couldn't sync right now. Try again later.";
+      }
+      syncNow.disabled = !syncToggle.checked;
+    };
+    syncRefresh();
+    container.appendChild(syncCard);
     const out = el(`<button class="outline mt-8">Sign out</button>`);
     out.onclick = async () => { await signOutUser(); render(); };
     container.appendChild(out);
