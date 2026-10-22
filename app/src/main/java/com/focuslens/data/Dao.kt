@@ -142,6 +142,12 @@ interface HourlyUsageDao {
 
     @Query("SELECT hour, SUM(millis) as millis FROM hourly_usage WHERE date BETWEEN :from AND :to GROUP BY hour")
     suspend fun hourTotals(from: String, to: String): List<HourTotal>
+
+    @Query(
+        "SELECT hour, SUM(millis) as millis FROM hourly_usage " +
+            "WHERE date BETWEEN :from AND :to AND pkg IN (:pkgs) GROUP BY hour"
+    )
+    suspend fun hourTotalsForPackages(from: String, to: String, pkgs: List<String>): List<HourTotal>
 }
 
 @Dao

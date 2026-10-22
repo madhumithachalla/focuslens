@@ -14,6 +14,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,22 +24,139 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.focuslens.data.AppDatabase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 private class CoachData(
     val insights: List<CoachInsight>,
     val plan: DayPlan,
-    val risks: List<RiskedTask>
+    val risks: List<RiskedTask>,
+    val signals: List<CoachInsight>,
+    val loadedAt: Long
 )
+
+private const val DAY_MS = 24L * 60 * 60 * 1000
+
+private fun startOfDayMs(ms: Long): Long {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = ms
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
+}
+
+/**
+ * Reads the on-device data behind the smart signals right now (UsageStats, the stored usage
+ * history, Health Connect if connected) and hands it to the pure functions in CoachLogic.kt.
+ * Any source that fails or has no permission is just left out.
+ */
+private suspend fun loadSmartSignals(context: android.content.Context, now: Long): List<CoachInsight> {
+    val usage = UsageRepository(context)
+    val history = UsageHistoryRepository(context, usage)
+    val db = AppDatabase.get(context)
+    val keyFmt = SimpleDateFormat("yyyyMMdd", Locale.US)
+    val todayStart = startOfDayMs(now)
+
+    try {
+        history.catchUp(14)
+        history.catchUpHourly(7)
+    } catch (e: Exception) {
+        // Carry on with whatever is already stored.
+    }
+
+    // (1) Minutes in 23:00-05:00 on each of the last 7 calendar days, from the raw event log.
+    val late = ArrayList<Double>()
+    try {
+        for (back in 0..6) {
+            val dayStart = todayStart - back * DAY_MS
+            val breakdown = usage.hourlyBreakdown(dayStart, minOf(dayStart + DAY_MS, now))
+            var ms = 0L
+            for ((hour, byPkg) in breakdown) {
+                if (hour in LATE_NIGHT_HOURS) ms += byPkg.values.sum()
+            }
+            late.add(ms / 60_000.0)
+        }
+    } catch (e: Exception) {
+        late.clear()
+    }
+
+    // (2) Today so far, and up to 14 earlier days (stored snapshots first, live data for the last week).
+    var todayMs = 0L
+    val prior = ArrayList<Long>()
+    try {
+        todayMs = usage.load(Range.TODAY).sumOf { it.millis }
+        for (back in 1..14) {
+            val dayStart = todayStart - back * DAY_MS
+            var total = db.dailyUsageDao().forDate(keyFmt.format(Date(dayStart))).sumOf { it.millis }
+            if (total <= 0L && back <= 6) {
+                total = usage.loadCustom(dayStart, dayStart + DAY_MS).sumOf { it.millis }
+            }
+            if (total > 0L) prior.add(total)
+        }
+    } catch (e: Exception) {
+        prior.clear()
+    }
+
+    // (3) Time in blocked apps by hour of day: last 7 finished days from history plus today live.
+    val blockedHours = HashMap<Int, Long>()
+    try {
+        val blocked = FocusPrefs(context).blocked().toList()
+        if (blocked.isNotEmpty()) {
+            val from = keyFmt.format(Date(todayStart - 7 * DAY_MS))
+            val to = keyFmt.format(Date(todayStart - DAY_MS))
+            db.hourlyUsageDao().hourTotalsForPackages(from, to, blocked).forEach {
+                blockedHours[it.hour] = (blockedHours[it.hour] ?: 0L) + it.millis
+            }
+            for ((hour, byPkg) in usage.hourlyBreakdown(todayStart, now)) {
+                val ms = byPkg.filterKeys { it in blocked }.values.sum()
+                if (ms > 0) blockedHours[hour] = (blockedHours[hour] ?: 0L) + ms
+            }
+        }
+    } catch (e: Exception) {
+        blockedHours.clear()
+    }
+
+    // (4) Health Connect, only if it is there and already permitted.
+    var hrvRatio: Double? = null
+    var sleepMinutes: Double? = null
+    try {
+        if (HealthVitals.isAvailable(context) && HealthVitals.hasPermission(context)) {
+            hrvRatio = HealthVitals.estimateStress(HealthVitals.readHrv(context, 14)).ratio
+            val nights = HealthVitals.readSleep(context, 3).map {
+                SleepInput(it.end.toEpochMilli(), it.totalMinutes, it.isNap)
+            }
+            sleepMinutes = lastNightSleepMinutes(nights, now)
+        }
+    } catch (e: Exception) {
+        // Health Connect is optional.
+    }
+
+    return smartSignalInsights(
+        SmartSignalInput(
+            lateNightMinutesPerDay = late,
+            todayMs = todayMs,
+            priorDailyMs = prior,
+            blockedHourMs = blockedHours,
+            hrvRatio = hrvRatio,
+            sleepMinutes = sleepMinutes
+        )
+    )
+}
 
 @Composable
 fun CoachScreen() {
@@ -46,8 +164,21 @@ fun CoachScreen() {
     val db = remember { AppDatabase.get(context) }
     var data by remember { mutableStateOf<CoachData?>(null) }
 
-    LaunchedEffect(Unit) {
-        data = withContext(Dispatchers.IO) {
+    // Live: reload when the screen is resumed and every 60 s while it is visible.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var visible by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) visible = true
+            if (event == Lifecycle.Event.ON_PAUSE) visible = false
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(visible) {
+        while (visible) {
+            data = withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             val tasks = db.taskDao().all().first().map {
                 CoachTask(it.id, it.title, it.type.name, it.scheduledAt, it.completedAt)
@@ -59,8 +190,12 @@ fun CoachScreen() {
             CoachData(
                 insights = coachInsights(tasks, checkIns, moods),
                 plan = planDay(tasks, checkIns, now),
-                risks = openTasksByRisk(tasks, checkIns, now)
+                risks = openTasksByRisk(tasks, checkIns, now),
+                signals = loadSmartSignals(context, now),
+                loadedAt = now
             )
+            }
+            delay(60_000L)
         }
     }
 
@@ -78,6 +213,34 @@ fun CoachScreen() {
         if (d == null) {
             item { Text("Reading your data...", color = Color.Gray) }
         } else {
+            item { SectionLabel("SMART SIGNALS FROM YOUR PHONE") }
+            if (d.signals.isEmpty()) {
+                item {
+                    Text(
+                        "Nothing stands out right now, or there isn't enough phone data yet " +
+                            "(these need a few days of usage history; readiness needs Health Connect).",
+                        color = Color.Gray
+                    )
+                }
+            }
+            items(d.signals) { i ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(i.head, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(i.why, fontSize = 13.sp, color = Color.Gray)
+                    }
+                }
+            }
+            item {
+                Text(
+                    "Updated ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(d.loadedAt))}, " +
+                        "refreshes every minute while you are here.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+
             item { SectionLabel("INSIGHTS") }
             items(d.insights) { i ->
                 Card(Modifier.fillMaxWidth()) {

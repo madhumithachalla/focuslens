@@ -127,6 +127,12 @@ class BlockActivity : ComponentActivity() {
         }
         val grantMin = 10
 
+        // The quiz gate comes before the allow path. Each time it is shown counts as one attempt
+        // today (read the config first so the first attempt starts at level 1).
+        val quizPrefs = QuizPrefs(this)
+        val quizGate = quizPrefs.gateConfig()
+        if (quizGate != null && savedInstanceState == null) quizPrefs.addAttempt()
+
         setContent {
             MaterialTheme(
                 colorScheme = lightColorScheme(
@@ -146,6 +152,7 @@ class BlockActivity : ComponentActivity() {
                         resisted = resisted,
                         steps = steps,
                         grantMin = grantMin,
+                        quizGate = quizGate,
                         onPass = {
                             prefs.grant(pkg, grantMin)
                             prefs.addPass(pkg)
@@ -194,7 +201,8 @@ fun BlockScreen(
     steps: List<Challenge>,
     grantMin: Int,
     onPass: () -> Unit,
-    onGiveUp: () -> Unit
+    onGiveUp: () -> Unit,
+    quizGate: QuizGateConfig? = null
 ) {
     var step by remember { mutableIntStateOf(0) }
     val next: () -> Unit = {
@@ -242,14 +250,23 @@ fun BlockScreen(
         }
 
         Spacer(Modifier.height(28.dp))
-        Text("Step ${step + 1} of ${steps.size}", fontSize = 12.sp, color = Color.Gray)
-        Spacer(Modifier.height(12.dp))
+        if (quizGate != null) {
+            QuizGate(
+                config = quizGate,
+                accent = Color(0xFF1F3A34),
+                onSuccess = onPass,
+                onHome = onGiveUp
+            )
+        } else {
+            Text("Step ${step + 1} of ${steps.size}", fontSize = 12.sp, color = Color.Gray)
+            Spacer(Modifier.height(12.dp))
 
-        key(step) {
-            when (steps[step]) {
-                Challenge.BREATHE -> BreatheStep(if (over) 15 else 10) { next() }
-                Challenge.MATH -> MathStep { next() }
-                Challenge.PHRASE -> PhraseStep { next() }
+            key(step) {
+                when (steps[step]) {
+                    Challenge.BREATHE -> BreatheStep(if (over) 15 else 10) { next() }
+                    Challenge.MATH -> MathStep { next() }
+                    Challenge.PHRASE -> PhraseStep { next() }
+                }
             }
         }
 
@@ -259,8 +276,10 @@ fun BlockScreen(
             fontSize = 12.sp,
             color = Color.Gray
         )
-        TextButton(onClick = onGiveUp) {
-            Text("Not now, take me home", fontSize = 16.sp)
+        if (quizGate == null) {
+            TextButton(onClick = onGiveUp) {
+                Text("Not now, take me home", fontSize = 16.sp)
+            }
         }
     }
 }
