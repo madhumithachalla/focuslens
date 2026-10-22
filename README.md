@@ -33,7 +33,7 @@ tested on one phone (Pixel 6a, Android 16).
 - **Accessibility service:** detect which app is open so the pause screen can appear.
   For Instagram and YouTube it also reads which tab is selected. It keeps only internal
   element names and a fixed list of tab words. It does not store text, messages or posts.
-- Screen-time data stays on the phone. The only network code is the optional account sign-in (Firebase Auth and Firestore, the same project as the web app); it does not upload usage data.
+- Screen-time data stays on the phone unless you turn on "Sync screen time to my account" in Settings (off by default; uploads per-day totals and app names to your own account, deletable any time). The only network code is the optional account sign-in and that opt-in sync (Firebase Auth and Firestore, the same project as the web app).
 
 ## Download
 

@@ -37,6 +37,10 @@ fun SettingsScreen() {
     var profile by remember { mutableStateOf<ProfileEntity?>(null) }
     var loaded by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
+    var syncOn by remember { mutableStateOf(UsageSync.isEnabled(context)) }
+    val signedIn = remember { UsageSync.isSignedIn() }
+    var syncBusy by remember { mutableStateOf(false) }
+    var syncMessage by remember { mutableStateOf<String?>(null) }
 
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf<AgeBracket?>(null) }
@@ -137,7 +141,7 @@ fun SettingsScreen() {
         ) {
             Spacer(Modifier.height(16.dp))
             Text("Settings", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text("Everything from setup, editable any time — nothing here leaves this device.", fontSize = 13.sp, color = Color.Gray)
+            Text("Everything from setup, editable any time — nothing here leaves this device unless you turn on screen-time sync below.", fontSize = 13.sp, color = Color.Gray)
 
             Spacer(Modifier.height(20.dp))
             Text("What should we call you?", fontSize = 15.sp, fontWeight = FontWeight.Medium)
@@ -282,6 +286,57 @@ fun SettingsScreen() {
                     selectedNeurodivergent = emptySet(); neurodivergentCustom = ""; neurodivergentNotSure = false
                 }
             })
+
+            Spacer(Modifier.height(24.dp))
+            Text("Sync screen time to my account", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Off by default. When on, the last 7 days of per-day screen-time totals, app names and an hourly " +
+                    "breakdown are uploaded to your account so you can see them on the web. Only you can read them. " +
+                    "Turning it off stops future uploads; use the button below to remove what is already uploaded.",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Spacer(Modifier.height(8.dp))
+            if (!signedIn) {
+                Text("Sign in on the Account screen to use this.", fontSize = 12.sp, color = Color(0xFFB26A00))
+                Spacer(Modifier.height(4.dp))
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Sync screen time to my account", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = syncOn && signedIn,
+                    enabled = signedIn,
+                    onCheckedChange = { on ->
+                        syncOn = on
+                        UsageSync.setEnabled(context, on)
+                        syncMessage = null
+                        if (on) {
+                            scope.launch {
+                                val repo = UsageRepository(context)
+                                UsageSync.maybeSync(context, repo, UsageHistoryRepository(context, repo), force = true)
+                            }
+                        }
+                    }
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = {
+                    syncBusy = true
+                    syncMessage = null
+                    scope.launch {
+                        val ok = UsageSync.deleteAll()
+                        syncBusy = false
+                        syncMessage = if (ok) "Deleted your synced usage." else "Couldn't delete right now — check your connection and try again."
+                    }
+                },
+                enabled = signedIn && !syncBusy
+            ) { Text("Delete my synced usage") }
+            if (syncMessage != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(syncMessage ?: "", fontSize = 12.sp, color = Color.Gray)
+            }
 
             Spacer(Modifier.height(24.dp))
         }
