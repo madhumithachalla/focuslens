@@ -90,7 +90,7 @@ private suspend fun signInWithGoogle(context: android.content.Context, auth: Fir
 }
 
 /**
- * Email sign-in via the same Firebase project as the web app (focuslens-8805c) — same
+ * Email sign-in via the same Firebase project as the web app (focuslens-d5379) — same
  * accounts, same Firestore `users` collection, so a future community/sharing/accountability
  * feature works identically on both. Doesn't sync Journal/Cycle/To-do data to the account
  * yet (still local-only, same as the web app) — this just establishes who's signed in.
