@@ -117,6 +117,10 @@ export const REWARD_IDEAS = [
 // suggestion to notice how you feel against, not a rule to follow regardless of how you
 // actually feel that day.
 export const PHASE_GUIDANCE = {
+  Menstrual: {
+    color: "var(--phase-menstrual)",
+    text: "Energy is often lower for the first few days of a period. Often suggested for: rest, gentle movement, reflection, and lighter commitments where you can — but plenty of people feel fine, so go by how you actually feel.",
+  },
   "Follicular phase": {
     color: "var(--phase-follicular)",
     text: "Energy commonly starts rising through this phase. Often suggested for: starting new projects, planning, brainstorming, and ramping up exercise intensity as you feel able to.",
@@ -141,8 +145,14 @@ export const PHASE_GUIDANCE = {
 export const JOURNAL_TEMPLATES = [
   { emoji: "🙏", title: "Gratitude list", scaffold: "Three things I'm grateful for today:\n1. \n2. \n3. \n" },
   { emoji: "✅", title: "Daily reflection", scaffold: "What went well today:\n\nWhat didn't go as planned:\n\nOne thing to try tomorrow:\n" },
-  { emoji: "🧩", title: "Thought record", scaffold: "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nA more balanced way to see it:\n" },
-  { emoji: "🌊", title: "Brain dump", scaffold: "Just getting everything out, no particular order:\n\n" },
+  { emoji: "🧩", title: "Thought record (CBT)", scaffold: "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nEvidence for the thought:\n\nEvidence against it:\n\nA more balanced way to see it:\n" },
+  { emoji: "🌊", title: "Brain dump (ADHD)", scaffold: "Everything in my head, no order, no judging:\n\n\nPick ONE thing from above to do next:\n" },
+  { emoji: "🏛️", title: "Stoic evening review", scaffold: "What did I do well today?\n\nWhere did I fall short of who I want to be?\n\nWhat was in my control, and what wasn't?\n\nWhat will I do differently tomorrow?\n" },
+  { emoji: "🌓", title: "Shadow work", scaffold: "Something that really irritated me lately:\n\nWhat might it be touching in me?\n\nA quality I judge in others that I recognise in myself:\n\nHow could I treat that part of me with kindness?\n" },
+  { emoji: "🌙", title: "Dream log", scaffold: "What I remember of the dream:\n\nHow it felt:\n\nAnything from yesterday it might connect to:\n" },
+  { emoji: "🌆", title: "Evening wind-down", scaffold: "What's still on my mind:\n\nWhat can wait until tomorrow:\n\nOne thing that felt good today:\n\nTomorrow's first small step:\n" },
+  { emoji: "⏱️", title: "5-minute micro-journal", scaffold: "Mood in one word:\n\nOne win:\n\nOne worry:\n\nOne kind thing I can do for myself:\n" },
+  { emoji: "🔎", title: "Sensory & focus check-in", scaffold: "What pulled my attention today (apps, people, noise)?\n\nWhat helped me concentrate?\n\nAny sensory triggers (light, sound, texture, crowds)?\n\nOne adjustment for tomorrow:\n" },
 ];
 
 // Tracking is opt-in per type — nobody is forced into any one of these; pick whichever apply.
@@ -182,16 +192,19 @@ export const MISS_SUGGESTIONS = {
 export const ROADMAP = {
   current: [
     { title: "Journal", brief: "Daily prompts or free writing, one entry per day, with a mood tag and a real streak (celebrates at 3/7/14/30/60/100 days)." },
-    { title: "Cycle & Energy", brief: "Log a period start or a general energy day — today or any past date. After 2+ logged starts: a rolling-average estimate of your next cycle, current phase (follicular/fertile window/ovulation/luteal) with its own accessible color, an estimated fertile window, and commonly-cited \"what people often do in this phase\" guidance. An estimate from your own data and widely-circulated wellness framing, not a clinical prediction, diagnosis, or contraception method. No watch-sync here (needs native OS access) — that's in the Android app." },
+    { title: "Menstrual & energy rhythm estimator", brief: "Log a period start or a general energy day — today or any past date. After 2+ logged starts: an exponentially weighted estimate of your next cycle (up to your last 12, recent ones count more), a regularity score, current phase (menstrual/follicular/fertile window/ovulation/luteal) with its own accessible color, an estimated fertile window, and commonly-cited \"what people often do in this phase\" guidance. An estimate from your own data and widely-circulated wellness framing, not a clinical prediction, diagnosis, or contraception method. No watch-sync here (needs native OS access) — that's in the Android app." },
     { title: "To-Do + weekly reflection", brief: "Add, complete, or miss tasks with a reason. A weekly summary surfaces your top miss-reason and a matching suggestion." },
     { title: "Calendar scheduling", brief: "Give a task a date/time and add it to Google Calendar (one tap) or download it as a .ics file for Apple Calendar, Outlook, or any other calendar app — no account or API key needed." },
     { title: "Learn", brief: "Newsletters, articles and research hubs across focus, sleep, mental health, habits, study skills, sex education, LGBTQ+ support, and neurodivergence/ADHD (including a real symptom screener designed by Harvard Medical School and the WHO), gated by a short self-reflection prompt before \"mark as read\" sticks." },
     { title: "Suggested for you", brief: "On the Mental health page: a simple rule-based pick from Learn based on your own recent mood trend or top missed-task reason — plainly labeled as rules, not AI or a diagnosis." },
     { title: "Account sign-in + cross-device sync", brief: "Email or Google sign-in via Firebase. Journal/Cycle/To-do/Birthdays data now follows your account — sign in on another browser or device and it pulls down automatically (newest edit wins if you changed both offline)." },
-    { title: "Focus timer", brief: "Pomodoro (25/5), 52/17 and 90-minute sprint blocks with breaks, a sound + notification when a block ends, and a count of the minutes you've actually focused today and this week. Keeps running if you switch pages." },
+    { title: "Focus timer + Eisenhower matrix", brief: "Pomodoro (25/5), 52/17 and 90-minute sprint blocks with breaks, a sound + notification when a block ends, and a count of the minutes you've actually focused today and this week. Keeps running if you switch pages." },
     { title: "Sleep", brief: "Bedtime planner built on 90-minute sleep cycles, a nightly sleep log, a 7-day sleep-debt figure against your own target, and a body-clock (lark / in-between / owl) tip. Based on what you enter — no phone or watch sensors on the web." },
-    { title: "Wellness", brief: "Habit tracker with a 7-day grid and streaks, a water counter with your own daily target, a self-written medication / supplement checklist, life pillars, and a 5-4-3-2-1 grounding exercise plus box breathing for when your mind is racing." },
+    { title: "Wellness", brief: "Habit library and tracker with a 7-day grid and streaks, an activity log with step goal, a nutrition log and your own plan, vision-board pillars, a water counter with your own daily target, a self-written medication / supplement checklist, life pillars, and a 5-4-3-2-1 grounding exercise plus box breathing for when your mind is racing." },
     { title: "Screeners", brief: "PHQ-9, GAD-7 and the WHO ASRS v1.1 Part A in their standard published wording, with saved results over time and crisis-support numbers always one tap away. Screening aids only, not a diagnosis." },
+    { title: "Journal (10 modes)", brief: "Ten structured templates (gratitude, CBT thought record, ADHD brain dump, Stoic review, shadow work, dream log, wind-down, 5-minute micro-journal and more), your own saved prompts, search across all entries, and a gentle nudge to calming exercises and helplines when your mood is low." },
+    { title: "Progress", brief: "Level and XP worked out from what you really log, daily quests, a weekly Doomscroll Serpent boss beaten with focus minutes, badges, and a milestone card you can save as an image." },
+    { title: "Help & accessibility", brief: "Helplines by region, a plain guide to getting a proper assessment, a printable self-report summary for appointments, plus dark/OLED theme, high contrast, larger text and reduced motion." },
     { title: "Glossary", brief: "Searchable plain-language definitions of the sleep, focus, cycle and screener terms used in the app, each with its primary source." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
@@ -301,4 +314,59 @@ export const CRISIS_RESOURCES = [
   { region: "United States", text: "Call or text 988 (Suicide & Crisis Lifeline)" },
   { region: "United Kingdom & Ireland", text: "Samaritans 116 123 (free, 24/7)" },
   { region: "Elsewhere", text: "findahelpline.com lists free local services by country. In immediate danger, call your local emergency number." },
+];
+
+// ---------------------------------------------------------------- Habit library, vision board, exercises
+export const HABIT_LIBRARY = [
+  { group: "Deep work", items: ["25-minute focus block before checking my phone", "Plan tomorrow's top 3 tasks", "Phone out of reach while I work"] },
+  { group: "Mindfulness", items: ["5 minutes of breathing or meditation", "Write one line in my journal", "Notice 3 good things today"] },
+  { group: "ADHD routines", items: ["Put keys / wallet / phone in the same spot", "2-minute tidy of one surface", "Body-double or co-work session", "Check the calendar after breakfast"] },
+  { group: "Digital detox", items: ["No screens for the last 30 minutes before bed", "Phone on grayscale after 9pm", "One meal without a screen"] },
+  { group: "Physical health", items: ["10-minute walk", "Stretch for 5 minutes", "Eat something with protein at breakfast", "Take a break to look 20 feet away every 20 minutes"] },
+];
+
+export const VISION_AREAS = ["Career", "Health", "Mindset", "Wealth", "Relationships", "Learning", "Fun"];
+
+export const EXERCISES = {
+  grounding: { title: "5-4-3-2-1 grounding", steps: [
+    "Name 5 things you can see.",
+    "Name 4 things you can feel (feet on the floor, fabric, air on your skin).",
+    "Name 3 things you can hear.",
+    "Name 2 things you can smell.",
+    "Name 1 thing you can taste.",
+  ] },
+  eyes: { title: "20-20-20 eye rest", steps: [
+    "Look away from your screen at something about 20 feet (6 m) away.",
+    "Keep looking there for 20 seconds. Let your eyes soften.",
+    "Blink slowly 10 times to re-wet your eyes.",
+    "Roll your eyes in a slow circle once each way, then return to your task.",
+  ] },
+  neck: { title: "Neck & shoulder release", steps: [
+    "Sit tall. Drop your shoulders away from your ears.",
+    "Slowly tilt your right ear toward your right shoulder. Hold for 15 seconds, breathing out.",
+    "Slowly tilt your left ear toward your left shoulder. Hold for 15 seconds.",
+    "Roll your shoulders back 5 times, then forward 5 times.",
+    "Gently look over each shoulder, 10 seconds a side. Stop if anything hurts.",
+  ] },
+};
+
+// ---------------------------------------------------------------- Support directory
+// Public services only. Always confirm opening hours and eligibility with the service itself.
+export const HELPLINES = [
+  { region: "Australia", name: "Lifeline", detail: "24/7 crisis support", contact: "13 11 14", url: "https://www.lifeline.org.au" },
+  { region: "Australia", name: "Beyond Blue", detail: "Anxiety, depression and general support", contact: "1300 22 4636", url: "https://www.beyondblue.org.au" },
+  { region: "Australia", name: "headspace", detail: "Support for ages 12-25", contact: "eheadspace online and phone", url: "https://headspace.org.au" },
+  { region: "Australia", name: "healthdirect service finder", detail: "Find a GP, psychologist or clinic near you", contact: "1800 022 222", url: "https://www.healthdirect.gov.au" },
+  { region: "United States", name: "988 Suicide & Crisis Lifeline", detail: "24/7 call or text", contact: "988", url: "https://988lifeline.org" },
+  { region: "United States", name: "SAMHSA treatment locator", detail: "Find mental-health and substance-use services", contact: "1-800-662-4357", url: "https://findtreatment.gov" },
+  { region: "United Kingdom & Ireland", name: "Samaritans", detail: "Free, 24/7 listening", contact: "116 123", url: "https://www.samaritans.org" },
+  { region: "United Kingdom & Ireland", name: "NHS: find a mental health service", detail: "Self-referral and GP routes", contact: "NHS 111 (UK)", url: "https://www.nhs.uk/service-search/mental-health" },
+  { region: "Anywhere", name: "Find a Helpline", detail: "Free local helplines listed by country", contact: "Website", url: "https://findahelpline.com" },
+];
+
+export const CARE_GUIDE = [
+  { q: "Not sure what you're going through?", a: "That's common. You don't need a label to ask for help. Start with your GP or a counsellor and describe what you notice: how long, how often, what gets in the way. Notes from your Journal, Sleep and Screeners pages can help you say it." },
+  { q: "Who can actually assess me?", a: "A registered GP, psychologist, psychiatrist or other licensed mental-health professional. Check registration with your country's professional register before booking. Online quizzes (including the ones in this app) can't diagnose." },
+  { q: "What should I bring to a first appointment?", a: "Use \"Print a summary\" on the Screeners page to bring your recent scores, mood and sleep. It is your own self-report, a conversation starter rather than a result." },
+  { q: "Is this an emergency?", a: "If you may act on thoughts of harming yourself or someone else, or you are in danger, call your local emergency number now. A helpline is also fine if you're unsure." },
 ];
