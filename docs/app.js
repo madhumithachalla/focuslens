@@ -4,6 +4,7 @@ import {
   REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES, JOURNAL_TEMPLATES,
 } from "./content.js";
 import * as store from "./storage.js";
+import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
 
 applyA11y();
@@ -28,6 +29,8 @@ const ROUTES = [
   { id: "explore", label: "Explore" },
   { id: "glossary", label: "Glossary" },
   { id: "progress", label: "Progress" },
+  { id: "community", label: "Community" },
+  { id: "partners", label: "Accountability" },
   { id: "help", label: "Help" },
   { id: "birthdays", label: "Birthdays" },
   { id: "account", label: "Account" },
@@ -48,7 +51,7 @@ watchAuth((user) => {
   } else {
     store.clearSyncUser();
   }
-  if (currentRoute() === "account") render();
+  if (["account", "community", "partners"].includes(currentRoute())) render();
 });
 // Picks up the user coming back from the Google sign-in redirect, if any. Errors here
 // (unauthorized domain, provider not enabled, etc.) must surface on the Account page, not be
@@ -179,6 +182,7 @@ authTrigger.onclick = () => {
 };
 
 function render() {
+  stopCommunity();
   renderNav();
   const route = currentRoute();
   page.innerHTML = "";
@@ -195,6 +199,8 @@ function render() {
     glossary: renderGlossary,
     progress: (c) => renderProgress(c, render),
     help: (c) => renderHelp(c, render),
+    community: (c) => renderCommunity(c, { user: currentUser, openSignIn: openAuthModal }),
+    partners: (c) => renderPartners(c, { user: currentUser, openSignIn: openAuthModal }),
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
