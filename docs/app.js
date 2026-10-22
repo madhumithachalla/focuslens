@@ -257,7 +257,7 @@ function renderRoadmap(container) {
     `));
   });
 
-  container.appendChild(el(`<div class="roadmap-section-title">Upcoming (needs the Firebase account system)</div>`));
+  container.appendChild(el(`<div class="roadmap-section-title">Upcoming (builds on the Firebase account system, which is live)</div>`));
   ROADMAP.upcoming.forEach((item) => {
     container.appendChild(el(`
       <div class="card">
