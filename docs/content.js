@@ -193,10 +193,10 @@ export const ROADMAP = {
     { title: "Mental health trend", brief: "A 14-day mood/energy trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis." },
   ],
   upcoming: [
-    { title: "Android screen-time in your account", brief: "The web sync above only covers Journal/Cycle/To-do/Birthdays, which live in the web app. Screen-time usage data is collected by the Android app and still stays on-device — making it follow your account too means adding the same Firestore write to the Android app itself, not a web change." },
-    { title: "Community chat", brief: "A shared space for FocusLens users to post and talk." },
-    { title: "Achievement sharing", brief: "Share a card of a milestone (a streak, a Focus Score) with other app users." },
-    { title: "Accountability partners + dares", brief: "Pick a friend to hold you accountable on tasks; if a task isn't done, a dare gets assigned." },
+    { title: "Android screen-time in your account", brief: "Accounts are live on both platforms (same Firebase project, same sign-in). The web sync only covers Journal/Cycle/To-do/Birthdays, which live in the web app. Screen-time usage is collected by the Android app and still stays on-device — making it follow your account means adding a Firestore write to the Android app itself (under users/{uid}/data, which the existing security rules already cover), not a web change." },
+    { title: "Community chat", brief: "A shared space for FocusLens users to post and talk. Sign-in is already in place; still to build: a posts collection, Firestore rules that allow signed-in users to read others' posts (today the rules only allow your own data), and moderation/reporting." },
+    { title: "Achievement sharing", brief: "Share a card of a milestone (a streak, a Focus Score) with other app users. Needs the same shared-read rules as community chat, plus an explicit opt-in so nothing is shared by default." },
+    { title: "Accountability partners + dares", brief: "Pick a friend to hold you accountable on tasks; if a task isn't done, a dare gets assigned. Needs a way to find and invite another account, a mutual-consent link between two users, and rules that let a partner see only the tasks you share with them." },
     { title: "Native iOS app", brief: "On hold until there's a Mac + Apple Developer account. Blocking features would need a redesign around Apple's narrower Screen Time framework — some current Android capabilities (Reels/Shorts-only blocking, Chrome domain detection) have no iOS equivalent at all." },
   ],
   androidOnly: [
