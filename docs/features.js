@@ -381,33 +381,9 @@ export function renderWellness(container, rerender) {
   };
   container.appendChild(water);
 
-  // Medication / supplements checklist
-  const meds = store.listMeds();
-  const taken = store.medsTakenToday();
-  const medCard = el(`<div class="card"><div class="bold">Medication &amp; supplements</div><p class="small muted">A reminder checklist you write yourself. FocusLens doesn't suggest doses or products — follow your prescriber's or pharmacist's advice.</p></div>`);
-  if (!meds.length) medCard.appendChild(el(`<p class="muted">Nothing on your list yet.</p>`));
-  meds.forEach((m) => {
-    const row = el(`
-      <div class="row task-item">
-        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" ${taken[m.id] ? "checked" : ""} /> <span>${escapeHtml(m.name)} <span class="small muted">· ${escapeHtml(m.slot)}</span></span></label>
-        <button class="text">Delete</button>
-      </div>`);
-    row.querySelector("input").onchange = (e) => { store.setMedTaken(m.id, e.target.checked); rerender(); };
-    row.querySelector("button").onclick = () => { store.deleteMed(m.id); rerender(); };
-    medCard.appendChild(row);
-  });
-  const addMed = el(`
-    <div class="mt-8">
-      <input type="text" id="med-name" placeholder="Name" />
-      <select id="med-slot" class="mt-8"><option>Morning</option><option>Midday</option><option>Evening</option><option>Bedtime</option></select>
-      <div class="mt-8"><button class="primary" id="med-add">Add</button></div>
-    </div>`);
-  addMed.querySelector("#med-add").onclick = () => {
-    const name = addMed.querySelector("#med-name").value.trim();
-    if (name) { store.addMed(name, addMed.querySelector("#med-slot").value); rerender(); }
-  };
-  medCard.appendChild(addMed);
-  container.appendChild(medCard);
+  // Medications live on their own page (reminders, sharing, label reading, privacy options)
+  const medLink = el(`<div class="card row"><div><div class="bold">Medication &amp; supplements</div><div class="small muted">Reminders, a daily checklist and a private update you can send to family.</div></div><a class="chip" href="#meds">Open</a></div>`);
+  container.appendChild(medLink);
 
   // Life pillars
   const pillars = store.listPillars();
