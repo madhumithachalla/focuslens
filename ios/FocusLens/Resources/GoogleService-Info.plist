@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>885226905018-p08nais7dvbio48t4r46caquocb4uu5j.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.885226905018-p08nais7dvbio48t4r46caquocb4uu5j</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDgJeJwuh4GLmtjpcN-GNlKVPwBpOWkZKQ</string>
+	<key>GCM_SENDER_ID</key>
+	<string>885226905018</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.focuslens</string>
+	<key>PROJECT_ID</key>
+	<string>focuslens-d5379</string>
+	<key>STORAGE_BUCKET</key>
+	<string>focuslens-d5379.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:885226905018:ios:6375538986d6498e065183</string>
+</dict>
+</plist>

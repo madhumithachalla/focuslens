@@ -1,0 +1,27 @@
+# XcodeGen spec. On a Mac: brew install xcodegen, then run `xcodegen generate` in this folder.
+name: FocusLens
+options:
+  bundleIdPrefix: com.focuslens
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""   # set your Apple Team ID here before running on a device
+targets:
+  FocusLens:
+    type: application
+    platform: iOS
+    sources:
+      - path: FocusLens/Sources
+    resources:
+      - path: FocusLens/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.focuslens
+        INFOPLIST_KEY_CFBundleDisplayName: FocusLens
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        GENERATE_INFOPLIST_FILE: YES
