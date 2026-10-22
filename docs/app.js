@@ -5,6 +5,8 @@ import {
 } from "./content.js";
 import * as store from "./storage.js";
 import { renderScreenTime } from "./screentime.js";
+import { renderBody } from "./body.js";
+import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
 
@@ -33,6 +35,8 @@ const ROUTES = [
   { id: "progress", label: "Progress" },
   { id: "community", label: "Community" },
   { id: "partners", label: "Accountability" },
+  { id: "body", label: "Body" },
+  { id: "care", label: "Care near me" },
   { id: "help", label: "Help" },
   { id: "birthdays", label: "Birthdays" },
   { id: "account", label: "Account" },
@@ -201,6 +205,8 @@ function render() {
     glossary: renderGlossary,
     progress: (c) => renderProgress(c, render),
     help: (c) => renderHelp(c, render),
+    body: (c) => renderBody(c, render),
+    care: (c) => renderCare(c, render),
     screentime: (c) => renderScreenTime(c, { user: currentUser, openSignIn: openAuthModal }),
     community: (c) => renderCommunity(c, { user: currentUser, openSignIn: openAuthModal }),
     partners: (c) => renderPartners(c, { user: currentUser, openSignIn: openAuthModal }),
