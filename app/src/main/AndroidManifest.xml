@@ -66,6 +66,15 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- Pause screen for a blocked app during an active block schedule. -->
+        <activity
+            android:name=".SchedulePauseActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
         <!-- Shown for a specific blocked feature (Reels, Shorts) or a blocked site in Chrome. -->
         <activity
             android:name=".FeatureBlockedActivity"

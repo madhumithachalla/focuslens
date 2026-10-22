@@ -80,7 +80,9 @@ class FocusAccessibilityService : AccessibilityService() {
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
 
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing ||
+            SchedulePauseActivity.showing
+        ) return
         if (now - lastLaunch < 3_000L) return
 
         val blockedFeature = when {
@@ -185,6 +187,22 @@ class FocusAccessibilityService : AccessibilityService() {
 
         if (!prefs.enabled || !prefs.isBlocked(pkg)) return
         if (now < prefs.allowedUntil(pkg)) return
+        // Block schedules: a blocked app opened inside an active schedule window gets the pause screen.
+        val schedule = BlockSchedulePrefs(this).activeSchedule(now)
+        if (schedule != null) {
+            if (now - lastLaunch < 1_500L) return
+            lastLaunch = now
+            startActivity(
+                Intent(this, SchedulePauseActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("pkg", pkg)
+                    putExtra("name", schedule.name)
+                    putExtra("end", schedule.endMinutes)
+                    putExtra("strict", schedule.strict)
+                }
+            )
+            return
+        }
         if (now - lastLaunch < 1_500L) return
         lastLaunch = now
         val intent = Intent(this, BlockActivity::class.java).apply {
