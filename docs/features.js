@@ -949,3 +949,18 @@ export function renderHelp(container, rerender) {
   ["#a-theme", "#a-contrast", "#a-large", "#a-motion"].forEach((id) => { card.querySelector(id).onchange = save; });
   container.appendChild(card);
 }
+
+// Header theme button: cycles Match device -> Light -> Dark (same setting as the Help page).
+const THEME_ORDER = ["auto", "light", "dark"];
+const THEME_INFO = { auto: { icon: "A", name: "match device" }, light: { icon: "☀", name: "light" }, dark: { icon: "☾", name: "dark" } };
+
+export function themeLabel() {
+  return THEME_INFO[readA11y().theme || "auto"];
+}
+
+export function cycleTheme() {
+  const a = readA11y();
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(a.theme || "auto") + 1) % THEME_ORDER.length];
+  writeA11y({ ...a, theme: next });
+  applyA11y();
+}

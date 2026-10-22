@@ -3,12 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#1F3A34" />
+  <meta name="theme-color" content="#f5f2eb" />
   <title>FocusLens</title>
   <meta name="description" content="Journal, cycle tracking, to-do reflection, curated learning and reward suggestions — the FocusLens features that don't need a native app, for any browser on any device." />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -27,18 +30,22 @@
           <img class="wordmark" src="wordmark.svg" alt="FocusLens" /><span class="brand-sub">web</span>
         </div>
         <div class="get-app" id="get-app">
+          <a id="xp-pill" class="xp-pill" href="#progress" title="Your level and XP"></a>
+          <button type="button" id="theme-toggle" class="icon-btn" aria-label="Change theme"></button>
           <button type="button" id="auth-trigger">Sign in</button>
           <button type="button" id="install-btn" hidden>Install app</button>
           <a id="android-link" class="get-app-link" href="https://madhumithachalla.github.io/focuslens/focuslens-debug.apk" target="_blank" rel="noopener">Android APK ↓</a>
         </div>
       </div>
-      <nav id="nav" class="nav"></nav>
     </header>
     <div id="ios-install-tip" class="ios-install-tip" hidden>
       <p>Add FocusLens to your home screen: tap the Share icon, then "Add to Home Screen".</p>
       <button type="button" id="ios-install-dismiss">Got it</button>
     </div>
-    <main id="page" class="page"></main>
+    <div class="shell">
+      <aside id="sidebar" class="sidebar"><nav id="nav" class="nav" aria-label="Main"></nav></aside>
+      <main id="page" class="page"></main>
+    </div>
   </div>
   <div id="auth-modal" class="modal-overlay" hidden>
     <div class="modal-card">
