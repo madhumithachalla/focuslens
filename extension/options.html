@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FocusLens Blocker Settings</title>
+<link rel="stylesheet" href="styles.css">
+<style>main{max-width:760px;margin:0 auto;padding:20px 16px 60px} .days label{margin-right:.6rem}</style>
+</head>
+<body>
+<main>
+  <h1>FocusLens Blocker settings</h1>
+  <p class="muted">Everything is stored on this device. Nothing is sent anywhere.</p>
+  <div id="lock" class="lock" role="status" hidden></div>
+  <p id="msg" class="msg" role="status" aria-live="polite"></p>
+
+  <section class="card" aria-labelledby="h-block">
+    <h2 id="h-block">Blocklist</h2>
+    <form id="addform" class="row grow">
+      <div><label for="newdomain" class="sr-only">Domain to block</label>
+      <input type="text" id="newdomain" placeholder="example.com or paste a URL" autocomplete="off" style="width:100%"></div>
+      <button class="primary" type="submit">Add</button>
+    </form>
+    <p class="muted">Subdomains are blocked too (blocking example.com also blocks m.example.com).</p>
+    <ul id="chips" class="chips" aria-label="Blocked domains"></ul>
+    <fieldset><legend>Preset packs</legend><div id="packs"></div></fieldset>
+  </section>
+
+  <section class="card" aria-labelledby="h-sched">
+    <h2 id="h-sched">Schedules</h2>
+    <p class="muted">With no schedules, blocking is always on. With schedules, blocking applies only inside active windows. Windows can cross midnight (e.g. 22:00 to 06:00).</p>
+    <ul id="schedlist" class="chips" style="display:block"></ul>
+    <form id="schedform">
+      <div class="row">
+        <label>Name <input type="text" id="sname" placeholder="Mindful morning" maxlength="60"></label>
+        <label>From <input type="time" id="sstart" value="07:30"></label>
+        <label>To <input type="time" id="send" value="10:30"></label>
+      </div>
+      <fieldset class="days"><legend>Days</legend><div id="sdays"></div></fieldset>
+      <button class="primary" type="submit">Add schedule</button>
+    </form>
+  </section>
+
+  <section class="card" aria-labelledby="h-fric">
+    <h2 id="h-fric">Friction</h2>
+    <div class="row">
+      <label for="delay">Wait before "Continue anyway" enables</label>
+      <select id="delay"><option value="0">0 seconds</option><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option></select>
+    </div>
+    <div class="row" style="margin-top:.6rem">
+      <label for="passes">Emergency passes per day</label>
+      <input type="number" id="passes" min="0" max="20" style="width:5rem">
+    </div>
+    <p class="muted">An emergency pass allows one site for 10 minutes.</p>
+    <p><label for="strict"><input type="checkbox" id="strict"> Strict mode</label></p>
+    <p class="muted">While a schedule window or focus session is active, settings cannot be edited or paused, and emergency passes are switched off.</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-gate">
+    <h2 id="h-gate">Question gate</h2>
+    <p class="muted">Before a blocked site opens you answer questions. They get harder the more often you try to get in during a day, and within a gate two right answers in a row raise the level.</p>
+    <p><label for="genabled"><input type="checkbox" id="genabled"> Require the question gate before continuing</label></p>
+    <fieldset><legend>Categories</legend><div id="gcats"></div></fieldset>
+    <p><label for="gneeded">Correct answers needed <input type="number" id="gneeded" min="1" max="5" style="width:4rem"></label></p>
+  </section>
+
+  <section class="card" aria-labelledby="h-quiz">
+    <h2 id="h-quiz">Topic quiz gate</h2>
+    <p class="muted">Pick something you want to learn. To continue to a blocked site you must answer three of your own questions correctly. For short answers, separate accepted alternatives with a vertical bar (paris|paris france).</p>
+    <p><label for="qenabled"><input type="checkbox" id="qenabled"> Require the quiz before continuing</label></p>
+    <p><label for="qtopic">Topic <input type="text" id="qtopic" maxlength="80" placeholder="Spanish verbs"></label></p>
+    <div id="qlist"></div>
+    <button id="qsave" class="primary" type="button">Save quiz</button>
+  </section>
+
+  <section class="card" aria-labelledby="h-stats">
+    <h2 id="h-stats">Stats (last 30 days)</h2>
+    <div class="row"><div><div class="stat" id="s-blocked">0</div><div class="muted">blocked attempts</div></div>
+    <div><div class="stat" id="s-gave">0</div><div class="muted">distractions I gave in to</div></div></div>
+    <div class="bars" id="bars" role="img" aria-label="Blocked attempts per day"></div>
+    <table><caption class="sr-only">Blocked attempts per site</caption><thead><tr><th>Site</th><th>Attempts</th></tr></thead><tbody id="sites"></tbody></table>
+  </section>
+
+  <section class="card" aria-labelledby="h-data">
+    <h2 id="h-data">Your data</h2>
+    <div class="row">
+      <button id="export" type="button">Export settings (JSON)</button>
+      <label for="import" class="sr-only">Import settings file</label>
+      <input type="file" id="import" accept="application/json,.json">
+      <button id="reset" type="button" class="danger">Reset everything</button>
+    </div>
+  </section>
+</main>
+<script type="module" src="options.js"></script>
+</body>
+</html>

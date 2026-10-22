@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "FocusLens Distraction Blocker",
+  "version": "1.0.0",
+  "description": "Block distracting websites with a gentle friction screen, schedules and focus mode. Everything stays on your device.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "declarativeNetRequest", "alarms", "activeTab"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": {
+    "default_title": "FocusLens Blocker",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "browser_specific_settings": { "gecko": { "id": "blocker@focuslens.local", "strict_min_version": "128.0" } }
+}
