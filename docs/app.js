@@ -4,6 +4,7 @@ import {
   REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES, JOURNAL_TEMPLATES,
 } from "./content.js";
 import * as store from "./storage.js";
+import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary } from "./features.js";
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
 import {
   watchAuth, signUp, signIn, signOutUser, authErrorMessage,
@@ -16,9 +17,14 @@ const ROUTES = [
   { id: "cycle", label: "Tracking" },
   { id: "tasks", label: "To-do" },
   { id: "alarms", label: "Alarms" },
+  { id: "focus", label: "Focus" },
+  { id: "sleep", label: "Sleep" },
+  { id: "wellness", label: "Wellness" },
+  { id: "screeners", label: "Screeners" },
   { id: "mental-health", label: "Mental health" },
   { id: "learn", label: "Learn" },
   { id: "explore", label: "Explore" },
+  { id: "glossary", label: "Glossary" },
   { id: "birthdays", label: "Birthdays" },
   { id: "account", label: "Account" },
 ];
@@ -178,6 +184,11 @@ function render() {
     cycle: renderCycle,
     tasks: renderTasks,
     alarms: renderAlarms,
+    focus: (c) => renderFocus(c, render),
+    sleep: (c) => renderSleep(c, render),
+    wellness: (c) => renderWellness(c, render),
+    screeners: (c) => renderScreeners(c, render),
+    glossary: renderGlossary,
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
