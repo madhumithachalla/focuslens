@@ -129,7 +129,7 @@ dependencies {
     // writes anything back, and only runs when the user taps "Import from watch."
     implementation("androidx.health.connect:connect-client:1.1.0")
 
-    // Same Firebase project as the web app (focuslens-8805c) — shares accounts and data
+    // Same Firebase project as the web app (focuslens-d5379) — shares accounts and data
     // once community/accountability features are built, via app/google-services.json.
     // Using the plain (non "-ktx") artifacts: Firebase merged the KTX extensions into the
     // base libraries a while back, and the BoM no longer manages the old "-ktx" coordinates.
