@@ -205,6 +205,8 @@ export const ROADMAP = {
     { title: "Journal (10 modes)", brief: "Ten structured templates (gratitude, CBT thought record, ADHD brain dump, Stoic review, shadow work, dream log, wind-down, 5-minute micro-journal and more), your own saved prompts, search across all entries, and a gentle nudge to calming exercises and helplines when your mood is low." },
     { title: "Progress", brief: "Level and XP worked out from what you really log, daily quests, a weekly Doomscroll Serpent boss beaten with focus minutes, badges, and a milestone card you can save as an image." },
     { title: "Help & accessibility", brief: "Helplines by region, a plain guide to getting a proper assessment, a printable self-report summary for appointments, plus dark/OLED theme, high contrast, larger text and reduced motion." },
+    { title: "Community chat", brief: "Sign in to post in General or the Quiet focus room, like and comment, and report anything harmful. Shows your display name only, never your email. Live updates; posts can't be edited, and you can delete your own." },
+    { title: "Accountability partners + dares", brief: "Swap invite codes with one friend, accept the pact, then each pledge tasks with a due time. Your partner verifies what you finish; a missed task gets a light dare from a fixed list, which you complete and send proof for. Your partner sees only the tasks in the pact." },
     { title: "Glossary", brief: "Searchable plain-language definitions of the sleep, focus, cycle and screener terms used in the app, each with its primary source." },
     { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
@@ -212,9 +214,7 @@ export const ROADMAP = {
   ],
   upcoming: [
     { title: "Android screen-time in your account", brief: "Accounts are live on both platforms (same Firebase project, same sign-in). The web sync only covers Journal/Cycle/To-do/Birthdays, which live in the web app. Screen-time usage is collected by the Android app and still stays on-device — making it follow your account means adding a Firestore write to the Android app itself (under users/{uid}/data, which the existing security rules already cover), not a web change." },
-    { title: "Community chat", brief: "A shared space for FocusLens users to post and talk. Sign-in is already in place; still to build: a posts collection, Firestore rules that allow signed-in users to read others' posts (today the rules only allow your own data), and moderation/reporting." },
     { title: "Achievement sharing", brief: "Share a card of a milestone (a streak, a Focus Score) with other app users. Needs the same shared-read rules as community chat, plus an explicit opt-in so nothing is shared by default." },
-    { title: "Accountability partners + dares", brief: "Pick a friend to hold you accountable on tasks; if a task isn't done, a dare gets assigned. Needs a way to find and invite another account, a mutual-consent link between two users, and rules that let a partner see only the tasks you share with them." },
     { title: "Native iOS app", brief: "On hold until there's a Mac + Apple Developer account. Blocking features would need a redesign around Apple's narrower Screen Time framework — some current Android capabilities (Reels/Shorts-only blocking, Chrome domain detection) have no iOS equivalent at all." },
   ],
   androidOnly: [
