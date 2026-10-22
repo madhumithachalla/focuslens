@@ -591,3 +591,97 @@ input[type="text"], input[type="number"], input[type="email"], input[type="passw
 :root[data-theme="dark"] .get-app button.icon-btn,
 :root[data-theme="dark"] .get-app .get-app-link { background: var(--surface-2); color: var(--text); }
 :root[data-theme="dark"] #auth-trigger { background: var(--primary); color: var(--on-primary); }
+
+/* =====================================================================================
+   v3: colour. Each menu group has its own hue; the accent itself is user-selectable
+   (Settings > Appearance sets data-accent / data-density / data-radius / data-font on <html>).
+   ===================================================================================== */
+:root {
+  --g-overview: #5b5bd6;
+  --g-focus: #e0583a;
+  --g-body: #0f8b7d;
+  --g-learn: #a87000;
+  --g-connect: #8a49c9;
+  --group: var(--g-overview);
+  --radius: 20px;
+  --pad: 18px;
+}
+:root[data-theme="dark"] {
+  --g-overview: #8f8fff;
+  --g-focus: #ff8a6b;
+  --g-body: #4fd6c3;
+  --g-learn: #f0b94a;
+  --g-connect: #c79bff;
+}
+/* user accent choices (light / dark values) */
+:root[data-accent="violet"]  { --primary: #6a4fd6; --accent: #5a3fc4; --primary-soft: #ece8fb; }
+:root[data-accent="coral"]   { --primary: #d4492c; --accent: #bf3b20; --primary-soft: #fbe9e3; }
+:root[data-accent="amber"]   { --primary: #a86b00; --accent: #8f5a00; --primary-soft: #fbf0d9; }
+:root[data-accent="blue"]    { --primary: #1f6fd1; --accent: #1a5eb3; --primary-soft: #e2edfb; }
+:root[data-accent="rose"]    { --primary: #c92d6b; --accent: #ad2459; --primary-soft: #fbe4ee; }
+:root[data-accent="forest"]  { --primary: #2f7a3a; --accent: #276a31; --primary-soft: #e3f1e5; }
+:root[data-theme="dark"][data-accent="violet"] { --primary: #9c86ff; --accent: #b4a3ff; --primary-soft: #1b1633; --on-primary: #0d0820; }
+:root[data-theme="dark"][data-accent="coral"]  { --primary: #ff8a6b; --accent: #ffa58c; --primary-soft: #2a1511; --on-primary: #1d0904; }
+:root[data-theme="dark"][data-accent="amber"]  { --primary: #f0b94a; --accent: #f6cb74; --primary-soft: #2a2006; --on-primary: #1c1403; }
+:root[data-theme="dark"][data-accent="blue"]   { --primary: #6aa8ff; --accent: #8fbcff; --primary-soft: #0f1b30; --on-primary: #04101f; }
+:root[data-theme="dark"][data-accent="rose"]   { --primary: #ff7aa8; --accent: #ff9bbd; --primary-soft: #2b0f1b; --on-primary: #230814; }
+:root[data-theme="dark"][data-accent="forest"] { --primary: #6fd07d; --accent: #8fdd9b; --primary-soft: #0f2013; --on-primary: #06140a; }
+/* density and corner style */
+:root[data-density="compact"] { --pad: 12px; }
+:root[data-density="compact"] .card { margin-bottom: 8px; }
+:root[data-density="compact"] .task-item { padding: 6px 0; }
+:root[data-density="compact"] body { font-size: 14px; }
+:root[data-radius="round"] { --radius: 28px; }
+:root[data-radius="sharp"] { --radius: 6px; }
+:root[data-font="system"] body, :root[data-font="system"] button, :root[data-font="system"] input, :root[data-font="system"] select, :root[data-font="system"] textarea { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+:root[data-font="dyslexia"] body, :root[data-font="dyslexia"] button, :root[data-font="dyslexia"] input, :root[data-font="dyslexia"] select, :root[data-font="dyslexia"] textarea { font-family: "Atkinson Hyperlegible", "Lexend", Verdana, system-ui, sans-serif; letter-spacing: 0.02em; }
+
+.card, .modal-card, .sidebar { border-radius: var(--radius); }
+.card { padding: var(--pad); }
+
+/* page colour follows the menu group of the current page */
+#page[data-group="overview"] { --group: var(--g-overview); }
+#page[data-group="focus"]    { --group: var(--g-focus); }
+#page[data-group="body"]     { --group: var(--g-body); }
+#page[data-group="learn"]    { --group: var(--g-learn); }
+#page[data-group="connect"]  { --group: var(--g-connect); }
+
+body {
+  background:
+    radial-gradient(900px 420px at 8% -8%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 70%),
+    radial-gradient(700px 360px at 100% 0%, color-mix(in srgb, var(--group, var(--g-overview)) 10%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+#page > div:first-child > h1 {
+  background: linear-gradient(90deg, var(--group), color-mix(in srgb, var(--group) 55%, var(--primary)));
+  -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content;
+}
+#page > div:first-child { position: relative; padding-bottom: 6px; }
+#page > div:first-child::after {
+  content: ""; display: block; height: 4px; width: 56px; border-radius: 4px; margin-top: 8px;
+  background: linear-gradient(90deg, var(--group), transparent);
+}
+.nav-group { display: flex; align-items: center; gap: 8px; }
+.nav-group::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--group-dot, var(--g-overview)); flex: 0 0 auto; }
+.nav-group[data-group="overview"] { --group-dot: var(--g-overview); }
+.nav-group[data-group="focus"] { --group-dot: var(--g-focus); }
+.nav-group[data-group="body"] { --group-dot: var(--g-body); }
+.nav-group[data-group="learn"] { --group-dot: var(--g-learn); }
+.nav-group[data-group="connect"] { --group-dot: var(--g-connect); }
+.nav button[data-group="overview"] { --hue: var(--g-overview); }
+.nav button[data-group="focus"] { --hue: var(--g-focus); }
+.nav button[data-group="body"] { --hue: var(--g-body); }
+.nav button[data-group="learn"] { --hue: var(--g-learn); }
+.nav button[data-group="connect"] { --hue: var(--g-connect); }
+.nav button:hover { background: color-mix(in srgb, var(--hue, var(--primary)) 12%, transparent); }
+.nav button.active, :root[data-theme="dark"] .nav button.active {
+  background: color-mix(in srgb, var(--hue, var(--primary)) 16%, var(--surface));
+  color: var(--text); box-shadow: inset 3px 0 0 var(--hue, var(--primary)); border-radius: 12px;
+}
+.xp-pill { background: linear-gradient(90deg, color-mix(in srgb, var(--g-focus) 18%, var(--surface-2)), color-mix(in srgb, var(--g-learn) 18%, var(--surface-2))); }
+.card.soft { background: color-mix(in srgb, var(--primary) 9%, var(--surface)); }
+.badge { background: color-mix(in srgb, var(--group) 15%, var(--surface)); color: color-mix(in srgb, var(--group) 70%, var(--text)); }
+.chip.active { box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent); }
+button.primary { box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 30%, transparent); }
+#pb-cats { flex-wrap: wrap; overflow: visible; }
