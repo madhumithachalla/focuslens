@@ -26,6 +26,13 @@
          from watch" and a source app (Samsung Health, Fitbit, Flo, etc.) has written any. -->
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
 
+    <!-- Optional: only requested if the user taps "Connect Health Connect" on the Watch & vitals
+         screen — reads heart rate, heart-rate variability and sleep sessions a watch app has
+         already saved to Health Connect. Read-only; nothing is written back. -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
     <!-- Optional: only requested if the user taps "Import from Contacts" on the Birthdays
          screen — reads contact names + birthdays already on the device (this picks up any
          synced account's contacts, including a Google account's, not just ones added
