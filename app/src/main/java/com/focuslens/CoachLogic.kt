@@ -269,3 +269,162 @@ fun coachInsights(tasks: List<CoachTask>, checkIns: List<CoachCheckIn>, moods: L
     }
     return out
 }
+
+// ---------------------------------------------------------------------------------------------
+// Smart signals from phone data (not only the watch). Pure functions: the screen reads the data
+// at load time and passes it in, so all of this is unit testable. Every insight has a plain-
+// language `why`, and any signal with no data is simply left out.
+// ---------------------------------------------------------------------------------------------
+
+/** Hours that count as "late night": 23:00 up to 05:00. */
+val LATE_NIGHT_HOURS: Set<Int> = setOf(23, 0, 1, 2, 3, 4)
+
+/** One sleep session as the coach needs it (end time in epoch ms, length in minutes). */
+data class SleepInput(val endMs: Long, val minutes: Long, val isNap: Boolean)
+
+/**
+ * Everything the smart signals look at. Nulls/empty lists mean "no data".
+ * [lateNightMinutesPerDay]: minutes of app use in 23:00-05:00, one value per day for the last 7.
+ * [todayMs]/[priorDailyMs]: total foreground time today so far, and for up to 14 earlier days.
+ * [blockedHourMs]: hour of day (0-23) -> millis spent in the user's blocked apps.
+ * [hrvRatio]: today's HRV as a fraction of the user's own baseline (HealthVitals.estimateStress).
+ * [sleepMinutes]: last night's main sleep, from Health Connect.
+ */
+data class SmartSignalInput(
+    val lateNightMinutesPerDay: List<Double> = emptyList(),
+    val todayMs: Long = 0L,
+    val priorDailyMs: List<Long> = emptyList(),
+    val blockedHourMs: Map<Int, Long> = emptyMap(),
+    val hrvRatio: Double? = null,
+    val sleepMinutes: Double? = null
+)
+
+data class ReadinessSignal(val name: String, val score: Int, val detail: String)
+
+data class Readiness(val score: Int, val label: String, val signals: List<ReadinessSignal>)
+
+private fun medianOf(values: List<Double>): Double {
+    val sorted = values.sorted()
+    val n = sorted.size
+    return if (n % 2 == 1) sorted[n / 2] else (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+}
+
+private fun hm(minutes: Double): String {
+    val total = Math.round(minutes).toInt()
+    val h = total / 60
+    val m = total % 60
+    return if (h > 0) "${h}h ${m}m" else "${m}m"
+}
+
+private fun hourLabel(h: Int): String = String.format("%02d:00", ((h % 24) + 24) % 24)
+
+/** Last night's main sleep: the most recent non-nap session that ended within the last 36 hours. */
+fun lastNightSleepMinutes(nights: List<SleepInput>, now: Long): Double? {
+    val recent = nights.filter { !it.isNap && now - it.endMs in 0..(36 * HOUR_MS) }
+    val latest = recent.maxByOrNull { it.endMs } ?: return null
+    return if (latest.minutes > 0) latest.minutes.toDouble() else null
+}
+
+/** (1) Late-night screen use: flagged when the daily average between 23:00 and 05:00 tops 30 min. */
+fun lateNightInsight(minutesPerDay: List<Double>, sleepMinutes: Double?): CoachInsight? {
+    if (minutesPerDay.isEmpty()) return null
+    val avg = minutesPerDay.sum() / minutesPerDay.size
+    if (avg <= 30.0) return null
+    val nightsWith = minutesPerDay.count { it > 0 }
+    var why = "Across the last ${minutesPerDay.size} days you averaged ${hm(avg)} a day in apps between " +
+        "23:00 and 05:00 (on $nightsWith of those days). Late screen light and stimulation can push " +
+        "bedtime back."
+    if (sleepMinutes != null) {
+        why += if (sleepMinutes < 6.5 * 60) {
+            " Your last night's sleep was ${hm(sleepMinutes)}, under the 7-9 hours most adults need, " +
+                "so the two may be linked (this is a pattern, not proof)."
+        } else {
+            " Your last night's sleep was ${hm(sleepMinutes)}, so it hasn't cost you sleep yet, " +
+                "but the habit is worth watching."
+        }
+    } else {
+        why += " No sleep data is connected, so this can't be compared with how you slept."
+    }
+    return CoachInsight("warn", "Late-night screen use: about ${hm(avg)} a day", why)
+}
+
+/** (2) Today so far against the median of the user's own earlier days; flagged when more than 40% above. */
+fun screenTimeSpikeInsight(todayMs: Long, priorDailyMs: List<Long>): CoachInsight? {
+    val prior = priorDailyMs.filter { it > 0 }
+    if (prior.size < 5 || todayMs <= 0) return null
+    val median = medianOf(prior.map { it.toDouble() })
+    if (median <= 0.0) return null
+    val ratio = todayMs / median
+    if (ratio <= 1.4) return null
+    val pct = Math.round((ratio - 1.0) * 100).toInt()
+    return CoachInsight(
+        "warn", "Screen time is $pct% above your usual",
+        "So far today: ${hm(todayMs / 60_000.0)}. Your typical day (median of the last ${prior.size} days) " +
+            "is ${hm(median / 60_000.0)}. The day isn't over yet, so this can only grow."
+    )
+}
+
+/** (3) The hour of day with the most time in blocked apps, or null with under 10 minutes of data. */
+fun peakDistractionHour(blockedHourMs: Map<Int, Long>): Pair<Int, Long>? {
+    val total = blockedHourMs.values.sum()
+    if (total < 10 * MIN_MS) return null
+    val best = blockedHourMs.entries.filter { it.value > 0 }.maxByOrNull { it.value } ?: return null
+    return best.key to best.value
+}
+
+fun peakHourInsight(blockedHourMs: Map<Int, Long>): CoachInsight? {
+    val peak = peakDistractionHour(blockedHourMs) ?: return null
+    val (hour, ms) = peak
+    val total = blockedHourMs.values.sum()
+    val share = Math.round(ms * 100.0 / total).toInt()
+    return CoachInsight(
+        "info", "Your blocked apps pull you most around ${hourLabel(hour)}",
+        "$share% of your blocked-app time (${hm(ms / 60_000.0)} of ${hm(total / 60_000.0)} recently) " +
+            "falls in the ${hourLabel(hour)} hour. Try a block schedule from ${hourLabel(hour)} to " +
+            "${hourLabel(hour + 1)} in the Schedules tab, so the pause is already in place when the urge hits."
+    )
+}
+
+/**
+ * (4) Readiness from whichever wearable signals exist: HRV against the user's own baseline
+ * (ratio 0.5 or less = 0, 1.0 or more = 100) and last night's sleep (8 hours = 100). The score is
+ * the plain average of the signals that have data; with none, there is no readiness line.
+ */
+fun readiness(hrvRatio: Double?, sleepMinutes: Double?): Readiness? {
+    val signals = mutableListOf<ReadinessSignal>()
+    if (hrvRatio != null) {
+        val s = Math.round(((hrvRatio - 0.5) / 0.5 * 100).coerceIn(0.0, 100.0)).toInt()
+        signals.add(ReadinessSignal("HRV", s, "today's HRV is ${Math.round(hrvRatio * 100)}% of your own baseline"))
+    }
+    if (sleepMinutes != null) {
+        val s = Math.round((sleepMinutes / 480.0 * 100).coerceIn(0.0, 100.0)).toInt()
+        signals.add(ReadinessSignal("Sleep", s, "last night you slept ${hm(sleepMinutes)}"))
+    }
+    if (signals.isEmpty()) return null
+    val score = Math.round(signals.sumOf { it.score }.toDouble() / signals.size).toInt()
+    val label = if (score >= 75) "Good" else if (score >= 50) "Moderate" else "Low"
+    return Readiness(score, label, signals)
+}
+
+fun readinessInsight(hrvRatio: Double?, sleepMinutes: Double?): CoachInsight? {
+    val r = readiness(hrvRatio, sleepMinutes) ?: return null
+    val used = r.signals.joinToString(" and ") { it.detail }
+    val missing = mutableListOf<String>()
+    if (hrvRatio == null) missing.add("HRV")
+    if (sleepMinutes == null) missing.add("sleep")
+    var why = "Based on: $used. "
+    if (missing.isNotEmpty()) why += "Not used (no data): ${missing.joinToString(", ")}. "
+    why += "A rough guide from the signals above, not a medical measure."
+    val tone = if (r.label == "Low") "care" else if (r.label == "Good") "good" else "info"
+    return CoachInsight(tone, "Readiness: ${r.label} (${r.score}/100)", why)
+}
+
+/** All the smart-signal insights that have enough data, in a sensible order. */
+fun smartSignalInsights(input: SmartSignalInput): List<CoachInsight> {
+    val out = mutableListOf<CoachInsight>()
+    readinessInsight(input.hrvRatio, input.sleepMinutes)?.let { out.add(it) }
+    lateNightInsight(input.lateNightMinutesPerDay, input.sleepMinutes)?.let { out.add(it) }
+    screenTimeSpikeInsight(input.todayMs, input.priorDailyMs)?.let { out.add(it) }
+    peakHourInsight(input.blockedHourMs)?.let { out.add(it) }
+    return out
+}
