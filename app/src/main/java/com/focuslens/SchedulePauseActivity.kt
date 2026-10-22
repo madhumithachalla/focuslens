@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +58,10 @@ class SchedulePauseActivity : ComponentActivity() {
         }
         val schedulePrefs = BlockSchedulePrefs(this)
         val focusPrefs = FocusPrefs(this)
+        // Quiz gate before the emergency pass (never for strict schedules, which allow no bypass).
+        // Each time the gate is shown counts as one attempt today (counted when it opens).
+        val quizPrefs = QuizPrefs(this)
+        val quizGate = if (strict) null else quizPrefs.gateConfig()
 
         setContent {
             MaterialTheme(
@@ -75,6 +80,8 @@ class SchedulePauseActivity : ComponentActivity() {
                         strict = strict,
                         delaySeconds = schedulePrefs.delaySeconds(),
                         passesLeft = schedulePrefs.passesLeft(),
+                        quizGate = quizGate,
+                        onQuizOpened = { quizPrefs.addAttempt() },
                         onHome = { goHome() },
                         onPass = {
                             if (schedulePrefs.usePass()) {
@@ -119,9 +126,12 @@ private fun SchedulePauseScreen(
     delaySeconds: Int,
     passesLeft: Int,
     onHome: () -> Unit,
-    onPass: () -> Unit
+    onPass: () -> Unit,
+    quizGate: QuizGateConfig? = null,
+    onQuizOpened: () -> Unit = {}
 ) {
     var remaining by remember { mutableIntStateOf(delaySeconds) }
+    var quizOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (remaining > 0) {
@@ -165,6 +175,19 @@ private fun SchedulePauseScreen(
                     fontSize = 13.sp,
                     color = Color(0xFFBFD3C9)
                 )
+                quizGate != null && quizOpen -> QuizGate(
+                    // The countdown above already ran, so the gate itself starts straight away.
+                    config = quizGate.copy(delaySeconds = 0),
+                    accent = Color.White,
+                    onSuccess = onPass,
+                    onHome = onHome
+                )
+                quizGate != null -> OutlinedButton(onClick = {
+                    quizOpen = true
+                    onQuizOpened()
+                }) {
+                    Text("Emergency pass ($passesLeft left): answer to unlock", color = Color(0xFFBFD3C9))
+                }
                 else -> OutlinedButton(onClick = onPass) {
                     Text("Emergency pass ($passesLeft left) - 10 min", color = Color(0xFFBFD3C9))
                 }
