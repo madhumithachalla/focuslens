@@ -8,12 +8,12 @@
 // just sign-in) with a blank page and no error. Account features are optional; the rest of the
 // app must not depend on Firebase's CDN being reachable.
 const firebaseConfig = {
-  apiKey: "AIzaSyBha4K2rRyuboD2C0uG9aJ0QAREXR-oEs0",
-  authDomain: "focuslens-8805c.firebaseapp.com",
-  projectId: "focuslens-8805c",
-  storageBucket: "focuslens-8805c.firebasestorage.app",
-  messagingSenderId: "637478613261",
-  appId: "1:637478613261:web:49e130e823a9c7e0d68044",
+  apiKey: "AIzaSyCep4myWjX7juxFimoO6f0Yf-bWPGUO7V8",
+  authDomain: "focuslens-d5379.firebaseapp.com",
+  projectId: "focuslens-d5379",
+  storageBucket: "focuslens-d5379.firebasestorage.app",
+  messagingSenderId: "885226905018",
+  appId: "1:885226905018:web:03c7f22b66d4d54b065183",
 };
 
 let sdk = null; // { app, auth, db, fns: {...} } once loaded, or a rejected promise's error
