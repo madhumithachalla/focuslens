@@ -78,3 +78,16 @@ the ZIP explaining each file.
 - Daily snapshots stored on the phone so history is kept beyond 10 days
 - Chrome extension for site blocking with shared rules
 - Weekly report and streaks
+
+## Community & accountability (Firestore)
+
+The web app's Community and Accountability pages use Firestore collections `profiles`, `posts`
+(with `likes`/`comments`), `reports` and `pacts` (with `tasks`). Access is enforced entirely by
+[`firestore.rules`](firestore.rules). **Publish the rules before using those pages**:
+
+```
+firebase deploy --only firestore:rules
+```
+
+or paste the file into Firebase console > Firestore > Rules. Moderation: review the `reports`
+collection in the console (the app cannot read it) and delete offending `posts` there.
