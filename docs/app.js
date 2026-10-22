@@ -9,7 +9,7 @@ import { renderBody } from "./body.js";
 import { renderCoach } from "./coach.js";
 import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
-import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
+import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y, cycleTheme, themeLabel } from "./features.js";
 
 applyA11y();
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
@@ -17,6 +17,14 @@ import {
   watchAuth, signUp, signIn, signOutUser, authErrorMessage,
   signInWithGoogle, handleGoogleRedirectResult,
 } from "./firebase.js";
+
+const NAV_GROUPS = [
+  { label: "Overview", ids: ["roadmap", "coach", "progress"] },
+  { label: "Focus", ids: ["focus", "tasks", "alarms", "screentime", "partners"] },
+  { label: "Body & mind", ids: ["sleep", "cycle", "body", "wellness", "journal", "mental-health", "screeners"] },
+  { label: "Learn", ids: ["learn", "explore", "glossary", "birthdays"] },
+  { label: "Connect", ids: ["community", "care", "help", "account"] },
+];
 
 const ROUTES = [
   { id: "roadmap", label: "Roadmap" },
@@ -125,28 +133,61 @@ function currentRoute() {
   return ROUTES.some((r) => r.id === hash) ? hash : "roadmap";
 }
 
+const sidebar = document.getElementById("sidebar");
 const navToggle = document.getElementById("nav-toggle");
 navToggle.onclick = () => {
-  const isOpen = nav.classList.toggle("open");
+  const isOpen = sidebar.classList.toggle("open");
   navToggle.setAttribute("aria-expanded", String(isOpen));
 };
 
 function renderNav() {
   const active = currentRoute();
   nav.innerHTML = "";
-  ROUTES.forEach((r) => {
+  const byId = new Map(ROUTES.map((r) => [r.id, r]));
+  const placed = new Set();
+  const addButton = (r) => {
     const btn = document.createElement("button");
     btn.textContent = r.label;
     btn.className = r.id === active ? "active" : "";
+    if (r.id === active) btn.setAttribute("aria-current", "page");
     btn.onclick = () => {
       location.hash = r.id;
       // Only relevant on the narrow/hamburger layout — harmless no-op otherwise.
-      nav.classList.remove("open");
+      sidebar.classList.remove("open");
       navToggle.setAttribute("aria-expanded", "false");
     };
     nav.appendChild(btn);
+  };
+  NAV_GROUPS.forEach((g) => {
+    const items = g.ids.map((id) => byId.get(id)).filter(Boolean);
+    if (!items.length) return;
+    const label = document.createElement("div");
+    label.className = "nav-group";
+    label.textContent = g.label;
+    nav.appendChild(label);
+    items.forEach((r) => { placed.add(r.id); addButton(r); });
   });
+  // Any route not listed in a group still gets a button, so a new page can't go missing.
+  ROUTES.filter((r) => !placed.has(r.id)).forEach(addButton);
+  updateXpPill();
 }
+
+function updateXpPill() {
+  const pill = document.getElementById("xp-pill");
+  if (!pill) return;
+  const p = store.progressSummary();
+  pill.innerHTML = `<span aria-hidden="true">⚡</span> ${p.xp.toLocaleString()} XP <span class="xp-lvl">Lvl ${p.level}</span>`;
+}
+
+const themeBtn = document.getElementById("theme-toggle");
+function paintThemeButton() {
+  const t = themeLabel();
+  themeBtn.textContent = t.icon;
+  themeBtn.title = `Theme: ${t.name} (tap to change)`;
+  themeBtn.setAttribute("aria-label", `Theme: ${t.name}. Tap to change.`);
+}
+themeBtn.onclick = () => { cycleTheme(); paintThemeButton(); };
+paintThemeButton();
 
 // ---------------------------------------------------------------- Sign-in popup
 
@@ -183,7 +224,7 @@ authModal.addEventListener("click", (e) => {
 authTrigger.onclick = () => {
   if (currentUser) {
     location.hash = "account";
-    nav.classList.remove("open");
+    sidebar.classList.remove("open");
   } else {
     openAuthModal();
   }
