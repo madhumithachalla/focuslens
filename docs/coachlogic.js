@@ -218,8 +218,12 @@ export function planDay(state, now = Date.now(), opts = {}) {
   const extras = [];
   const water = opts.water || null;
   if (water && water.ml < water.target * 0.5 && now < at(15)) extras.push({ kind: "habit", start: Math.max(now, at(11)), end: Math.max(now, at(11)) + 5 * MIN, title: "Drink water", why: `You're at ${water.ml} of ${water.target} ml.` });
+  let habitCursor = Math.max(now, at(18));
   (state.habits || []).forEach((h) => {
-    if (!(h.days || {})[dayKeyOf(now)] && extras.length < 3) extras.push({ kind: "habit", start: Math.max(now, at(18)), end: Math.max(now, at(18)) + 10 * MIN, title: h.title, why: "Not ticked off yet today." });
+    if (!(h.days || {})[dayKeyOf(now)] && extras.length < 3) {
+      extras.push({ kind: "habit", start: habitCursor, end: habitCursor + 10 * MIN, title: h.title, why: "Not ticked off yet today." });
+      habitCursor += 10 * MIN; // stagger so two habits never share a time slot
+    }
   });
   if (bedtimeMin != null) {
     const bedMs = dayStart.getTime() + bedtimeMin * MIN;

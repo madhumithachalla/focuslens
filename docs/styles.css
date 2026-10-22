@@ -440,3 +440,14 @@ a { color: var(--accent); }
 
 :root[data-motion="reduce"] * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* The app name is the owner's own handwriting (wordmark.svg). It's traced in blue; the top bar is
+   dark, so it's rendered white there. */
+.brand .wordmark { height: 56px; width: auto; filter: brightness(0) invert(1); margin: -6px 0; }
+
+/* Mobile menu: the base .nav rule above is declared after the earlier max-width block, so it was
+   overriding display:none and the whole menu stayed open on phones. Re-assert it here. */
+@media (max-width: 640px) {
+  .nav { display: none; }
+  .nav.open { display: flex; }
+}
