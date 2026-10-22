@@ -66,11 +66,14 @@ export const MEDIA_GENRES = [
   { id: "DOCUMENTARY", label: "Documentary" },
   { id: "MEMOIR", label: "Memoir & Non-fiction" },
   { id: "FEEL_GOOD", label: "Feel-good" },
+  { id: "FOCUS", label: "Focus" },
+  { id: "CALM", label: "Calm" },
+  { id: "ADHD", label: "ADHD-friendly" },
 ];
 
 export const MEDIA_ITEMS = [
-  { title: "Atomic Habits", creator: "James Clear", y: 2018, kind: "BOOK", genres: ["PRODUCTIVITY"], blurb: "Small, consistent changes compound — the book behind most modern habit-building advice." },
-  { title: "Deep Work", creator: "Cal Newport", y: 2016, kind: "BOOK", genres: ["PRODUCTIVITY"], blurb: "The case for long, undistracted stretches of focused work in a world built to fragment it." },
+  { title: "Atomic Habits", creator: "James Clear", y: 2018, kind: "BOOK", genres: ["PRODUCTIVITY", "ADHD"], blurb: "Small, consistent changes compound — the book behind most modern habit-building advice." },
+  { title: "Deep Work", creator: "Cal Newport", y: 2016, kind: "BOOK", genres: ["PRODUCTIVITY", "FOCUS"], blurb: "The case for long, undistracted stretches of focused work in a world built to fragment it." },
   { title: "Sapiens", creator: "Yuval Noah Harari", y: 2011, kind: "BOOK", genres: ["MEMOIR"], blurb: "A sweeping, readable history of how humans ended up running the planet." },
   { title: "Educated", creator: "Tara Westover", y: 2018, kind: "BOOK", genres: ["MEMOIR", "DRAMA"], blurb: "A memoir about growing up off-grid and the cost and value of an education found later." },
   { title: "Project Hail Mary", creator: "Andy Weir", y: 2021, kind: "BOOK", genres: ["SCI_FI"], blurb: "A lone astronaut, a dying sun, and a puzzle-box plot from the author of The Martian." },
@@ -85,12 +88,26 @@ export const MEDIA_ITEMS = [
   { title: "Abbott Elementary", creator: "ABC", y: 2021, kind: "SERIES", genres: ["COMEDY"], blurb: "A mockumentary about underfunded teachers who keep showing up anyway." },
   { title: "Brooklyn Nine-Nine", creator: "NBC / Fox", y: 2013, kind: "SERIES", genres: ["COMEDY"], blurb: "A precinct of very silly detectives. Easy to watch an episode and stop — or not." },
   { title: "Planet Earth II", creator: "BBC", y: 2016, kind: "SERIES", genres: ["DOCUMENTARY"], blurb: "Nature documentary filmmaking at its most jaw-dropping, narrated by David Attenborough." },
+  { title: "Hidden Brain", creator: "Shankar Vedantam / NPR", y: 2015, kind: "PODCAST", genres: ["CALM", "FOCUS"], blurb: "Psychology and social science stories about why we do what we do. Unhurried, one idea per episode." },
+  { title: "The Happiness Lab", creator: "Dr. Laurie Santos", y: 2019, kind: "PODCAST", genres: ["CALM", "FEEL_GOOD"], blurb: "A Yale professor on what research says actually makes people happier, and what doesn't." },
+  { title: "Huberman Lab", creator: "Andrew Huberman", y: 2021, kind: "PODCAST", genres: ["FOCUS", "PRODUCTIVITY"], blurb: "Long, detailed neuroscience episodes on sleep, attention and habits. Treat the advice as ideas to check, not prescriptions." },
+  { title: "Deep Questions", creator: "Cal Newport", y: 2020, kind: "PODCAST", genres: ["FOCUS", "PRODUCTIVITY"], blurb: "Practical Q&A on deep work, digital minimalism and organising a work life without constant busyness." },
+  { title: "Ten Percent Happier", creator: "Dan Harris", kind: "PODCAST", genres: ["CALM"], blurb: "Meditation and mindfulness for sceptics, with teachers and researchers." },
+  { title: "ADHD reWired", creator: "Eric Tivers", kind: "PODCAST", genres: ["ADHD"], blurb: "A coach with ADHD interviews guests and shares practical strategies for adults with ADHD." },
+  { title: "Music for Airports", creator: "Brian Eno", y: 1978, kind: "MUSIC", genres: ["CALM", "FOCUS"], blurb: "The original ambient album. Slow, wordless and easy to leave on in the background." },
+  { title: "Sleep", creator: "Max Richter", y: 2015, kind: "MUSIC", genres: ["CALM"], blurb: "An eight-hour piece for sleeping, with shorter excerpts that work for winding down." },
+  { title: "Kind of Blue", creator: "Miles Davis", y: 1959, kind: "MUSIC", genres: ["FOCUS", "CALM"], blurb: "Relaxed modal jazz with no vocals, a long-time favourite for working to." },
+  { title: "Goldberg Variations", creator: "J.S. Bach", kind: "MUSIC", genres: ["FOCUS", "CALM"], blurb: "Structured, repetitive classical keyboard music. Many people find instrumental music helps them settle into a task." },
+  { title: "Dive", creator: "Tycho", y: 2011, kind: "MUSIC", genres: ["FOCUS", "ADHD"], blurb: "Warm, steady instrumental electronica with a gentle pulse. Wordless, so it won't compete with what you're reading or writing." },
+  { title: "Substrata", creator: "Biosphere", y: 1997, kind: "MUSIC", genres: ["CALM"], blurb: "Cold, spacious ambient from Norway. Good for quiet, low-stimulation stretches." },
 ];
 
 export const MEDIA_KINDS = [
   { id: "BOOK", label: "Books" },
   { id: "MOVIE", label: "Movies" },
   { id: "SERIES", label: "Series" },
+  { id: "PODCAST", label: "Podcasts" },
+  { id: "MUSIC", label: "Music" },
 ];
 
 export const REWARD_IDEAS = [
@@ -208,12 +225,13 @@ export const ROADMAP = {
     { title: "Community chat", brief: "Sign in to post in General or the Quiet focus room, like and comment, and report anything harmful. Shows your display name only, never your email. Live updates; posts can't be edited, and you can delete your own." },
     { title: "Accountability partners + dares", brief: "Swap invite codes with one friend, accept the pact, then each pledge tasks with a due time. Your partner verifies what you finish; a missed task gets a light dare from a fixed list, which you complete and send proof for. Your partner sees only the tasks in the pact." },
     { title: "Glossary", brief: "Searchable plain-language definitions of the sleep, focus, cycle and screener terms used in the app, each with its primary source." },
-    { title: "Explore", brief: "A curated, filterable list of real books, movies and series — not a live catalog." },
+    { title: "Explore + My stack", brief: "A curated, filterable list of real books, movies, series, podcasts and music, with focus, calm and ADHD-friendly tags. Pin items to My stack and they stay at the top and follow your account. Private to you, never shared; not a live catalog." },
+    { title: "Screen time (from your Android app)", brief: "Sign in and see the last 7 days of phone usage, today's top apps and your weekly average. It only shows data the Android app has synced to your account, and shows an empty state if there is none." },
     { title: "Reward suggestions", brief: "A small real-world activity suggestion, shuffled on request." },
     { title: "Mental health trend", brief: "A 14-day mood/energy trend built from your own Journal and Cycle entries — a mirror on your own pattern, not a diagnosis." },
   ],
   upcoming: [
-    { title: "Android screen-time in your account", brief: "Accounts are live on both platforms (same Firebase project, same sign-in). The web sync only covers Journal/Cycle/To-do/Birthdays, which live in the web app. Screen-time usage is collected by the Android app and still stays on-device — making it follow your account means adding a Firestore write to the Android app itself (under users/{uid}/data, which the existing security rules already cover), not a web change." },
+    { title: "Android screen-time in your account", brief: "Now available: the Android app can sync daily usage to your account (opt-in, off by default, under Sync screen time to my account), and the Screen time page on the web shows it. Remaining work: a category breakdown and Focus Score on the web." },
     { title: "Achievement sharing", brief: "Share a card of a milestone (a streak, a Focus Score) with other app users. Needs the same shared-read rules as community chat, plus an explicit opt-in so nothing is shared by default." },
     { title: "Native iOS app", brief: "On hold until there's a Mac + Apple Developer account. Blocking features would need a redesign around Apple's narrower Screen Time framework — some current Android capabilities (Reels/Shorts-only blocking, Chrome domain detection) have no iOS equivalent at all." },
   ],
