@@ -139,6 +139,10 @@ dependencies {
 
     // "Continue with Google" on the Account screen: Credential Manager is the current
     // (non-deprecated) Android API for this, replacing the old Google Sign-In SDK.
+    // On-device label scan for the Medication tab: bundled Latin text model, no network, no
+    // Play Services download. The photo is never stored.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")

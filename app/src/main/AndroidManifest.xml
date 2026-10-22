@@ -22,6 +22,9 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Medication reminders (Android 13+ asks at runtime). Data never leaves the phone. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Optional: reads period-start dates from Health Connect, if the user taps "Import
          from watch" and a source app (Samsung Health, Fitbit, Flo, etc.) has written any. -->
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION" />
@@ -102,6 +105,9 @@
 
         <!-- Fired by AlarmManager when a scheduled alarm's time arrives. -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
+
+        <!-- Medication reminder notifications and their Mark taken / Snooze buttons. -->
+        <receiver android:name=".MedReminderReceiver" android:exported="false" />
 
         <!-- Re-arms every enabled alarm after the phone reboots. -->
         <receiver android:name=".BootReceiver" android:exported="true">

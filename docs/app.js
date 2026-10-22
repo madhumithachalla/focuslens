@@ -7,6 +7,8 @@ import * as store from "./storage.js";
 import { renderScreenTime } from "./screentime.js";
 import { renderBody } from "./body.js";
 import { renderCoach } from "./coach.js";
+import { renderMeds, startMedReminders } from "./meds.js";
+import { renderPromptBrowser } from "./journalkit.js";
 import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y, cycleTheme, themeLabel } from "./features.js";
@@ -21,7 +23,7 @@ import {
 const NAV_GROUPS = [
   { label: "Overview", ids: ["roadmap", "coach", "progress"] },
   { label: "Focus", ids: ["focus", "tasks", "alarms", "screentime", "partners"] },
-  { label: "Body & mind", ids: ["sleep", "cycle", "body", "wellness", "journal", "mental-health", "screeners"] },
+  { label: "Body & mind", ids: ["sleep", "cycle", "body", "meds", "wellness", "journal", "mental-health", "screeners"] },
   { label: "Learn", ids: ["learn", "explore", "glossary", "birthdays"] },
   { label: "Connect", ids: ["community", "care", "help", "account"] },
 ];
@@ -45,6 +47,7 @@ const ROUTES = [
   { id: "community", label: "Community" },
   { id: "partners", label: "Accountability" },
   { id: "coach", label: "Coach" },
+  { id: "meds", label: "Medications" },
   { id: "body", label: "Body" },
   { id: "care", label: "Care near me" },
   { id: "help", label: "Help" },
@@ -249,6 +252,7 @@ function render() {
     progress: (c) => renderProgress(c, render),
     help: (c) => renderHelp(c, render),
     coach: (c) => renderCoach(c),
+    meds: (c) => renderMeds(c, render),
     body: (c) => renderBody(c, render),
     care: (c) => renderCare(c, render),
     screentime: (c) => renderScreenTime(c, { user: currentUser, openSignIn: openAuthModal }),
@@ -264,7 +268,28 @@ function render() {
   window.scrollTo(0, 0);
 }
 
+startMedReminders();
 window.addEventListener("hashchange", render);
+
+// Everything that depends on the clock or on data (cycle day, coach plan, dose states, XP) is
+// recomputed from the current time and saved data on every render. This keeps the visible page
+// current: it re-renders when you come back to the tab, once a minute, when the day rolls over,
+// and when another tab changes your data, but never while you're typing so nothing is lost.
+const LIVE_ROUTES = new Set(["coach", "progress", "meds", "mental-health", "cycle", "tasks", "sleep", "wellness", "roadmap"]);
+let renderedDay = store.todayKey();
+function isEditing() {
+  const a = document.activeElement;
+  if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")) return true;
+  return [...document.querySelectorAll("#page textarea, #page input[type=text], #page input[type=number]")].some((i) => i.value && i.defaultValue !== i.value);
+}
+function refreshIfIdle() {
+  if (document.hidden || isEditing() || !authModal.hidden) return;
+  const dayChanged = store.todayKey() !== renderedDay;
+  if (dayChanged || LIVE_ROUTES.has(currentRoute())) { renderedDay = store.todayKey(); render(); }
+}
+setInterval(refreshIfIdle, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshIfIdle(); });
+window.addEventListener("storage", (e) => { if (e.key === "focuslens_web_v1") refreshIfIdle(); });
 render();
 showAgreementOnce();
 
@@ -401,52 +426,19 @@ function renderJournal(container) {
   `);
   container.appendChild(card);
 
-  const templatesCard = el(`
-    <div class="card soft">
-      <div class="bold mb-0" style="font-size:13px">Templates</div>
-      <p class="small muted mt-8" style="margin-bottom:8px">Fills in the box above with a starting structure — or just leave it blank and write freely.</p>
-      <div class="chips"></div>
-    </div>
-  `);
-  const templateChips = templatesCard.querySelector(".chips");
-  JOURNAL_TEMPLATES.forEach((t) => {
-    const chip = el(`<button type="button" class="chip">${t.emoji} ${escapeHtml(t.title)}</button>`);
-    chip.onclick = () => {
-      card.querySelector("#journal-text").value = t.scaffold;
-      card.querySelector("#journal-text").focus();
-    };
-    templateChips.appendChild(chip);
-  });
-  container.appendChild(templatesCard);
-
-  const promptsCard = el(`
-    <div class="card soft">
-      <div class="bold mb-0" style="font-size:13px">Your own prompts</div>
-      <p class="small muted mt-8" style="margin-bottom:8px">Add questions you want to be asked — tap one to start an entry with it.</p>
-      <div class="chips" id="custom-prompt-chips"></div>
-      <input type="text" id="custom-prompt-new" placeholder="e.g. What made me feel safe today?" />
-      <div class="mt-8"><button class="outline" id="custom-prompt-add">Add prompt</button></div>
-    </div>
-  `);
-  store.listCustomPrompts().forEach((cp) => {
-    const chip = el(`<span class="chip"></span>`);
-    const use = el(`<button type="button" style="all:unset;cursor:pointer">${escapeHtml(cp.text)}</button>`);
-    use.onclick = () => {
+  container.appendChild(renderPromptBrowser({
+    insertPrompt: (text) => {
       const ta = card.querySelector("#journal-text");
-      ta.value = `${cp.text}\n\n${ta.value}`;
+      ta.value = `${text}\n\n${ta.value}`;
       ta.focus();
-    };
-    const del = el(`<button type="button" aria-label="Delete prompt" style="all:unset;cursor:pointer;margin-left:8px">×</button>`);
-    del.onclick = () => { store.deleteCustomPrompt(cp.id); render(); };
-    chip.appendChild(use);
-    chip.appendChild(del);
-    promptsCard.querySelector("#custom-prompt-chips").appendChild(chip);
-  });
-  promptsCard.querySelector("#custom-prompt-add").onclick = () => {
-    const v = promptsCard.querySelector("#custom-prompt-new").value.trim();
-    if (v) { store.addCustomPrompt(v); render(); }
-  };
-  container.appendChild(promptsCard);
+    },
+    insertTemplate: (text) => {
+      const ta = card.querySelector("#journal-text");
+      ta.value = ta.value.trim() ? `${ta.value}\n\n${text}` : text;
+      ta.focus();
+    },
+    currentText: () => card.querySelector("#journal-text").value,
+  }, render));
 
   // Gentle support nudge: rule-based on the mood you chose, or on your last two entries both
   // being "low". Not a diagnosis; it just makes the support options one tap away.
@@ -534,6 +526,9 @@ function renderCycle(container) {
           next start around <span class="bold">${formatDateKey(prediction.predictedNextStart)}</span>,
           based on an average ${prediction.averageCycleLengthDays}-day cycle from your own logs.
           Estimated fertile window: day ${prediction.fertileWindowStartDay}–${prediction.fertileWindowEndDay}.
+        </p>
+        <p class="small" style="margin:0 0 8px">
+          ${prediction.isLate ? `Your next period was expected ${-prediction.daysUntilNext} day${prediction.daysUntilNext === -1 ? "" : "s"} ago. Late periods are common with stress, travel or illness; log it when it starts, and mention repeated delays to a doctor.` : prediction.daysUntilNext === 0 ? "Your next period is expected today." : `Next period expected in about ${prediction.daysUntilNext} day${prediction.daysUntilNext === 1 ? "" : "s"} (${formatDateKey(prediction.predictedNextStart)}).`}
         </p>
         <p class="small" style="margin:0 0 8px">
           Weighted over your last ${prediction.cyclesUsed} cycle${prediction.cyclesUsed === 1 ? "" : "s"} (recent ones count more).

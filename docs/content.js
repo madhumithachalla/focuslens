@@ -224,6 +224,7 @@ export const ROADMAP = {
     { title: "Help & accessibility", brief: "Helplines by region, a plain guide to getting a proper assessment, a printable self-report summary for appointments, plus dark/OLED theme, high contrast, larger text and reduced motion." },
     { title: "Community chat", brief: "Sign in to post in General or the Quiet focus room, like and comment, and report anything harmful. Shows your display name only, never your email. Live updates; posts can't be edited, and you can delete your own." },
     { title: "Accountability partners + dares", brief: "Swap invite codes with one friend, accept the pact, then each pledge tasks with a due time. Your partner verifies what you finish; a missed task gets a light dare from a fixed list, which you complete and send proof for. Your partner sees only the tasks in the pact." },
+    { title: "Medications", brief: "Keep what you take and when: your own list from your labels, a daily checklist, reminders while the app is open, and a private text update you can send to a family member through your own messaging app. Stays on this device unless you opt in to sync. Never suggests doses or products. Reading a label with the camera is Android-only." },
     { title: "Glossary", brief: "Searchable plain-language definitions of the sleep, focus, cycle and screener terms used in the app, each with its primary source." },
     { title: "Explore + My stack", brief: "A curated, filterable list of real books, movies, series, podcasts and music, with focus, calm and ADHD-friendly tags. Pin items to My stack and they stay at the top and follow your account. Private to you, never shared; not a live catalog." },
     { title: "Screen time (from your Android app)", brief: "Sign in and see the last 7 days of phone usage, today's top apps and your weekly average. It only shows data the Android app has synced to your account, and shows an empty state if there is none." },
@@ -388,4 +389,113 @@ export const CARE_GUIDE = [
   { q: "Who can actually assess me?", a: "A registered GP, psychologist, psychiatrist or other licensed mental-health professional. Check registration with your country's professional register before booking. Online quizzes (including the ones in this app) can't diagnose." },
   { q: "What should I bring to a first appointment?", a: "Use \"Print a summary\" on the Screeners page to bring your recent scores, mood and sleep. It is your own self-report, a conversation starter rather than a result." },
   { q: "Is this an emergency?", a: "If you may act on thoughts of harming yourself or someone else, or you are in danger, call your local emergency number now. A helpline is also fine if you're unsure." },
+];
+
+// ---------------------------------------------------------------- Journal prompt library
+// Prompts are questions to answer; templates (JOURNAL_TEMPLATES) are structures to fill in.
+// Users can add their own templates on the Journal page.
+export const JOURNAL_CATEGORIES = [
+  { id: "reflect", emoji: "🪞", label: "Reflection", prompts: [
+    "What is one small thing that brought me genuine ease today?",
+    "What did I spend the most energy on today, and was it worth it?",
+    "What would I do differently if I could replay today?",
+    "What am I avoiding, and what is the smallest first step?",
+    "What did I learn about myself this week?",
+  ] },
+  { id: "gratitude", emoji: "🙏", label: "Gratitude", prompts: [
+    "Who made my day easier recently, and what could I say to thank them?",
+    "What is something ordinary I'd miss if it were gone?",
+    "What went right today that I didn't plan for?",
+    "Which part of my body helped me today, and how?",
+  ] },
+  { id: "feelings", emoji: "🌊", label: "Feelings & thoughts", prompts: [
+    "What am I feeling right now, and where do I feel it in my body?",
+    "What thought keeps repeating, and what's the evidence for and against it?",
+    "If a friend told me this worry, what would I say to them?",
+    "What would 'good enough' look like for this situation?",
+    "What is in my control here, and what isn't?",
+  ] },
+  { id: "values", emoji: "🏛️", label: "Values & Stoic", prompts: [
+    "What kind of person did I want to be today, and how close did I get?",
+    "What obstacle today could become a chance to practise patience?",
+    "What do I want to be remembered for, in one sentence?",
+    "Which of my values did I honour today, and which did I neglect?",
+  ] },
+  { id: "creative", emoji: "🎨", label: "Creativity", prompts: [
+    "Describe a place you've never been, using only senses.",
+    "Write the first paragraph of a story that starts with an unexpected phone call.",
+    "What would I make if nobody would ever see it?",
+    "List 10 ways to solve the problem I'm stuck on, including silly ones.",
+  ] },
+  { id: "people", emoji: "🤝", label: "Relationships", prompts: [
+    "Who do I want to be more present with, and what's one way to do that this week?",
+    "What do I need from the people close to me that I haven't asked for?",
+    "Is there a conversation I've been putting off? What's the kindest honest version of it?",
+    "How do I want to show up for someone who's struggling?",
+  ] },
+  { id: "work", emoji: "🎓", label: "Work & study", prompts: [
+    "What is the one thing that would make today a success?",
+    "Where did my attention go today, and what pulled it?",
+    "What am I learning that I want to explain to someone else?",
+    "What's blocking me on my biggest task, and who or what could help?",
+    "What can I stop doing, delegate or shrink?",
+  ] },
+  { id: "body", emoji: "💪", label: "Body & health", prompts: [
+    "How is my energy right now, 1 to 5, and what's helping or hurting it?",
+    "What did I eat, drink and move today, and how did I feel after?",
+    "What does my body need most this week?",
+    "What small health habit am I proud of?",
+  ] },
+  { id: "sleep", emoji: "🌙", label: "Sleep & dreams", prompts: [
+    "How did I sleep, and what might have helped or hurt it?",
+    "What's on my mind that I should put on paper before bed?",
+    "Describe the most vivid image from last night's dream.",
+    "What would make tonight's wind-down easier?",
+  ] },
+  { id: "money", emoji: "💰", label: "Money", prompts: [
+    "What did I spend on today that I'm glad about, and what do I regret?",
+    "What does 'enough' mean to me?",
+    "What's one money habit I'd like to build this month?",
+  ] },
+  { id: "goals", emoji: "🧭", label: "Goals & future", prompts: [
+    "Where do I want to be in a year, and what's the first step for this month?",
+    "What would I attempt if I knew I'd learn a lot even if it failed?",
+    "What's one thing I've outgrown?",
+    "What does a really good ordinary day look like for me?",
+  ] },
+  { id: "adhd", emoji: "⚡", label: "ADHD & focus", prompts: [
+    "What helped me start today, and what made starting hard?",
+    "Which sensory things (light, noise, texture) affected my focus today?",
+    "What's one task I can make 2 minutes long to get going?",
+    "What did I hyperfocus on, and was it what I intended?",
+    "What systems (lists, alarms, body-doubling) are working, and which should I drop?",
+  ] },
+  { id: "kind", emoji: "💚", label: "Self-compassion", prompts: [
+    "What would I say to comfort a friend who felt the way I do today?",
+    "What did I do well today that I'm not giving myself credit for?",
+    "What can I forgive myself for this week?",
+    "What do I need to hear right now?",
+  ] },
+  { id: "hard", emoji: "🕊️", label: "Hard times", prompts: [
+    "What is the hardest part of this moment, in plain words?",
+    "Who or what has helped me through something difficult before?",
+    "What is one small, gentle thing I can do for myself in the next hour?",
+    "Is this something I should tell someone, or ask for help with?",
+  ] },
+];
+
+// Research journal: pick something you're curious about, then write what you find in your own
+// words. Starter questions only; follow the sources in Learn or your library.
+export const RESEARCH_TEMPLATE = "Question I'm exploring:\n\nWhat I already think I know:\n\nSources I'll check (books, papers, people):\n\nWhat I found (in my own words):\n\nWhat surprised me or didn't fit:\n\nMy next question:\n";
+
+export const RESEARCH_TOPICS = [
+  { topic: "Sleep and memory", questions: ["How does sleep help consolidate what I learn?", "What happens to attention after a short night?", "Does timing of sleep matter as much as length?"] },
+  { topic: "Building habits", questions: ["How long do habits really take to form?", "What makes a habit easier to start: cues, rewards, or friction?", "How do I restart after missing days?"] },
+  { topic: "ADHD and time blindness", questions: ["What strategies help with estimating time?", "How do external timers and body-doubling work?", "What's the difference between a screener and a diagnosis?"] },
+  { topic: "Screens and attention", questions: ["How does short-form video affect focus?", "What does research say about notifications and task switching?", "What limits actually stick?"] },
+  { topic: "Stress and the body", questions: ["What is heart rate variability and what does it reflect?", "How does slow breathing change stress responses?", "Which recovery habits have the best evidence?"] },
+  { topic: "Exercise and mood", questions: ["How much movement is linked to better mood?", "Does the type of exercise matter?", "What's the smallest dose worth doing?"] },
+  { topic: "Procrastination", questions: ["Why do I delay tasks I care about?", "What's the role of emotion rather than time management?", "Which tactics help me begin?"] },
+  { topic: "The menstrual cycle and energy", questions: ["How much do energy and mood vary across phases, and how much does that differ by person?", "What can and can't cycle tracking tell me?", "When should I mention cycle changes to a doctor?"] },
+  { topic: "Learning how to learn", questions: ["What do spaced repetition and retrieval practice do?", "How long can I focus on hard material?", "How do I check I really understand something?"] },
 ];
