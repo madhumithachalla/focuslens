@@ -4,6 +4,9 @@
 // simulated — wearable heart-rate/HRV and app-usage data need the Android app and are not
 // faked on the web.
 import * as store from "./storage.js";
+import { getPref } from "./prefs.js";
+import { runGate } from "./intercept.js";
+import * as istore from "./intercept-store.js";
 import { GLOSSARY, SCREENERS, CRISIS_RESOURCES, HABIT_LIBRARY, VISION_AREAS, EXERCISES, HELPLINES, CARE_GUIDE, JOURNAL_TEMPLATES } from "./content.js";
 
 function el(html) {
@@ -26,18 +29,29 @@ const FOCUS_MODES = {
   ultra: { label: "90-minute sprint", focus: 90, rest: 20 },
 };
 
+// Durations come from Settings > Focus & timers. Re-read before each use so a change applies at once.
+function syncFocusModesFromPrefs() {
+  const set = (id, f, r, name) => { FOCUS_MODES[id].focus = f; FOCUS_MODES[id].rest = r; FOCUS_MODES[id].label = `${name} ${f}/${r}`; };
+  set("pomo", getPref("pomoFocus"), getPref("pomoRest"), "Pomodoro");
+  set("rule52", getPref("r52Focus"), getPref("r52Rest"), "Long block");
+  set("ultra", getPref("ultraFocus"), getPref("ultraRest"), "Sprint");
+}
+syncFocusModesFromPrefs();
+
 // Module-level so a running timer keeps going when you open another page. Uses an absolute end
 // time rather than counting ticks, so a throttled background tab still shows the right time.
-const timer = { mode: "pomo", phase: "focus", running: false, endAt: 0, leftMs: 25 * 60000, tickId: null, onDone: null };
+const timer = { untouched: true, mode: "pomo", phase: "focus", running: false, endAt: 0, leftMs: 25 * 60000, tickId: null, onDone: null,
+  away: { count: 0, seconds: 0, since: 0 }, block: false, lastQuality: null, quiz: null };
 
 function timerBeep() {
+  if (!getPref("sound")) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     [0, 0.35, 0.7].forEach((t) => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.frequency.value = 880;
-      g.gain.value = 0.2;
+      g.gain.value = 0.3 * (getPref("volume") / 100);
       o.connect(g);
       g.connect(ctx.destination);
       o.start(ctx.currentTime + t);
@@ -62,7 +76,17 @@ function timerTick() {
     clearInterval(timer.tickId);
     timer.running = false;
     const finished = timer.phase;
-    if (finished === "focus") store.logFocusSession(FOCUS_MODES[timer.mode].focus, timer.mode);
+    awayClose();
+    timer.lastQuality = null;
+    if (finished === "focus") {
+      const m = FOCUS_MODES[timer.mode];
+      store.logFocusSession(m.focus, timer.mode);
+      const rec = { minutes: m.focus, mode: timer.mode, awayCount: timer.away.count, awaySeconds: timer.away.seconds };
+      istore.recordFocusBlock(rec);
+      timer.lastQuality = { ...rec, quality: istore.focusQuality(rec.awayCount, rec.awaySeconds) };
+    }
+    timer.away = { count: 0, seconds: 0, since: 0 };
+    removeQuiz();
     timerBeep();
     try {
       if (window.Notification && Notification.permission === "granted") {
@@ -71,17 +95,78 @@ function timerTick() {
     } catch (e) {}
     timer.phase = finished === "focus" ? "break" : "focus";
     timer.leftMs = timerPhaseMs();
+    if (getPref("autoStart")) timerStart();
     if (timer.onDone) timer.onDone();
     return;
   }
   timer.leftMs = left;
   const d = document.getElementById("timer-display");
   if (d) d.textContent = fmtClock(left);
+  updateAwayLine();
 }
+
+// ---- Focus-quality tracking: counts real tab/app visibility losses during a running focus block.
+function trackingActive() { return timer.running && timer.phase === "focus"; }
+
+function awayClose() {
+  if (timer.away.since) {
+    timer.away.seconds += Math.round((Date.now() - timer.away.since) / 1000);
+    timer.away.since = 0;
+  }
+}
+
+function fmtAway(sec) { return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
+
+function updateAwayLine(root = document) {
+  const n = root.querySelector("#timer-away");
+  if (!n) return;
+  const live = timer.away.seconds + (timer.away.since ? Math.round((Date.now() - timer.away.since) / 1000) : 0);
+  n.textContent = `Distractions: ${timer.away.count} · away ${fmtAway(live)}`;
+}
+
+function removeQuiz() {
+  if (timer.quiz) { timer.quiz.destroy(); timer.quiz = null; }
+  const o = document.getElementById("focus-quiz-overlay");
+  if (o) o.remove();
+}
+
+function showReturnQuiz(awaySec) {
+  removeQuiz();
+  const prefs = istore.interceptPrefs();
+  const overlay = el(`<div id="focus-quiz-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto">
+    <div style="max-width:440px;width:100%"><div class="card"><div class="bold" id="focus-quiz-msg">You left for ${awaySec} s. Answer to keep your streak.</div></div><div id="focus-quiz-host" style="margin-top:8px"></div></div></div>`);
+  document.body.appendChild(overlay);
+  timer.quiz = runGate(overlay.querySelector("#focus-quiz-host"), {
+    needed: 1, delaySeconds: 0, categories: prefs.categories, attemptsToday: istore.attemptsToday(), floor: prefs.floor, harder: prefs.harder,
+    customQuestions: istore.listCustom(), practice: true, exitLabel: "Skip (counts as a lapse)",
+    onFinish: (r) => {
+      const msg = overlay.querySelector("#focus-quiz-msg");
+      if (msg) msg.textContent = r.passed ? "Nice. Back to focus." : "Skipped. Back to focus.";
+      setTimeout(removeQuiz, 1200);
+    },
+  });
+}
+
+function onVisibility() {
+  if (document.hidden) {
+    if (trackingActive() && !timer.away.since) {
+      timer.away.count++;
+      timer.away.since = Date.now();
+    }
+  } else if (timer.away.since) {
+    const secs = Math.round((Date.now() - timer.away.since) / 1000);
+    awayClose();
+    updateAwayLine();
+    if (timer.block && trackingActive() && secs > 30) showReturnQuiz(secs);
+  }
+}
+document.addEventListener("visibilitychange", onVisibility);
 
 function timerStart() {
   if (timer.running) return;
+  timer.untouched = false;
   if (window.Notification && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+  timer.lastQuality = null;
   timer.running = true;
   timer.endAt = Date.now() + timer.leftMs;
   timer.tickId = setInterval(timerTick, 250);
@@ -92,17 +177,24 @@ function timerPause() {
   clearInterval(timer.tickId);
   timer.running = false;
   timer.leftMs = Math.max(0, timer.endAt - Date.now());
+  awayClose();
 }
 
 function timerReset(mode) {
+  timer.untouched = true;
   clearInterval(timer.tickId);
   timer.running = false;
   if (mode) timer.mode = mode;
   timer.phase = "focus";
   timer.leftMs = timerPhaseMs();
+  timer.away = { count: 0, seconds: 0, since: 0 };
+  timer.lastQuality = null;
+  removeQuiz();
 }
 
 export function renderFocus(container, rerender) {
+  syncFocusModesFromPrefs();
+  if (!timer.running && timer.untouched) timer.leftMs = timerPhaseMs();
   timer.onDone = rerender;
   container.appendChild(el(`
     <div>
@@ -125,19 +217,27 @@ export function renderFocus(container, rerender) {
       <div id="timer-display" style="font-size:64px;font-weight:700;font-variant-numeric:tabular-nums;margin:6px 0 12px">${fmtClock(timer.leftMs)}</div>
       <button class="primary" id="timer-toggle">${timer.running ? "Pause" : "Start"}</button>
       <button class="text" id="timer-reset">Reset</button>
+      <div id="timer-away" class="small muted" style="margin-top:8px"></div>
+      <label class="small" style="display:block;margin-top:8px"><input type="checkbox" id="timer-block"${timer.block ? " checked" : ""}> Block distractions during this session</label>
+      <div class="small muted">If you come back after more than 30 s away, answer a question to continue.</div>
+      ${timer.lastQuality ? `<div id="timer-quality" class="bold" style="margin-top:10px">Block complete: Focus quality ${timer.lastQuality.quality}% (${timer.lastQuality.awayCount} switch${timer.lastQuality.awayCount === 1 ? "" : "es"}, ${fmtAway(timer.lastQuality.awaySeconds)} away)</div>` : ""}
     </div>
   `);
+  card.querySelector("#timer-block").onchange = (e) => { timer.block = e.target.checked; };
   card.querySelector("#timer-toggle").onclick = () => {
     if (timer.running) timerPause(); else timerStart();
     rerender();
   };
   card.querySelector("#timer-reset").onclick = () => { timerReset(); rerender(); };
+  updateAwayLine(card);
   container.appendChild(card);
 
+  const q7 = istore.focusQualityAvg7();
   container.appendChild(el(`
     <div class="card soft">
       <div class="bold">${store.focusMinutesToday()} min focused today</div>
       <div class="small muted">${store.focusMinutesLast7()} min over the last 7 days. Only completed focus blocks count, not breaks.</div>
+      <div class="small muted" id="quality-avg">${q7 === null ? "Focus quality: complete a block to see your 7-day average." : `Focus quality, 7-day average: ${q7}% (100 minus 5 per tab switch and 1 per 10 s away).`}</div>
     </div>
   `));
   renderMatrix(container, rerender);
