@@ -10,6 +10,25 @@ const KEY = "focuslens_web_v1";
 // Firestore. null while signed out — saves stay local-only, same as before accounts existed.
 let syncUid = null;
 
+const SYNC_KEY = "focuslens_sync_enabled";
+
+// Cross-device sync preference. Default ON (the behaviour before this toggle existed).
+export function getSyncEnabled() {
+  try {
+    return localStorage.getItem(SYNC_KEY) !== "0";
+  } catch (e) {
+    return true;
+  }
+}
+
+export function setSyncEnabled(on) {
+  try {
+    localStorage.setItem(SYNC_KEY, on ? "1" : "0");
+  } catch (e) {
+    // Storage blocked: the preference just won't persist.
+  }
+}
+
 function loadAll() {
   try {
     const raw = localStorage.getItem(KEY);
@@ -26,7 +45,7 @@ function saveAll(state) {
   } catch (e) {
     // Private browsing / full storage: the app still works for this session, just doesn't persist.
   }
-  if (syncUid) {
+  if (syncUid && getSyncEnabled()) {
     // Fire-and-forget: a failed push (offline, rules not set up yet) shouldn't block local use.
     pushAppState(syncUid, state).catch(() => {});
   }
@@ -37,6 +56,7 @@ function saveAll(state) {
 // by timestamp — fine for one person's own data across their own devices, not a real-time merge.
 export async function syncOnSignIn(uid) {
   syncUid = uid;
+  if (!getSyncEnabled()) return; // this device only: no pull, no push
   const local = loadAll();
   let remote = null;
   try {
@@ -821,4 +841,9 @@ export function togglePin(key) {
   state.stack = stack.includes(key) ? stack.filter((k) => k !== key) : [...stack, key];
   saveAll(state);
   return state.stack.includes(key);
+}
+
+// Read-only snapshot for the Coach (it computes from a plain copy and never writes back).
+export function getStateSnapshot() {
+  return JSON.parse(JSON.stringify(loadAll()));
 }
