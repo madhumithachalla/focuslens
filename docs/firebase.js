@@ -114,6 +114,15 @@ export async function pushAppState(uid, state) {
   await storeMod.setDoc(storeMod.doc(db, "users", uid, "data", "state"), state);
 }
 
+// Daily usage docs written by the Android app when "Sync screen time to my account" is on:
+// users/{uid}/data/usage_YYYYMMDD. Reads the owner's data collection and filters by id prefix
+// client-side. Returns [] when there are none; throws if offline or rules deny.
+export async function listUsageDocs(uid) {
+  const { db, storeMod } = await loadSdk();
+  const snap = await storeMod.getDocs(storeMod.collection(db, "users", uid, "data"));
+  return snap.docs.filter((d) => d.id.startsWith("usage_")).map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function pullAppState(uid) {
   const { db, storeMod } = await loadSdk();
   const snap = await storeMod.getDoc(storeMod.doc(db, "users", uid, "data", "state"));

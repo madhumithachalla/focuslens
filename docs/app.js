@@ -4,6 +4,7 @@ import {
   REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES, JOURNAL_TEMPLATES,
 } from "./content.js";
 import * as store from "./storage.js";
+import { renderScreenTime } from "./screentime.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
 
@@ -23,6 +24,7 @@ const ROUTES = [
   { id: "focus", label: "Focus" },
   { id: "sleep", label: "Sleep" },
   { id: "wellness", label: "Wellness" },
+  { id: "screentime", label: "Screen time" },
   { id: "screeners", label: "Screeners" },
   { id: "mental-health", label: "Mental health" },
   { id: "learn", label: "Learn" },
@@ -51,7 +53,7 @@ watchAuth((user) => {
   } else {
     store.clearSyncUser();
   }
-  if (["account", "community", "partners"].includes(currentRoute())) render();
+  if (["account", "community", "partners", "screentime"].includes(currentRoute())) render();
 });
 // Picks up the user coming back from the Google sign-in redirect, if any. Errors here
 // (unauthorized domain, provider not enabled, etc.) must surface on the Account page, not be
@@ -199,6 +201,7 @@ function render() {
     glossary: renderGlossary,
     progress: (c) => renderProgress(c, render),
     help: (c) => renderHelp(c, render),
+    screentime: (c) => renderScreenTime(c, { user: currentUser, openSignIn: openAuthModal }),
     community: (c) => renderCommunity(c, { user: currentUser, openSignIn: openAuthModal }),
     partners: (c) => renderPartners(c, { user: currentUser, openSignIn: openAuthModal }),
     "mental-health": renderMentalHealth,
@@ -1070,12 +1073,25 @@ function openReflection(item, onDone) {
 function renderExplore(container) {
   let genre = "ALL";
 
+  function mediaCard(m, pinned) {
+    const card = el(`
+      <div class="card">
+        <div class="bold" style="font-size:15px">${escapeHtml(m.title)}${m.y ? ` (${m.y})` : ""}</div>
+        <div class="small muted">${escapeHtml(m.creator)}</div>
+        <p class="small mt-8" style="margin-bottom:0">${escapeHtml(m.blurb)}</p>
+        <div class="mt-8"><button type="button" class="chip" aria-pressed="${pinned}">${pinned ? "Unpin from My stack" : "Pin to My stack"}</button></div>
+      </div>
+    `);
+    card.querySelector("button").onclick = () => { store.togglePin(store.stackKey(m)); draw(); };
+    return card;
+  }
+
   function draw() {
     container.innerHTML = "";
     container.appendChild(el(`
       <div>
         <h1>Explore</h1>
-        <p class="subtitle">Books, movies and series worth your time — a short curated starter list, not a live catalog.</p>
+        <p class="subtitle">Books, movies, series, podcasts and music worth your time — a short curated starter list, not a live catalog. Pin favourites to My stack; it is private to you.</p>
       </div>
     `));
 
@@ -1087,20 +1103,20 @@ function renderExplore(container) {
     });
     container.appendChild(chips);
 
-    const visible = genre === "ALL" ? MEDIA_ITEMS : MEDIA_ITEMS.filter((m) => m.genres.includes(genre));
+    const pins = new Set(store.listStack());
+    const stacked = MEDIA_ITEMS.filter((m) => pins.has(store.stackKey(m)));
+    if (stacked.length) {
+      container.appendChild(el(`<div class="roadmap-section-title">My stack</div>`));
+      stacked.forEach((m) => container.appendChild(mediaCard(m, true)));
+    }
+
+    const visible = (genre === "ALL" ? MEDIA_ITEMS : MEDIA_ITEMS.filter((m) => m.genres.includes(genre)))
+      .filter((m) => !pins.has(store.stackKey(m)));
     MEDIA_KINDS.forEach((kind) => {
       const items = visible.filter((m) => m.kind === kind.id);
       if (items.length === 0) return;
       container.appendChild(el(`<div class="roadmap-section-title">${kind.label}</div>`));
-      items.forEach((m) => {
-        container.appendChild(el(`
-          <div class="card">
-            <div class="bold" style="font-size:15px">${escapeHtml(m.title)} (${m.y})</div>
-            <div class="small muted">${escapeHtml(m.creator)}</div>
-            <p class="small mt-8" style="margin-bottom:0">${escapeHtml(m.blurb)}</p>
-          </div>
-        `));
-      });
+      items.forEach((m) => container.appendChild(mediaCard(m, false)));
     });
   }
 
