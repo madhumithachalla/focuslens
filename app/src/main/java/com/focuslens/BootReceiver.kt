@@ -18,6 +18,7 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 val dao = AppDatabase.get(context).alarmDao()
                 dao.allEnabledOnce().forEach { AlarmScheduler.schedule(context, it) }
+                MedScheduler.rescheduleAll(context)
             } finally {
                 pendingResult.finish()
             }

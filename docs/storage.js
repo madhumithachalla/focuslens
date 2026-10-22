@@ -47,8 +47,28 @@ function saveAll(state) {
   }
   if (syncUid && getSyncEnabled()) {
     // Fire-and-forget: a failed push (offline, rules not set up yet) shouldn't block local use.
-    pushAppState(syncUid, state).catch(() => {});
+    pushAppState(syncUid, forSync(state)).catch(() => {});
   }
+}
+
+// Medication data is the most private thing in the app, so by default it never leaves this
+// device: it's stripped from what is uploaded to your account, and a pull from the account never
+// overwrites it. The user can opt in from the Medications page.
+const MED_KEYS = ["medPlans", "doseLog"];
+
+export function getMedsLocalOnly() {
+  try { return localStorage.getItem("focuslens_meds_local_only") !== "0"; } catch (e) { return true; }
+}
+
+export function setMedsLocalOnly(v) {
+  try { localStorage.setItem("focuslens_meds_local_only", v ? "1" : "0"); } catch (e) {}
+}
+
+function forSync(state) {
+  if (!getMedsLocalOnly()) return state;
+  const copy = { ...state };
+  MED_KEYS.forEach((k) => { delete copy[k]; });
+  return copy;
 }
 
 // Called once on sign-in. Pulls whichever copy (this browser's or the account's) is newer and
@@ -65,9 +85,10 @@ export async function syncOnSignIn(uid) {
     return; // offline, or Firestore rules not set up yet — keep working locally
   }
   if (remote && (remote.updatedAt || 0) > (local.updatedAt || 0)) {
+    if (getMedsLocalOnly()) MED_KEYS.forEach((k) => { if (local[k] !== undefined) remote[k] = local[k]; else delete remote[k]; });
     saveAll(remote);
   } else {
-    pushAppState(uid, local).catch(() => {});
+    pushAppState(uid, forSync(local)).catch(() => {});
   }
 }
 
@@ -326,6 +347,8 @@ export function predictNextCycle() {
     cyclesUsed: gaps.length,
     cycleSdDays: sd,
     regularity,
+    daysUntilNext: daysBetweenKeys(today, predicted),
+    isLate: daysBetweenKeys(today, predicted) < 0,
     ovulationDay,
     fertileWindowStartDay: fertileStart,
     fertileWindowEndDay: fertileEnd,
@@ -518,38 +541,6 @@ export function setWaterTarget(ml) {
   const state = loadAll();
   state.water = state.water || { target: 2500, byDay: {} };
   state.water.target = ml;
-  saveAll(state);
-}
-
-export function listMeds() {
-  return (loadAll().meds || []).slice();
-}
-
-export function addMed(name, slot) {
-  const state = loadAll();
-  state.meds = state.meds || [];
-  state.meds.push({ id: nextId(state), name, slot });
-  saveAll(state);
-}
-
-export function deleteMed(id) {
-  const state = loadAll();
-  state.meds = (state.meds || []).filter((m) => m.id !== id);
-  saveAll(state);
-}
-
-export function medsTakenToday() {
-  const log = (loadAll().medLog || {})[todayKey()] || {};
-  return log;
-}
-
-export function setMedTaken(id, taken) {
-  const state = loadAll();
-  state.medLog = state.medLog || {};
-  const key = todayKey();
-  state.medLog[key] = state.medLog[key] || {};
-  if (taken) state.medLog[key][id] = true;
-  else delete state.medLog[key][id];
   saveAll(state);
 }
 
@@ -817,7 +808,7 @@ export function summaryData() {
     avgSleepMin: sleepLogs.length ? sleepLogs.reduce((s, l) => s + l.minutes, 0) / sleepLogs.length : null,
     sleepNights: sleepLogs.length,
     cycle: predictNextCycle(),
-    meds: (state.meds || []).map((m) => `${m.name} (${m.slot})`),
+    meds: (state.medPlans || []).map((m) => `${m.name}${m.strength ? " " + m.strength : ""} (${(m.times || []).join(", ")})`),
   };
 }
 
@@ -846,4 +837,114 @@ export function togglePin(key) {
 // Read-only snapshot for the Coach (it computes from a plain copy and never writes back).
 export function getStateSnapshot() {
   return JSON.parse(JSON.stringify(loadAll()));
+}
+
+// ---- Medication plans, dose log and sharing summary ----
+// The user types what's on their own label. FocusLens never suggests a dose, product or interaction.
+
+export function listMedPlans() {
+  return (loadAll().medPlans || []).slice();
+}
+
+export function addMedPlan(plan) {
+  const state = loadAll();
+  state.medPlans = state.medPlans || [];
+  state.medPlans.push({ id: nextId(state), name: plan.name, strength: plan.strength || "", instructions: plan.instructions || "", times: plan.times || [], days: plan.days || [], notes: plan.notes || "", createdAt: Date.now() });
+  saveAll(state);
+}
+
+export function updateMedPlan(id, fields) {
+  const state = loadAll();
+  const p = (state.medPlans || []).find((m) => m.id === id);
+  if (!p) return;
+  Object.assign(p, fields);
+  saveAll(state);
+}
+
+export function deleteMedPlan(id) {
+  const state = loadAll();
+  state.medPlans = (state.medPlans || []).filter((m) => m.id !== id);
+  Object.values(state.doseLog || {}).forEach((day) => {
+    Object.keys(day).forEach((k) => { if (k.startsWith(`${id}@`)) delete day[k]; });
+  });
+  saveAll(state);
+}
+
+function timeToMs(dayStart, hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return dayStart + h * 3600000 + m * 60000;
+}
+
+const MISSED_AFTER_MS = 2 * 3600000;
+const DUE_BEFORE_MS = 10 * 60000;
+
+/** Today's doses in time order, each with a state: taken / upcoming / due / missed. */
+export function dosesToday(now = Date.now()) {
+  const state = loadAll();
+  const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+  const dayStart = d0.getTime();
+  const key = todayKey(new Date(now));
+  const log = (state.doseLog || {})[key] || {};
+  const dow = new Date(now).getDay();
+  const out = [];
+  (state.medPlans || []).forEach((p) => {
+    if (p.days && p.days.length && !p.days.includes(dow)) return;
+    (p.times || []).forEach((t) => {
+      const due = timeToMs(dayStart, t);
+      const takenAt = log[`${p.id}@${t}`] || null;
+      const st = takenAt ? "taken" : now >= due + MISSED_AFTER_MS ? "missed" : now >= due - DUE_BEFORE_MS ? "due" : "upcoming";
+      out.push({ planId: p.id, name: p.name, strength: p.strength, time: t, dueMs: due, state: st, takenAt });
+    });
+  });
+  return out.sort((a, b) => a.dueMs - b.dueMs);
+}
+
+export function markDose(planId, time, taken, now = Date.now()) {
+  const state = loadAll();
+  const key = todayKey(new Date(now));
+  state.doseLog = state.doseLog || {};
+  state.doseLog[key] = state.doseLog[key] || {};
+  if (taken) state.doseLog[key][`${planId}@${time}`] = now;
+  else delete state.doseLog[key][`${planId}@${time}`];
+  saveAll(state);
+}
+
+/** Plain-text update the user can send to a family member through their own messaging app. */
+export function medShareText(now = Date.now(), includeNotes = false) {
+  const doses = dosesToday(now);
+  const hm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+  const label = (x) => `${x.name}${x.strength ? " " + x.strength : ""}`;
+  const taken = doses.filter((x) => x.state === "taken").map((x) => `${label(x)} at ${hm(x.takenAt)}`);
+  const todo = doses.filter((x) => x.state === "upcoming" || x.state === "due").map((x) => `${label(x)} at ${x.time}`);
+  const missed = doses.filter((x) => x.state === "missed").map((x) => `${label(x)} (due ${x.time})`);
+  const date = new Date(now).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const lines = [`Medication update for ${date} (sent from FocusLens)`];
+  if (!doses.length) lines.push("No doses scheduled today.");
+  lines.push(`Taken: ${taken.length ? taken.join("; ") : "none yet"}`);
+  lines.push(`Still to take: ${todo.length ? todo.join("; ") : "nothing"}`);
+  lines.push(`Missed: ${missed.length ? missed.join("; ") : "none"}`);
+  if (includeNotes) {
+    const notes = (loadAll().medPlans || []).filter((p) => p.notes).map((p) => `${p.name}: ${p.notes}`);
+    if (notes.length) lines.push(`Notes: ${notes.join("; ")}`);
+  }
+  return lines.join("\n");
+}
+
+// ---- User journal templates ----
+
+export function listUserTemplates() {
+  return (loadAll().userTemplates || []).slice();
+}
+
+export function addUserTemplate(title, category, scaffold) {
+  const state = loadAll();
+  state.userTemplates = state.userTemplates || [];
+  state.userTemplates.push({ id: nextId(state), title, category: category || "mine", scaffold, createdAt: Date.now() });
+  saveAll(state);
+}
+
+export function deleteUserTemplate(id) {
+  const state = loadAll();
+  state.userTemplates = (state.userTemplates || []).filter((t) => t.id !== id);
+  saveAll(state);
 }
