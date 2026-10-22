@@ -245,13 +245,16 @@ const LUTEAL_PHASE_DAYS = 14;
  * or a contraception method.
  */
 export function predictNextCycle() {
+  // Up to 13 most recent starts -> up to 12 gaps.
   const starts = loadAll()
     .cycle.filter((c) => c.periodStart)
     .map((c) => c.date)
     .sort((a, b) => (a < b ? 1 : -1))
-    .slice(0, 6);
+    .slice(0, 13);
   if (starts.length < 2) return null;
 
+  // gaps[0] is the most recent cycle. Gaps outside 15-60 days are treated as a missed log,
+  // not a real cycle, and dropped.
   const gaps = [];
   for (let i = 0; i < starts.length - 1; i++) {
     const gap = daysBetweenKeys(starts[i + 1], starts[i]);
@@ -259,7 +262,27 @@ export function predictNextCycle() {
   }
   if (gaps.length === 0) return null;
 
-  const avg = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
+  // Exponentially weighted average: each older cycle counts 70% as much as the one after it, so
+  // the estimate follows recent changes instead of an all-time mean.
+  const DECAY = 0.7;
+  let wSum = 0;
+  let weighted = 0;
+  gaps.forEach((g, i) => {
+    const w = Math.pow(DECAY, i);
+    wSum += w;
+    weighted += w * g;
+  });
+  const avg = Math.round(weighted / wSum);
+
+  // Regularity = standard deviation of cycle length (needs 2+ cycles).
+  let sd = null;
+  let regularity = null;
+  if (gaps.length >= 2) {
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) * (g - mean), 0) / gaps.length);
+    regularity = sd <= 2 ? "Very regular" : sd <= 4 ? "Regular" : sd <= 7 ? "Somewhat variable" : "Highly variable";
+  }
+
   const lastStart = starts[0];
   const predicted = addDaysToKey(lastStart, avg);
   const today = todayKey();
@@ -268,8 +291,10 @@ export function predictNextCycle() {
   const ovulationDay = Math.max(7, avg - LUTEAL_PHASE_DAYS);
   const fertileStart = Math.max(1, ovulationDay - 5);
   const fertileEnd = ovulationDay + 1;
+  const MENSTRUAL_DAYS = 5; // typical bleed length; shown as a phase label only
   let phase;
   if (currentDay >= fertileStart && currentDay <= fertileEnd) phase = currentDay === ovulationDay ? "Ovulation" : "Fertile window";
+  else if (currentDay <= MENSTRUAL_DAYS && currentDay < fertileStart) phase = "Menstrual";
   else if (currentDay < fertileStart) phase = "Follicular phase";
   else phase = "Luteal phase";
 
@@ -278,6 +303,9 @@ export function predictNextCycle() {
     predictedNextStart: predicted,
     currentCycleDay: currentDay,
     isConfident: gaps.length >= 3,
+    cyclesUsed: gaps.length,
+    cycleSdDays: sd,
+    regularity,
     ovulationDay,
     fertileWindowStartDay: fertileStart,
     fertileWindowEndDay: fertileEnd,
@@ -612,4 +640,163 @@ export function listScreenerResults(type) {
   return (loadAll().screeners || [])
     .filter((r) => r.type === type)
     .sort((a, b) => b.at - a.at);
+}
+
+// ---- Custom journal prompts ----
+
+export function listCustomPrompts() {
+  return (loadAll().customPrompts || []).slice();
+}
+
+export function addCustomPrompt(text) {
+  const state = loadAll();
+  state.customPrompts = state.customPrompts || [];
+  state.customPrompts.push({ id: nextId(state), text });
+  saveAll(state);
+}
+
+export function deleteCustomPrompt(id) {
+  const state = loadAll();
+  state.customPrompts = (state.customPrompts || []).filter((p) => p.id !== id);
+  saveAll(state);
+}
+
+// ---- Activity, meals and diet plan (all self-entered; the web can't read phone sensors) ----
+
+export function logActivity(kind, minutes, steps, calories) {
+  const state = loadAll();
+  state.activity = state.activity || [];
+  state.activity.push({ id: nextId(state), date: todayKey(), kind, minutes, steps, calories });
+  saveAll(state);
+}
+
+export function activityToday() {
+  const key = todayKey();
+  const rows = (loadAll().activity || []).filter((a) => a.date === key);
+  return {
+    rows,
+    minutes: rows.reduce((s, r) => s + (r.minutes || 0), 0),
+    steps: rows.reduce((s, r) => s + (r.steps || 0), 0),
+    calories: rows.reduce((s, r) => s + (r.calories || 0), 0),
+  };
+}
+
+export function deleteActivity(id) {
+  const state = loadAll();
+  state.activity = (state.activity || []).filter((a) => a.id !== id);
+  saveAll(state);
+}
+
+export function getStepGoal() {
+  return loadAll().stepGoal || 8000;
+}
+
+export function setStepGoal(n) {
+  const state = loadAll();
+  state.stepGoal = n;
+  saveAll(state);
+}
+
+export function logMeal(slot, text) {
+  const state = loadAll();
+  state.meals = state.meals || [];
+  state.meals.push({ id: nextId(state), date: todayKey(), slot, text });
+  saveAll(state);
+}
+
+export function mealsToday() {
+  const key = todayKey();
+  return (loadAll().meals || []).filter((m) => m.date === key);
+}
+
+export function deleteMeal(id) {
+  const state = loadAll();
+  state.meals = (state.meals || []).filter((m) => m.id !== id);
+  saveAll(state);
+}
+
+export function getDietPlan() {
+  return loadAll().dietPlan || "";
+}
+
+export function setDietPlan(text) {
+  const state = loadAll();
+  state.dietPlan = text;
+  saveAll(state);
+}
+
+// ---- Eisenhower matrix (urgent x important) ----
+
+export function listMatrix() {
+  return (loadAll().matrix || []).slice();
+}
+
+export function addMatrixItem(text, urgent, important) {
+  const state = loadAll();
+  state.matrix = state.matrix || [];
+  state.matrix.push({ id: nextId(state), text, urgent, important });
+  saveAll(state);
+}
+
+export function deleteMatrixItem(id) {
+  const state = loadAll();
+  state.matrix = (state.matrix || []).filter((m) => m.id !== id);
+  saveAll(state);
+}
+
+// ---- Progress (XP / level / quests / boss) — derived from what you actually logged ----
+// Nothing is stored for this: XP is recomputed from the real records every time, so it can
+// never drift from, or be inflated beyond, your actual activity.
+
+const XP_PER = { focusMinute: 1, journal: 20, habitTick: 5, task: 10, sleepLog: 10 };
+
+export function progressSummary() {
+  const state = loadAll();
+  const focus = (state.focusSessions || []).reduce((s, f) => s + f.minutes, 0);
+  const journal = (state.journal || []).length;
+  const habitTicks = (state.habits || []).reduce((s, h) => s + Object.keys(h.days).length, 0);
+  const tasks = (state.tasks || []).filter((t) => t.completedAt).length;
+  const sleep = (state.sleep || []).length;
+  const xp = focus * XP_PER.focusMinute + journal * XP_PER.journal + habitTicks * XP_PER.habitTick + tasks * XP_PER.task + sleep * XP_PER.sleepLog;
+  const level = Math.floor(Math.sqrt(xp / 50)) + 1;
+  const levelStart = 50 * (level - 1) * (level - 1);
+  const levelEnd = 50 * level * level;
+  return { xp, level, levelStart, levelEnd, focus, journal, habitTicks, tasks, sleep };
+}
+
+export function dailyQuests() {
+  const today = todayKey();
+  const state = loadAll();
+  const water = waterToday();
+  return [
+    { id: "focus", label: "Focus for 25 minutes", done: focusMinutesToday() >= 25 },
+    { id: "journal", label: "Write today's journal entry", done: (state.journal || []).some((e) => e.date === today) },
+    { id: "habit", label: "Tick off a habit", done: (state.habits || []).some((h) => h.days[today]) },
+    { id: "water", label: "Reach your water target", done: water.ml >= water.target },
+  ];
+}
+
+export const BOSS_WEEKLY_HP = 300; // focus minutes needed to defeat this week's boss
+export function bossStatus() {
+  const dealt = focusMinutesLast7();
+  return { hp: BOSS_WEEKLY_HP, dealt, left: Math.max(0, BOSS_WEEKLY_HP - dealt), defeated: dealt >= BOSS_WEEKLY_HP };
+}
+
+export function bestHabitStreak() {
+  return (loadAll().habits || []).reduce((m, h) => Math.max(m, habitStreak(h)), 0);
+}
+
+// Everything the doctor summary needs in one read.
+export function summaryData() {
+  const state = loadAll();
+  const moods = (state.journal || []).filter((e) => e.mood).slice(-14);
+  const sleepLogs = recentSleep(14);
+  return {
+    screeners: ["PHQ9", "GAD7", "ASRS"].map((t) => ({ type: t, latest: listScreenerResults(t)[0] || null })),
+    moodEntries: moods,
+    avgSleepMin: sleepLogs.length ? sleepLogs.reduce((s, l) => s + l.minutes, 0) / sleepLogs.length : null,
+    sleepNights: sleepLogs.length,
+    cycle: predictNextCycle(),
+    meds: (state.meds || []).map((m) => `${m.name} (${m.slot})`),
+  };
 }
