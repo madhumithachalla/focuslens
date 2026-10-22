@@ -9,6 +9,8 @@ import { renderBody } from "./body.js";
 import { renderCoach } from "./coach.js";
 import { renderMeds, startMedReminders } from "./meds.js";
 import { renderPromptBrowser } from "./journalkit.js";
+import { renderSettings } from "./settings.js";
+import { renderIntercept } from "./intercept.js";
 import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y, cycleTheme, themeLabel } from "./features.js";
@@ -21,11 +23,11 @@ import {
 } from "./firebase.js";
 
 const NAV_GROUPS = [
-  { label: "Overview", ids: ["roadmap", "coach", "progress"] },
-  { label: "Focus", ids: ["focus", "tasks", "alarms", "screentime", "partners"] },
-  { label: "Body & mind", ids: ["sleep", "cycle", "body", "meds", "wellness", "journal", "mental-health", "screeners"] },
-  { label: "Learn", ids: ["learn", "explore", "glossary", "birthdays"] },
-  { label: "Connect", ids: ["community", "care", "help", "account"] },
+  { key: "overview", label: "Overview", ids: ["roadmap", "coach", "progress"] },
+  { key: "focus", label: "Focus", ids: ["focus", "intercept", "tasks", "alarms", "screentime", "partners"] },
+  { key: "body", label: "Body & mind", ids: ["sleep", "cycle", "body", "meds", "wellness", "journal", "mental-health", "screeners"] },
+  { key: "learn", label: "Learn", ids: ["learn", "explore", "glossary", "birthdays"] },
+  { key: "connect", label: "Connect", ids: ["community", "care", "help", "settings", "account"] },
 ];
 
 const ROUTES = [
@@ -35,6 +37,7 @@ const ROUTES = [
   { id: "tasks", label: "To-do" },
   { id: "alarms", label: "Alarms" },
   { id: "focus", label: "Focus" },
+  { id: "intercept", label: "Intercept" },
   { id: "sleep", label: "Sleep" },
   { id: "wellness", label: "Wellness" },
   { id: "screentime", label: "Screen time" },
@@ -52,6 +55,7 @@ const ROUTES = [
   { id: "care", label: "Care near me" },
   { id: "help", label: "Help" },
   { id: "birthdays", label: "Birthdays" },
+  { id: "settings", label: "Settings" },
   { id: "account", label: "Account" },
 ];
 
@@ -148,8 +152,9 @@ function renderNav() {
   nav.innerHTML = "";
   const byId = new Map(ROUTES.map((r) => [r.id, r]));
   const placed = new Set();
-  const addButton = (r) => {
+  const addButton = (r, groupKey) => {
     const btn = document.createElement("button");
+    btn.dataset.group = groupKey || "overview";
     btn.textContent = r.label;
     btn.className = r.id === active ? "active" : "";
     if (r.id === active) btn.setAttribute("aria-current", "page");
@@ -166,9 +171,10 @@ function renderNav() {
     if (!items.length) return;
     const label = document.createElement("div");
     label.className = "nav-group";
+    label.dataset.group = g.key;
     label.textContent = g.label;
     nav.appendChild(label);
-    items.forEach((r) => { placed.add(r.id); addButton(r); });
+    items.forEach((r) => { placed.add(r.id); addButton(r, g.key); });
   });
   // Any route not listed in a group still gets a button, so a new page can't go missing.
   ROUTES.filter((r) => !placed.has(r.id)).forEach(addButton);
@@ -233,11 +239,17 @@ authTrigger.onclick = () => {
   }
 };
 
+function groupOfRoute(id) {
+  const g = NAV_GROUPS.find((x) => x.ids.includes(id));
+  return g ? g.key : "overview";
+}
+
 function render() {
   stopCommunity();
   renderNav();
   const route = currentRoute();
   page.innerHTML = "";
+  page.dataset.group = groupOfRoute(route);
   const renderers = {
     roadmap: renderRoadmap,
     journal: renderJournal,
@@ -253,6 +265,8 @@ function render() {
     help: (c) => renderHelp(c, render),
     coach: (c) => renderCoach(c),
     meds: (c) => renderMeds(c, render),
+    settings: (c) => renderSettings(c, render),
+    intercept: (c) => renderIntercept(c, render),
     body: (c) => renderBody(c, render),
     care: (c) => renderCare(c, render),
     screentime: (c) => renderScreenTime(c, { user: currentUser, openSignIn: openAuthModal }),
