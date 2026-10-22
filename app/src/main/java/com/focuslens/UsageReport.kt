@@ -159,6 +159,8 @@ fun WeeklyReportCard(repo: UsageRepository, history: UsageHistoryRepository) {
     LaunchedEffect(Unit) {
         val taskRepo = TaskRepository(AppDatabase.get(context).taskDao(), AppDatabase.get(context).checkInDao())
         lines = withContext(Dispatchers.IO) { buildWeeklyReport(repo, history, taskRepo) }
+        // Opt-in account sync (no-op unless enabled + signed in; throttled to once per 30 min).
+        UsageSync.maybeSync(context, repo, history)
     }
 
     Card(
