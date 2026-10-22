@@ -634,7 +634,7 @@ input[type="text"], input[type="number"], input[type="email"], input[type="passw
 :root[data-radius="round"] { --radius: 28px; }
 :root[data-radius="sharp"] { --radius: 6px; }
 :root[data-font="system"] body, :root[data-font="system"] button, :root[data-font="system"] input, :root[data-font="system"] select, :root[data-font="system"] textarea { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-:root[data-font="dyslexia"] body, :root[data-font="dyslexia"] button, :root[data-font="dyslexia"] input, :root[data-font="dyslexia"] select, :root[data-font="dyslexia"] textarea { font-family: "Atkinson Hyperlegible", "Lexend", Verdana, system-ui, sans-serif; letter-spacing: 0.02em; }
+[data-font="dyslexia"] body, [data-font="dyslexia-friendly"] body, [data-font="dyslexia-friendly"] button, [data-font="dyslexia-friendly"] input, [data-font="dyslexia-friendly"] select, [data-font="dyslexia-friendly"] textarea { font-family: "Atkinson Hyperlegible", "Lexend", Verdana, system-ui, sans-serif; letter-spacing: 0.02em; }
 
 .card, .modal-card, .sidebar { border-radius: var(--radius); }
 .card { padding: var(--pad); }
