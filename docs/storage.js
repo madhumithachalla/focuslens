@@ -800,3 +800,25 @@ export function summaryData() {
     meds: (state.meds || []).map((m) => `${m.name} (${m.slot})`),
   };
 }
+
+// ---- Explore "My stack" (pinned media; private to this account, synced with the rest of state) ----
+
+export function stackKey(item) {
+  return `${item.kind}:${item.title}`;
+}
+
+export function listStack() {
+  return (loadAll().stack || []).slice();
+}
+
+export function isPinned(key) {
+  return (loadAll().stack || []).includes(key);
+}
+
+export function togglePin(key) {
+  const state = loadAll();
+  const stack = state.stack || [];
+  state.stack = stack.includes(key) ? stack.filter((k) => k !== key) : [...stack, key];
+  saveAll(state);
+  return state.stack.includes(key);
+}

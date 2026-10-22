@@ -390,6 +390,15 @@ function tasksBoxFor(pactId) {
 function paintTasks(box, pact, partnerName, tasks, ctx) {
   box.innerHTML = "";
   if (!tasks.length) { box.appendChild(el(`<p class="small muted">No tasks yet.</p>`)); return; }
+  // Per-pact stats, computed only from the tasks loaded here (nothing extra is stored or written).
+  const count = (fn) => tasks.filter(fn).length;
+  const stat = (label, mineFn) => `<div style="flex:1;min-width:90px"><div class="bold" style="font-size:18px">${count(mineFn)}</div><div class="small muted">${label}</div></div>`;
+  box.appendChild(el(`
+    <div class="card soft" style="display:flex;gap:8px;flex-wrap:wrap" aria-label="Pact stats">
+      ${stat("Tasks verified", (t) => t.status === "done" && t.verified)}
+      ${stat("Missed", (t) => t.status === "missed")}
+      ${stat("Dares completed", (t) => t.status === "missed" && t.dareStatus === "accepted")}
+    </div>`));
   const fail = (e) => alert(friendlyError(e));
   tasks.forEach((t) => {
     const mine = t.ownerUid === ctx.user.uid;
