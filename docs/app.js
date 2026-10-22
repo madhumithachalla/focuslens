@@ -10,12 +10,14 @@ import { renderCoach } from "./coach.js";
 import { renderMeds, startMedReminders } from "./meds.js";
 import { renderPromptBrowser } from "./journalkit.js";
 import { renderSettings } from "./settings.js";
+import { applyPrefs, isPageHidden } from "./prefs.js";
 import { renderIntercept } from "./intercept.js";
 import { renderCare } from "./care.js";
 import { renderCommunity, renderPartners, stopCommunity } from "./community.js";
 import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y, cycleTheme, themeLabel } from "./features.js";
 
 applyA11y();
+applyPrefs();
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
 import {
   watchAuth, signUp, signIn, signOutUser, authErrorMessage,
@@ -167,7 +169,8 @@ function renderNav() {
     nav.appendChild(btn);
   };
   NAV_GROUPS.forEach((g) => {
-    const items = g.ids.map((id) => byId.get(id)).filter(Boolean);
+    const allIds = ROUTES.map((r) => r.id);
+    const items = g.ids.map((id) => byId.get(id)).filter((r) => r && (!isPageHidden(r.id, allIds) || r.id === active));
     if (!items.length) return;
     const label = document.createElement("div");
     label.className = "nav-group";
@@ -177,7 +180,7 @@ function renderNav() {
     items.forEach((r) => { placed.add(r.id); addButton(r, g.key); });
   });
   // Any route not listed in a group still gets a button, so a new page can't go missing.
-  ROUTES.filter((r) => !placed.has(r.id)).forEach(addButton);
+  ROUTES.filter((r) => !placed.has(r.id) && (!isPageHidden(r.id) || r.id === active)).forEach(addButton);
   updateXpPill();
 }
 
