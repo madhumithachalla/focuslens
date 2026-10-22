@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "637478613261",
-    "project_id": "focuslens-8805c",
-    "storage_bucket": "focuslens-8805c.firebasestorage.app"
+    "project_number": "885226905018",
+    "project_id": "focuslens-d5379",
+    "storage_bucket": "focuslens-d5379.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:637478613261:android:99292e56138c5226d68044",
+        "mobilesdk_app_id": "1:885226905018:android:57b8adfe23804bac065183",
         "android_client_info": {
           "package_name": "com.focuslens"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "885226905018-21ecmoi3kcfc679607lb9l3s1lfd0oum.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBQg0ZZfLSr4PW2DmgTevpza46ujBNcv1I"
+          "current_key": "AIzaSyCJ4PtTGpsYEXyHihPpMm2E5-_F6RGD3v0"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "885226905018-21ecmoi3kcfc679607lb9l3s1lfd0oum.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
