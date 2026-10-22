@@ -4,7 +4,9 @@ import {
   REWARD_IDEAS, MOODS, MISS_REASONS, ROADMAP, PHASE_GUIDANCE, TRACKER_TYPES, JOURNAL_TEMPLATES,
 } from "./content.js";
 import * as store from "./storage.js";
-import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary } from "./features.js";
+import { renderFocus, renderSleep, renderWellness, renderScreeners, renderGlossary, renderProgress, renderHelp, applyA11y } from "./features.js";
+
+applyA11y();
 import { buildIcs, downloadIcs, googleCalendarUrl } from "./calendar.js";
 import {
   watchAuth, signUp, signIn, signOutUser, authErrorMessage,
@@ -25,6 +27,8 @@ const ROUTES = [
   { id: "learn", label: "Learn" },
   { id: "explore", label: "Explore" },
   { id: "glossary", label: "Glossary" },
+  { id: "progress", label: "Progress" },
+  { id: "help", label: "Help" },
   { id: "birthdays", label: "Birthdays" },
   { id: "account", label: "Account" },
 ];
@@ -189,6 +193,8 @@ function render() {
     wellness: (c) => renderWellness(c, render),
     screeners: (c) => renderScreeners(c, render),
     glossary: renderGlossary,
+    progress: (c) => renderProgress(c, render),
+    help: (c) => renderHelp(c, render),
     "mental-health": renderMentalHealth,
     learn: renderLearn,
     explore: renderExplore,
@@ -354,12 +360,55 @@ function renderJournal(container) {
   });
   container.appendChild(templatesCard);
 
+  const promptsCard = el(`
+    <div class="card soft">
+      <div class="bold mb-0" style="font-size:13px">Your own prompts</div>
+      <p class="small muted mt-8" style="margin-bottom:8px">Add questions you want to be asked — tap one to start an entry with it.</p>
+      <div class="chips" id="custom-prompt-chips"></div>
+      <input type="text" id="custom-prompt-new" placeholder="e.g. What made me feel safe today?" />
+      <div class="mt-8"><button class="outline" id="custom-prompt-add">Add prompt</button></div>
+    </div>
+  `);
+  store.listCustomPrompts().forEach((cp) => {
+    const chip = el(`<span class="chip"></span>`);
+    const use = el(`<button type="button" style="all:unset;cursor:pointer">${escapeHtml(cp.text)}</button>`);
+    use.onclick = () => {
+      const ta = card.querySelector("#journal-text");
+      ta.value = `${cp.text}\n\n${ta.value}`;
+      ta.focus();
+    };
+    const del = el(`<button type="button" aria-label="Delete prompt" style="all:unset;cursor:pointer;margin-left:8px">×</button>`);
+    del.onclick = () => { store.deleteCustomPrompt(cp.id); render(); };
+    chip.appendChild(use);
+    chip.appendChild(del);
+    promptsCard.querySelector("#custom-prompt-chips").appendChild(chip);
+  });
+  promptsCard.querySelector("#custom-prompt-add").onclick = () => {
+    const v = promptsCard.querySelector("#custom-prompt-new").value.trim();
+    if (v) { store.addCustomPrompt(v); render(); }
+  };
+  container.appendChild(promptsCard);
+
+  // Gentle support nudge: rule-based on the mood you chose, or on your last two entries both
+  // being "low". Not a diagnosis; it just makes the support options one tap away.
+  const lowRecently = entries.slice(0, 2).length === 2 && entries.slice(0, 2).every((e) => e.mood === "low");
+  const supportBanner = el(`
+    <div class="card" style="border-color:var(--danger)" hidden>
+      <div class="bold">Feeling low?</div>
+      <p class="small" style="margin:6px 0 8px">That's worth taking seriously. You could try a grounding or breathing exercise, or reach out to someone.</p>
+      <a href="#wellness" class="small bold">Calm-down exercises</a> · <a href="#help" class="small bold">Helplines &amp; finding care</a>
+    </div>
+  `);
+  supportBanner.hidden = !lowRecently;
+  container.insertBefore(supportBanner, card);
+
   let selectedMood = todayEntry?.mood || null;
   const moodChips = card.querySelector("#mood-chips");
   MOODS.forEach((m) => {
     const chip = el(`<button type="button" class="chip${selectedMood === m.id ? " active" : ""}" aria-pressed="${selectedMood === m.id}" aria-label="Mood: ${m.id}">${m.emoji}</button>`);
     chip.onclick = () => {
       selectedMood = m.id;
+      supportBanner.hidden = !(m.id === "low" || lowRecently);
       moodChips.querySelectorAll(".chip").forEach((c) => { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
       chip.classList.add("active");
       chip.setAttribute("aria-pressed", "true");
@@ -376,18 +425,27 @@ function renderJournal(container) {
   };
 
   container.appendChild(el(`<div class="roadmap-section-title">Recent entries</div>`));
-  if (entries.length === 0) {
-    container.appendChild(el(`<p class="muted">Nothing yet.</p>`));
-  }
-  entries.forEach((e) => {
-    const mood = MOODS.find((m) => m.id === e.mood);
-    container.appendChild(el(`
-      <div class="card">
-        <div class="row mb-0"><span class="small muted">${formatDateKey(e.date)}</span><span>${mood ? mood.emoji : ""}</span></div>
-        <p class="mt-8" style="margin-bottom:0">${escapeHtml(e.text)}</p>
-      </div>
-    `));
-  });
+  const search = el(`<input type="text" id="journal-search" placeholder="Search all entries" aria-label="Search journal entries" />`);
+  container.appendChild(search);
+  const listBox = el(`<div class="mt-8"></div>`);
+  container.appendChild(listBox);
+  const paintEntries = () => {
+    const q = search.value.trim().toLowerCase();
+    const pool = q ? store.recentJournal(3650).filter((e) => e.text.toLowerCase().includes(q)) : entries;
+    listBox.innerHTML = "";
+    if (pool.length === 0) listBox.appendChild(el(`<p class="muted">${q ? "No matching entries." : "Nothing yet."}</p>`));
+    pool.forEach((e) => {
+      const mood = MOODS.find((m) => m.id === e.mood);
+      listBox.appendChild(el(`
+        <div class="card">
+          <div class="row mb-0"><span class="small muted">${formatDateKey(e.date)}</span><span>${mood ? mood.emoji : ""}</span></div>
+          <p class="mt-8" style="margin-bottom:0;white-space:pre-wrap">${escapeHtml(e.text)}</p>
+        </div>
+      `));
+    });
+  };
+  search.oninput = paintEntries;
+  paintEntries();
 }
 
 function formatDateKey(key) {
@@ -417,6 +475,11 @@ function renderCycle(container) {
           next start around <span class="bold">${formatDateKey(prediction.predictedNextStart)}</span>,
           based on an average ${prediction.averageCycleLengthDays}-day cycle from your own logs.
           Estimated fertile window: day ${prediction.fertileWindowStartDay}–${prediction.fertileWindowEndDay}.
+        </p>
+        <p class="small" style="margin:0 0 8px">
+          Weighted over your last ${prediction.cyclesUsed} cycle${prediction.cyclesUsed === 1 ? "" : "s"} (recent ones count more).
+          ${prediction.regularity ? `Regularity: <span class="bold">${prediction.regularity}</span> (cycle length varies by about ±${prediction.cycleSdDays.toFixed(1)} days).` : "Log one more cycle to see how regular yours is."}
+          ${prediction.regularity === "Highly variable" ? "Very variable cycles are worth mentioning to a doctor." : ""}
         </p>
         <p class="small muted" style="margin-bottom:0">
           Assumes a standard ~14-day luteal phase (real range ~11-17 days per person) — only basal body

@@ -15,6 +15,7 @@
   --phase-fertile: #C96A3E;
   --phase-ovulation: #A8336B;
   --phase-luteal: #4F5584;
+  --phase-menstrual: #A5352F;
   color-scheme: light;
 }
 
@@ -335,7 +336,7 @@ input[type="text"], textarea, select, input[type="number"] {
   padding: 9px 10px;
   font-size: 14px;
   font-family: inherit;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -401,3 +402,41 @@ a { color: var(--accent); }
 @media (max-width: 420px) {
   .page { padding: 16px 14px 40px; }
 }
+
+/* ---- Display preferences (set from the Help page; see applyA11y in features.js) ---- */
+:root[data-theme="dark"] {
+  --bg: #050505;
+  --surface: #121212;
+  --primary: #2E7D5B;
+  --primary-soft: #16241d;
+  --accent: #6FD1A5;
+  --text: #F5F2EB;
+  --text-muted: #B2AEA4;
+  --border: #2B2B2B;
+  --danger: #FF8A80;
+  --phase-follicular: #E0B04C;
+  --phase-fertile: #F09A6E;
+  --phase-ovulation: #E57AA8;
+  --phase-luteal: #9EA6E8;
+  --phase-menstrual: #FF8A80;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .nav button.active,
+:root[data-theme="dark"] .get-app button,
+:root[data-theme="dark"] .get-app-link { background: #F5F2EB; color: #1F3A34; }
+:root[data-theme="dark"] button.text,
+:root[data-theme="dark"] button.outline,
+:root[data-theme="dark"] a { color: var(--accent); }
+:root[data-theme="dark"] button.outline { border-color: var(--accent); }
+
+:root[data-contrast="high"] { --text-muted: #333; --border: #555; }
+:root[data-theme="dark"][data-contrast="high"] { --text: #fff; --text-muted: #ddd; --border: #aaa; }
+:root[data-contrast="high"] .card { border-width: 2px; }
+
+:root[data-text="large"] body { font-size: 19px; }
+:root[data-text="large"] .muted { font-size: 16px; }
+:root[data-text="large"] .small { font-size: 15px; }
+:root[data-text="large"] button, :root[data-text="large"] input, :root[data-text="large"] select, :root[data-text="large"] textarea { font-size: 17px; }
+
+:root[data-motion="reduce"] * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
