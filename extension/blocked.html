@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blocked by FocusLens</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  main { max-width: 560px; margin: 0 auto; padding: 8vh 16px 40px; }
+  .big { font-size: 2rem; }
+  .actions { display: grid; gap: .6rem; margin-top: 1rem; }
+  .actions button { width: 100%; padding: .8rem 1rem; }
+  #out { font-size: 1.05rem; letter-spacing: .04em; }
+  .q { margin: .8rem 0; }
+  .q label { display: block; margin: .15rem 0; }
+  .meter { display: inline-flex; gap: 4px; vertical-align: middle; }
+  .meter i { width: 18px; height: 10px; border-radius: 3px; background: var(--border); }
+  .meter i.on { background: var(--accent); }
+  .choices { display: grid; gap: .4rem; }
+  .choices button { text-align: left; }
+  .choices button.right { border-color: var(--ok); }
+  .choices button.wrong { border-color: var(--warn); }
+  .site { word-break: break-all; color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <p class="muted">FocusLens Distraction Blocker</p>
+  <h1 class="big" id="title">Ouch! You blocked <span class="site" id="site">this site</span></h1>
+  <p id="sub">Past you set this up for a reason. Take a breath. Is this really what you want to do right now?</p>
+  <p id="why" class="muted"></p>
+
+  <section id="gatebox" class="card" hidden aria-labelledby="gatetitle">
+    <h2 id="gatetitle">Answer to continue</h2>
+    <p class="muted" id="gateprogress" aria-live="polite"></p>
+    <p><span id="meterlabel" class="muted">Difficulty</span>
+      <span id="meter" role="meter" aria-labelledby="meterlabel" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="Level 1 of 5" class="meter"></span>
+      <span class="muted" id="meternote"></span></p>
+    <fieldset><legend id="gateq"></legend><div id="gatechoices" class="choices"></div></fieldset>
+    <p id="gateexplain" class="msg" role="status" aria-live="polite"></p>
+    <button id="gatenext" type="button" hidden>Next question</button>
+  </section>
+
+  <section id="quizbox" class="card" hidden aria-labelledby="quiztitle">
+    <h2 id="quiztitle">Quick quiz to continue</h2>
+    <p class="muted" id="quiztopic"></p>
+    <form id="quizform" novalidate></form>
+    <p id="quizmsg" class="msg" role="status" aria-live="polite"></p>
+  </section>
+
+  <div class="actions">
+    <button id="out" class="primary">TAKE ME OUT OF HERE</button>
+    <button id="cont" disabled>Continue anyway</button>
+    <button id="pass" disabled>Emergency pass</button>
+  </div>
+  <p id="passinfo" class="muted" aria-live="polite"></p>
+  <p id="err" class="msg err" role="alert"></p>
+</main>
+<script type="module" src="blocked.js"></script>
+</body>
+</html>

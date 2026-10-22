@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FocusLens Blocker</title>
+<link rel="stylesheet" href="styles.css">
+<style>body{width:340px;padding:12px 14px} .card{padding:.7rem .85rem;margin-bottom:.7rem}</style>
+</head>
+<body>
+<h1>FocusLens Blocker</h1>
+<div id="lock" class="lock" role="status" hidden></div>
+<div class="card row">
+  <label for="enabled"><input type="checkbox" id="enabled"> Blocking is on</label>
+  <span id="state" class="muted" aria-live="polite"></span>
+</div>
+<div class="card">
+  <h2>This site</h2>
+  <p id="site" class="muted">Checking the current tab...</p>
+  <button id="add" class="primary" disabled>Block this site</button>
+  <p id="addmsg" class="msg" role="status"></p>
+</div>
+<div class="card">
+  <h2>Focus mode</h2>
+  <p class="muted" id="focusinfo">Block everything in your list right now, ignoring schedules.</p>
+  <div class="row" id="focusbtns">
+    <button data-min="25">25 min</button><button data-min="50">50 min</button><button data-min="90">90 min</button>
+    <button id="stopfocus" class="danger" hidden>Stop focus</button>
+  </div>
+</div>
+<div class="card">
+  <h2>Today</h2>
+  <div class="row"><div><div class="stat" id="today">0</div><div class="muted">blocked attempts</div></div>
+  <div><div class="stat" id="gave">0</div><div class="muted">distractions I gave in to</div></div></div>
+  <p class="muted" id="top"></p>
+</div>
+<button id="opts">Open settings</button>
+<script type="module" src="popup.js"></script>
+</body>
+</html>
