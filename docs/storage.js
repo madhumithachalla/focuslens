@@ -409,3 +409,207 @@ export function markAlarmFired(id, firedKey) {
 }
 
 export { todayKey, addDaysToKey };
+
+// ---- Habits, hydration, medication/supplement checklist, life pillars ----
+// Every list is created lazily (`state.x = state.x || ...`) so state saved before these
+// features existed — locally or in Firestore — keeps loading.
+
+export function listHabits() {
+  return (loadAll().habits || []).slice();
+}
+
+export function addHabit(title) {
+  const state = loadAll();
+  state.habits = state.habits || [];
+  state.habits.push({ id: nextId(state), title, days: {} });
+  saveAll(state);
+}
+
+export function deleteHabit(id) {
+  const state = loadAll();
+  state.habits = (state.habits || []).filter((h) => h.id !== id);
+  saveAll(state);
+}
+
+export function toggleHabitDay(id, dayKey) {
+  const state = loadAll();
+  const habit = (state.habits || []).find((h) => h.id === id);
+  if (!habit) return;
+  if (habit.days[dayKey]) delete habit.days[dayKey];
+  else habit.days[dayKey] = true;
+  saveAll(state);
+}
+
+// Consecutive done days ending today. If today isn't ticked yet the streak counts back from
+// yesterday, so it doesn't read as broken before the day is over.
+export function habitStreak(habit) {
+  let cursor = todayKey();
+  if (!habit.days[cursor]) cursor = addDaysToKey(cursor, -1);
+  let n = 0;
+  while (habit.days[cursor]) {
+    n++;
+    cursor = addDaysToKey(cursor, -1);
+  }
+  return n;
+}
+
+export function waterToday() {
+  const w = loadAll().water || { target: 2500, byDay: {} };
+  return { target: w.target, ml: w.byDay[todayKey()] || 0 };
+}
+
+export function addWater(ml) {
+  const state = loadAll();
+  state.water = state.water || { target: 2500, byDay: {} };
+  const key = todayKey();
+  state.water.byDay[key] = Math.max(0, (state.water.byDay[key] || 0) + ml);
+  saveAll(state);
+}
+
+export function setWaterTarget(ml) {
+  const state = loadAll();
+  state.water = state.water || { target: 2500, byDay: {} };
+  state.water.target = ml;
+  saveAll(state);
+}
+
+export function listMeds() {
+  return (loadAll().meds || []).slice();
+}
+
+export function addMed(name, slot) {
+  const state = loadAll();
+  state.meds = state.meds || [];
+  state.meds.push({ id: nextId(state), name, slot });
+  saveAll(state);
+}
+
+export function deleteMed(id) {
+  const state = loadAll();
+  state.meds = (state.meds || []).filter((m) => m.id !== id);
+  saveAll(state);
+}
+
+export function medsTakenToday() {
+  const log = (loadAll().medLog || {})[todayKey()] || {};
+  return log;
+}
+
+export function setMedTaken(id, taken) {
+  const state = loadAll();
+  state.medLog = state.medLog || {};
+  const key = todayKey();
+  state.medLog[key] = state.medLog[key] || {};
+  if (taken) state.medLog[key][id] = true;
+  else delete state.medLog[key][id];
+  saveAll(state);
+}
+
+export function listPillars() {
+  return (loadAll().pillars || []).slice();
+}
+
+export function addPillar(title, goal) {
+  const state = loadAll();
+  state.pillars = state.pillars || [];
+  state.pillars.push({ id: nextId(state), title, goal });
+  saveAll(state);
+}
+
+export function deletePillar(id) {
+  const state = loadAll();
+  state.pillars = (state.pillars || []).filter((p) => p.id !== id);
+  saveAll(state);
+}
+
+// ---- Sleep log + debt ----
+
+export function logSleep(wakeDateKey, bed, wake, quality) {
+  const [bh, bm] = bed.split(":").map(Number);
+  const [wh, wm] = wake.split(":").map(Number);
+  let minutes = (wh * 60 + wm) - (bh * 60 + bm);
+  if (minutes <= 0) minutes += 24 * 60; // crossed midnight
+  const state = loadAll();
+  state.sleep = (state.sleep || []).filter((s) => s.date !== wakeDateKey);
+  state.sleep.push({ date: wakeDateKey, bed, wake, quality, minutes });
+  saveAll(state);
+}
+
+export function recentSleep(days = 14) {
+  const cutoff = addDaysToKey(todayKey(), -(days - 1));
+  return (loadAll().sleep || [])
+    .filter((s) => s.date >= cutoff)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function deleteSleep(dateKey) {
+  const state = loadAll();
+  state.sleep = (state.sleep || []).filter((s) => s.date !== dateKey);
+  saveAll(state);
+}
+
+export function getSleepTargetHours() {
+  return loadAll().sleepTargetHours || 8;
+}
+
+export function setSleepTargetHours(h) {
+  const state = loadAll();
+  state.sleepTargetHours = h;
+  saveAll(state);
+}
+
+// Minutes short of the nightly target across the last 7 days that have a log. Nights over
+// target don't "pay back" debt here — a deliberately simple, inspectable rule.
+export function weeklySleepDebtMinutes() {
+  const target = getSleepTargetHours() * 60;
+  const logs = recentSleep(7);
+  return logs.reduce((sum, s) => sum + Math.max(0, target - s.minutes), 0);
+}
+
+export function getChronotype() {
+  return loadAll().chronotype || "bear";
+}
+
+export function setChronotype(c) {
+  const state = loadAll();
+  state.chronotype = c;
+  saveAll(state);
+}
+
+// ---- Focus sessions ----
+
+export function logFocusSession(minutes, mode) {
+  const state = loadAll();
+  state.focusSessions = state.focusSessions || [];
+  state.focusSessions.push({ at: Date.now(), date: todayKey(), minutes, mode });
+  saveAll(state);
+}
+
+export function focusMinutesToday() {
+  const key = todayKey();
+  return (loadAll().focusSessions || [])
+    .filter((s) => s.date === key)
+    .reduce((sum, s) => sum + s.minutes, 0);
+}
+
+export function focusMinutesLast7() {
+  const cutoff = addDaysToKey(todayKey(), -6);
+  return (loadAll().focusSessions || [])
+    .filter((s) => s.date >= cutoff)
+    .reduce((sum, s) => sum + s.minutes, 0);
+}
+
+// ---- Screener results (kept on this device / your account, never shown to anyone else) ----
+
+export function saveScreenerResult(type, score, band) {
+  const state = loadAll();
+  state.screeners = state.screeners || [];
+  state.screeners.push({ at: Date.now(), type, score, band });
+  saveAll(state);
+}
+
+export function listScreenerResults(type) {
+  return (loadAll().screeners || [])
+    .filter((r) => r.type === type)
+    .sort((a, b) => b.at - a.at);
+}
