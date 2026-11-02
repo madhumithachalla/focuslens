@@ -140,7 +140,7 @@ fun SettingsScreen() {
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(Modifier.height(16.dp))
-            Text("Settings", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold)
             Text("Everything from setup, editable any time — nothing here leaves this device unless you turn on screen-time sync below.", fontSize = 13.sp, color = Color.Gray)
 
             Spacer(Modifier.height(20.dp))

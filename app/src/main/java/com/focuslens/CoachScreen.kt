@@ -208,7 +208,7 @@ fun CoachScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Coach", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("Coach", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         }
         if (d == null) {
             item { Text("Reading your data...", color = Color.Gray) }

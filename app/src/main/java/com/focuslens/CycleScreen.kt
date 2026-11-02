@@ -124,7 +124,7 @@ fun CycleScreen() {
     val p = profile!!
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Tracking", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Tracking", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "Anyone who gets periods can track that directly — everyone else can pick whichever of the other trackers fit, any subset, any day.",

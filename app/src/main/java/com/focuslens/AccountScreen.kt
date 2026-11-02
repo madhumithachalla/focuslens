@@ -137,7 +137,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
     val current = user
     if (current != null) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-            Text("Account", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Account", fontSize = 23.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
             // Exactly what this sign-in actually fetched/stored, not just a one-line summary —
             // name and email always come from Firebase Auth itself; the sign-in method and
@@ -176,7 +176,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Account", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Account", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "Sign in so your data can eventually follow you across devices, and so you can use community " +

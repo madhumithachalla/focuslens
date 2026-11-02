@@ -114,7 +114,7 @@ fun MentalHealthScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Mental health", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Mental health", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "Your own logged mood over the last 14 days — from Journal entries and Cycle check-ins. Not a diagnosis, just your own pattern.",

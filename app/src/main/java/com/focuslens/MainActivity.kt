@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +23,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,6 +176,17 @@ fun FocusLensMain(repo: UsageRepository) {
     if (hasPermission) {
         var tab by remember { mutableIntStateOf(0) }
         Column(Modifier.fillMaxSize()) {
+            // Same brand header as the web app (docs/index.html): the hand-drawn eye symbol
+            // next to the hand-traced wordmark — this app had neither before, just plain tab
+            // text and a generic system launcher icon.
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(painterResource(R.drawable.ic_focuslens_symbol), contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(22.dp))
+            }
             ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Usage") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Focus") })
@@ -235,7 +250,7 @@ fun PermissionScreen() {
             .padding(32.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("FocusLens", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text("FocusLens", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
         Text(
             "To show your screen time, FocusLens needs Usage access. " +

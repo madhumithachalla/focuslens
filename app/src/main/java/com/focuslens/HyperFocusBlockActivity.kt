@@ -122,7 +122,7 @@ private fun HyperFocusScreen(prefs: FocusPrefs, onEnded: () -> Unit, onGiveUp: (
     ) {
         Text("🧘", fontSize = 48.sp)
         Spacer(Modifier.height(10.dp))
-        Text("Hyper Focus", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("Hyper Focus", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(Modifier.height(8.dp))
         Text(
             "Everything is paused except calls — no challenge to beat here, this one's just a timer.",
