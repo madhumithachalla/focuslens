@@ -102,7 +102,12 @@ val NEURODIVERGENT_OPTIONS = listOf(
  */
 @Composable
 fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
-    var name by remember { mutableStateOf("") }
+    // Pre-fill from whoever just signed in on WelcomeAuthScreen, so a name already given there
+    // (typed into the email sign-up form, or auto-fetched from Google) isn't asked for twice.
+    // Still blank, and still editable, for anyone who chose "Skip for now" instead.
+    var name by remember {
+        mutableStateOf(com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.displayName.orEmpty())
+    }
     var age by remember { mutableStateOf<AgeBracket?>(null) }
     var ageMenuOpen by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf<String?>(null) }
