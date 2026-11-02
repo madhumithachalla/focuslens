@@ -9,6 +9,7 @@ import { renderBody } from "./body.js";
 import { renderCoach } from "./coach.js";
 import { renderMeds, startMedReminders } from "./meds.js";
 import { renderPromptBrowser } from "./journalkit.js";
+import { getJournalSuggestions } from "./journalInsights.js";
 import { renderSettings } from "./settings.js";
 import { applyPrefs, isPageHidden } from "./prefs.js";
 import { renderIntercept } from "./intercept.js";
@@ -442,6 +443,26 @@ function renderJournal(container) {
     </div>
   `);
   container.appendChild(card);
+
+  // Suggested for you: prompts built from the user's own real data (mood/energy trend,
+  // weekly to-do miss reason, and synced phone usage if signed in) — see journalInsights.js.
+  // Appended once resolved so the rest of the page renders immediately either way.
+  const suggestedCard = el(`<div class="card soft" hidden><div class="bold">Suggested for you</div><p class="small muted" style="margin:6px 0 10px">From your own recent data — not a fixed list.</p><div class="chips" id="suggested-prompts" style="flex-direction:column;align-items:stretch"></div></div>`);
+  container.insertBefore(suggestedCard, card.nextSibling);
+  getJournalSuggestions(currentUser).then((suggestions) => {
+    if (!suggestions.length) return;
+    const list = suggestedCard.querySelector("#suggested-prompts");
+    suggestions.forEach((s) => {
+      const b = el(`<button type="button" class="chip" style="text-align:left;border-radius:14px;white-space:normal">${s.emoji} ${s.text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))}</button>`);
+      b.onclick = () => {
+        const ta = card.querySelector("#journal-text");
+        ta.value = `${s.text}\n\n${ta.value}`;
+        ta.focus();
+      };
+      list.appendChild(b);
+    });
+    suggestedCard.hidden = false;
+  });
 
   container.appendChild(renderPromptBrowser({
     insertPrompt: (text) => {
