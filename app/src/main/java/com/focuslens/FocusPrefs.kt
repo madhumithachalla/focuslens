@@ -80,6 +80,7 @@ class FocusPrefs(context: Context) {
 
     companion object {
         private const val RESET_HOUR = 6
+        const val HYPERFOCUS_INDEFINITE = Long.MAX_VALUE
     }
 
     fun passesToday(pkg: String): Int = sp.getInt("passes_${pkg}_${today()}", 0)
@@ -164,12 +165,20 @@ class FocusPrefs(context: Context) {
 
     // ---- Hyper Focus: blocks every app device-wide, not just the ones toggled on ----
 
-    /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this time. */
+    /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this
+     *  time — or, if this equals [HYPERFOCUS_INDEFINITE], until [endHyperFocus] is called. */
     fun hyperFocusUntil(): Long = sp.getLong("hyperfocus_until", 0L)
 
     fun startHyperFocus(minutes: Int) {
         sp.edit().putLong("hyperfocus_until", System.currentTimeMillis() + minutes * 60_000L).apply()
     }
+
+    /** "Stay on until I turn it off" — no auto-end time, same block everything else. */
+    fun startHyperFocusIndefinite() {
+        sp.edit().putLong("hyperfocus_until", HYPERFOCUS_INDEFINITE).apply()
+    }
+
+    fun isHyperFocusIndefinite(): Boolean = hyperFocusUntil() == HYPERFOCUS_INDEFINITE
 
     fun endHyperFocus() {
         sp.edit().putLong("hyperfocus_until", 0L).apply()
