@@ -331,7 +331,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         item {
             Spacer(Modifier.height(4.dp))
             Text(
-                "Your most used apps (last 7 days)",
+                "Apps (last 7 days)",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium
@@ -347,7 +347,8 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
-        items(apps, key = { it.packageName }) { app ->
+        // ---- Section: Apps — whole-app block, on/off, with a daily limit once blocked ----
+        items(apps, key = { "app-${it.packageName}" }) { app ->
             val isBlocked = app.packageName in blocked
             val avgMillisPerDay = app.millis / 7
             val avgMin = (avgMillisPerDay / 60_000L).toInt()
@@ -373,50 +374,61 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     })
                 }
                 if (isBlocked) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("Daily limit", fontSize = 13.sp, color = Color.Gray)
-                        OutlinedButton(onClick = {
-                            prefs.setLimitMin(app.packageName, limit - 5)
-                            rev++
-                        }) { Text("-5") }
-                        Text(if (limit == 0) "0 min" else "$limit min", fontWeight = FontWeight.Medium)
-                        OutlinedButton(onClick = {
-                            prefs.setLimitMin(app.packageName, limit + 5)
-                            rev++
-                        }) { Text("+5") }
-                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("Daily limit — ${formatMinutesHM(limit)}", fontSize = 13.sp, color = Color.Gray)
+                    Spacer(Modifier.height(6.dp))
+                    DurationPickerRow(
+                        selectedMinutes = limit.coerceAtLeast(5),
+                        onSelect = { prefs.setLimitMin(app.packageName, it); rev++ },
+                        maxMinutes = 480
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "Under the limit: short challenge, then 10 minutes. Over it: three challenges, then 5 minutes.",
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
                 }
+            }
+        }
 
-                // Reflects whatever's actually on this phone: any app on the device that
-                // FocusLens tracks sub-sections for (SectionDetector.feedFeature) gets this
-                // toggle automatically, not just Instagram/YouTube.
-                val featureName = SectionDetector.feedFeature[app.packageName]
-                if (featureName != null) {
-                    val featureBlocked = remember(rev, app.packageName) {
-                        prefs.isSectionBlocked(app.packageName, featureName)
+        // ---- Section: Feature blocking — just the one addictive tab in an otherwise-allowed app ----
+        val featureApps = apps.filter { SectionDetector.feedFeature.containsKey(it.packageName) }
+        if (featureApps.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Feature blocking",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Block just the one addictive tab, keep the rest of the app usable — independent of " +
+                        "whether the app itself is blocked above.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            items(featureApps, key = { "feature-${it.packageName}" }) { app ->
+                val featureName = SectionDetector.feedFeature.getValue(app.packageName)
+                val featureBlocked = remember(rev, app.packageName) {
+                    prefs.isSectionBlocked(app.packageName, featureName)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(app.label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text("Block $featureName only — rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Block $featureName only (rest of ${app.label} still works)", fontSize = 12.sp, color = Color.Gray)
-                        Switch(checked = featureBlocked, onCheckedChange = {
-                            prefs.setSectionBlocked(app.packageName, featureName, it)
-                            rev++
-                        })
-                    }
+                    Switch(checked = featureBlocked, onCheckedChange = {
+                        prefs.setSectionBlocked(app.packageName, featureName, it)
+                        rev++
+                    })
                 }
             }
         }

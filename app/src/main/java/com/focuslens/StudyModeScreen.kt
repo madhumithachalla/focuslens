@@ -23,7 +23,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-private enum class AudioChoice { SYSTEM_DEFAULT, SPOTIFY_PICK, LOCAL_MUSIC, SILENCE }
+private enum class AudioChoice { SYSTEM_DEFAULT, SPOTIFY_PICK, YOUTUBE_MUSIC, LOCAL_MUSIC, SILENCE }
+
+/** Launches the named music app by package if installed; otherwise falls back to a generic
+ *  "any music app" chooser, same forgiving behaviour as the existing Local-music option. */
+private fun launchMusicApp(context: android.content.Context, pkg: String?) {
+    try {
+        val intent = if (pkg != null) context.packageManager.getLaunchIntentForPackage(pkg) else null
+        if (intent != null) {
+            context.startActivity(intent.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+        } else {
+            context.startActivity(Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_APP_MUSIC)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        }
+    } catch (e: Exception) { /* no music app found — session still starts */ }
+}
 
 /**
  * Setup screen styled after Minimalist Focus Launcher: black background, plain text rows,
@@ -41,6 +57,7 @@ fun StudyModeScreen() {
     val prefs = remember { FocusPrefs(context) }
 
     var minutes by remember { mutableIntStateOf(45) }
+    var noTimeLimit by remember { mutableStateOf(false) }
     var audioChoice by remember { mutableStateOf(AudioChoice.SYSTEM_DEFAULT) }
     var spotifyPlaylist by remember { mutableStateOf(FOCUS_PLAYLISTS.first()) }
     var showSpotifyPicker by remember { mutableStateOf(false) }
@@ -69,6 +86,7 @@ fun StudyModeScreen() {
     if (sessionActive) {
         InSessionScreen(
             resetAt = prefs.hyperFocusUntil(),
+            indefinite = prefs.isHyperFocusIndefinite(),
             onEnded = { sessionActive = false; justFinished = true },
             onEndEarly = { confirmEnd = true }
         )
@@ -109,10 +127,30 @@ fun StudyModeScreen() {
 
         Text("DURATION", color = Color(0xFF9A9A9A), fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(25, 45, 60, 90).forEach { m ->
-                MinimalRow(label = "${m}m", selected = minutes == m, onClick = { minutes = m }, compact = true)
-            }
+        if (!noTimeLimit) {
+            DurationPickerRow(
+                selectedMinutes = minutes,
+                onSelect = { minutes = it },
+                maxMinutes = 240,
+                dark = true
+            )
+            Spacer(Modifier.height(10.dp))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { noTimeLimit = !noTimeLimit },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = noTimeLimit,
+                onCheckedChange = { noTimeLimit = it },
+                colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color(0xFF9A9A9A))
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "No time limit — stay on until I turn it off",
+                color = Color(0xFFB0B0B0),
+                fontSize = 13.sp
+            )
         }
 
         Spacer(Modifier.height(28.dp))
@@ -128,6 +166,11 @@ fun StudyModeScreen() {
             label = if (audioChoice == AudioChoice.SPOTIFY_PICK) "Spotify — ${spotifyPlaylist.label}" else "Choose a Spotify playlist",
             selected = audioChoice == AudioChoice.SPOTIFY_PICK,
             onClick = { audioChoice = AudioChoice.SPOTIFY_PICK; showSpotifyPicker = true }
+        )
+        MinimalRow(
+            label = "YouTube Music",
+            selected = audioChoice == AudioChoice.YOUTUBE_MUSIC,
+            onClick = { audioChoice = AudioChoice.YOUTUBE_MUSIC }
         )
         MinimalRow(
             label = "Local music (opens your music app)",
@@ -158,7 +201,7 @@ fun StudyModeScreen() {
 
         Button(
             onClick = {
-                prefs.startHyperFocus(minutes)
+                if (noTimeLimit) prefs.startHyperFocusIndefinite() else prefs.startHyperFocus(minutes)
                 when (audioChoice) {
                     AudioChoice.SYSTEM_DEFAULT -> connector.connect { state ->
                         spotifyState = state
@@ -168,14 +211,8 @@ fun StudyModeScreen() {
                         spotifyState = state
                         if (state is SpotifyState.Connected) connector.play(spotifyPlaylist)
                     }
-                    AudioChoice.LOCAL_MUSIC -> {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_MAIN).apply {
-                                addCategory(Intent.CATEGORY_APP_MUSIC)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            })
-                        } catch (e: Exception) { /* no music app found — session still starts */ }
-                    }
+                    AudioChoice.YOUTUBE_MUSIC -> launchMusicApp(context, "com.google.android.apps.youtube.music")
+                    AudioChoice.LOCAL_MUSIC -> launchMusicApp(context, null)
                     AudioChoice.SILENCE -> {}
                 }
                 sessionActive = true
@@ -212,15 +249,20 @@ private fun MinimalRow(label: String, selected: Boolean, onClick: () -> Unit, co
 }
 
 @Composable
-private fun InSessionScreen(resetAt: Long, onEnded: () -> Unit, onEndEarly: () -> Unit) {
-    var remainingMs by remember { mutableLongStateOf((resetAt - System.currentTimeMillis()).coerceAtLeast(0L)) }
+private fun InSessionScreen(resetAt: Long, indefinite: Boolean, onEnded: () -> Unit, onEndEarly: () -> Unit) {
+    var remainingMs by remember {
+        mutableLongStateOf(if (indefinite) 0L else (resetAt - System.currentTimeMillis()).coerceAtLeast(0L))
+    }
 
-    LaunchedEffect(Unit) {
-        while (remainingMs > 0) {
-            delay(1000)
-            remainingMs = (resetAt - System.currentTimeMillis()).coerceAtLeast(0L)
+    // Indefinite sessions never auto-end — only onEndEarly (the "End session" button) can stop one.
+    if (!indefinite) {
+        LaunchedEffect(Unit) {
+            while (remainingMs > 0) {
+                delay(1000)
+                remainingMs = (resetAt - System.currentTimeMillis()).coerceAtLeast(0L)
+            }
+            onEnded()
         }
-        onEnded()
     }
 
     val transition = rememberInfiniteTransition(label = "breathe")
@@ -251,7 +293,11 @@ private fun InSessionScreen(resetAt: Long, onEnded: () -> Unit, onEndEarly: () -
         Spacer(Modifier.height(32.dp))
         Text("Studying", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
-        Text(String.format("%02d:%02d", mins, secs), color = Color(0xFF9A9A9A), fontSize = 15.sp)
+        Text(
+            if (indefinite) "No time limit — tap below to stop" else String.format("%02d:%02d", mins, secs),
+            color = Color(0xFF9A9A9A),
+            fontSize = 15.sp
+        )
         Spacer(Modifier.height(40.dp))
         TextButton(onClick = onEndEarly) {
             Text("End session", color = Color(0xFF9A9A9A))
