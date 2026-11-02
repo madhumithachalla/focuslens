@@ -108,15 +108,18 @@ object SectionDetector {
         fun has(vararg k: String) = ids.any { id -> k.any { id.contains(it) } }
         fun sel(vararg k: String) = selIds.any { id -> k.any { id.contains(it) } }
         return when {
-            // Checked first and on view-ID evidence alone: Instagram's Stories viewer uses ids
-            // literally named "reel_viewer" internally (Stories predates, and still shares code
-            // with, the separate Reels short-video feature) — that id previously lost to the
-            // "reels" in words check below whenever some unrelated selected element elsewhere on
-            // a Stories screen happened to carry "reels" as its content description, which is
-            // what made blocking Reels also block Stories. ID evidence here is the stronger,
-            // narrower signal, so it now wins regardless of what order the tab words came in.
-            has("reel_viewer", "story_viewer", "stories_viewer") -> "Stories"
+            // Checked first, and wins even when Stories-viewer ids are also present: real
+            // Reels-player elements (clips_viewer/clips_video/clips_swipe, the dedicated Reels
+            // tab, or a "reels" tab word) are the definitive signal that reel-style short video
+            // is actually on screen — which Instagram also shows embedded inside Feed/Explore
+            // ("for you"-style recommendations) and inside the Stories tray/between Stories, not
+            // only on the dedicated Reels tab. Blocking Reels is meant to catch all of those, per
+            // explicit instruction, even though that means an Explore or Stories screen that
+            // happens to have a Reels unit mixed into it gets blocked too, not just the Reels tab.
             sel("clips_tab") || has("clips_viewer", "clips_video", "clips_swipe") || "reels" in words -> "Reels"
+            // Falls through here only when there is Stories-viewer evidence and no Reels-player
+            // evidence at all — genuine Stories viewing, not mixed with a Reels unit.
+            has("reel_viewer", "story_viewer", "stories_viewer") -> "Stories"
             sel("direct_tab") || "messages" in words || "direct" in words ||
                 has("direct_thread", "direct_inbox", "row_thread") -> "Messages"
             sel("feed_tab") || "home" in words -> "Feed"
