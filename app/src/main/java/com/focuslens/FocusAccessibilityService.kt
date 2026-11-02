@@ -37,8 +37,8 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Every 4 seconds, while Instagram or YouTube is in front and the screen is on, note
-    // which section is showing and add the elapsed time to it.
+    // Every 4 seconds, while a tracked social app (SectionDetector.tracked) is in front and
+    // the screen is on, note which section is showing and add the elapsed time to it.
     private var lastSampleT = 0L
     private val sampler = object : Runnable {
         override fun run() {
@@ -85,16 +85,12 @@ class FocusAccessibilityService : AccessibilityService() {
         ) return
         if (now - lastLaunch < 3_000L) return
 
-        val blockedFeature = when {
-            pkg == SectionDetector.INSTAGRAM && section == "Reels" -> "Reels"
-            pkg == SectionDetector.YOUTUBE && section == "Shorts" -> "Shorts"
-            else -> null
-        }
-        if (blockedFeature != null && prefs.isSectionBlocked(pkg, blockedFeature)) {
-            val appName = if (pkg == SectionDetector.INSTAGRAM) "Instagram" else "YouTube"
+        val feedFeature = SectionDetector.feedFeature[pkg]
+        if (feedFeature != null && section == feedFeature && prefs.isSectionBlocked(pkg, feedFeature)) {
+            val appName = SectionDetector.displayName[pkg] ?: pkg
             launchFeatureBlock(
-                "$blockedFeature is blocked",
-                "You've turned off $blockedFeature specifically — the rest of $appName still works."
+                "$feedFeature is blocked",
+                "You've turned off $feedFeature specifically — the rest of $appName still works."
             )
             return
         }
