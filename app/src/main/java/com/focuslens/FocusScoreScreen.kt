@@ -65,7 +65,7 @@ fun FocusScoreScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Focus Score", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Focus Score", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "How consistently you're sticking to your own limits — not a measure of grades, productivity, or any outcome outside the app.",

@@ -186,7 +186,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
             ) {
                 item {
                     Spacer(Modifier.height(32.dp))
-                    Text("Quick setup", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("Quick setup", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Just enough to set sensible defaults — everything here is editable later in Settings.",

@@ -308,7 +308,7 @@ fun LockedScreen(
     ) {
         Text("🔒", fontSize = 48.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Locked until 6am", fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("Locked until 6am", fontSize = 23.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text(
             if (skipLimitReached) {

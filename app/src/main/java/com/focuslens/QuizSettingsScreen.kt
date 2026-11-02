@@ -57,7 +57,7 @@ fun QuizSettingsScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Quiz gate", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("Quiz gate", fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text(
                 "Before a blocked app opens you answer a few questions. Each unlock attempt today " +
                     "starts a little harder. Switch every category off to turn the quiz off.",

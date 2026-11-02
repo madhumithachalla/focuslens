@@ -145,7 +145,7 @@ private fun SchedulePauseScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Ouch!", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("Ouch!", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(Modifier.height(10.dp))
         Text(
             "You have blocked $appName until $endLabel",

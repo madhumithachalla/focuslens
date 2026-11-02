@@ -85,7 +85,7 @@ fun VitalsScreen() {
             .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Watch & vitals", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Watch & vitals", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Text(
             "Real heart rate, HRV and sleep your watch app saved to Health Connect. " +
                 "Read-only, and only after you connect it.",
@@ -283,7 +283,7 @@ private fun HrvStressCard(snap: HealthVitals.Snapshot) {
                     HealthVitals.StressLevel.ELEVATED -> Color(0xFFB26A00)
                     HealthVitals.StressLevel.HIGH_STRAIN -> Color(0xFFB3261E)
                 }
-                Text(level.label, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = color)
+                Text(level.label, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = color)
             }
             Text(stress.message, fontSize = 13.sp)
             Text(

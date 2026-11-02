@@ -24,7 +24,7 @@ fun FocusPlaylistsScreen() {
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Focus playlists", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Focus playlists", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "Plays in your own Spotify app — FocusLens just tells it what to queue.",

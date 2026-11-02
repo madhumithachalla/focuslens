@@ -64,7 +64,7 @@ fun GuideScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Guide", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Guide", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text("What each part of FocusLens actually does.", fontSize = 14.sp, color = Color.Gray)
             }
         }

@@ -51,6 +51,7 @@ fun JournalScreen() {
     var text by remember { mutableStateOf("") }
     var mood by remember { mutableStateOf<String?>(null) }
     var celebration by remember { mutableStateOf<Int?>(null) }
+    var suggestedPrompts by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
     suspend fun refresh() {
         entries = repo.recent(30)
@@ -58,6 +59,7 @@ fun JournalScreen() {
     }
 
     LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) { suggestedPrompts = usageAwareJournalPrompts(context) }
 
     celebration?.let { milestone ->
         CelebrationDialog(
@@ -139,13 +141,39 @@ fun JournalScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Journal", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Journal", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you — nothing here leaves your device",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
             }
+        }
+
+        if (suggestedPrompts.isNotEmpty()) {
+            item {
+                Text("SUGGESTED FOR YOU", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "From your own usage this week — not a fixed list.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            items(suggestedPrompts) { (emoji, prompt) ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    onClick = { activePrompt = prompt; writing = true }
+                ) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(emoji, fontSize = 20.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(prompt, fontSize = 13.sp)
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(6.dp)) }
         }
 
         item {

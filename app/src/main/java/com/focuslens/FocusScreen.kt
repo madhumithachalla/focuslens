@@ -85,7 +85,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Focus", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Focus", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Pick the apps that pull you in. When you open one, you get a short challenge first.",
                     fontSize = 14.sp,

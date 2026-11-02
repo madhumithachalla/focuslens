@@ -76,7 +76,7 @@ fun TaskScreen() {
         ) {
             item {
                 Spacer(Modifier.height(16.dp))
-                Text("To-do", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("To-do", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
             }
 
@@ -132,7 +132,7 @@ fun TaskScreen() {
             onClick = { showAdd = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
         ) {
-            Text("+", fontSize = 24.sp)
+            Text("+", fontSize = 20.sp)
         }
     }
 }
