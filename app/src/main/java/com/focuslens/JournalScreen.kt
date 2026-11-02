@@ -69,6 +69,16 @@ fun JournalScreen() {
 
     if (writing) {
         Column(Modifier.fillMaxSize().padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = {
+                    writing = false
+                    text = ""
+                    mood = null
+                    activePrompt = null
+                    activeTemplateTitle = null
+                }) { Text("← Back") }
+            }
+            Spacer(Modifier.height(4.dp))
             activePrompt?.let {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
