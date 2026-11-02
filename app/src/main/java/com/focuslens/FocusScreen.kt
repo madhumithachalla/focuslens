@@ -277,6 +277,50 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            val doomScrollOn = remember(rev) { prefs.doomScrollReminderEnabled() }
+            val doomScrollThreshold = remember(rev) { prefs.doomScrollThreshold() }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Doom-scroll reminders", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                            Text(
+                                "A nudge, not a block: after a continuous streak of scrolling in Instagram, " +
+                                    "TikTok, Snapchat and the other tracked apps, a quick \"still scrolling?\" check-in " +
+                                    "with the choice to keep going or take a break.",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(checked = doomScrollOn, onCheckedChange = {
+                            prefs.setDoomScrollReminderEnabled(it)
+                            rev++
+                        })
+                    }
+                    if (doomScrollOn) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Remind after", fontSize = 13.sp, color = Color.Gray)
+                            OutlinedButton(onClick = {
+                                prefs.setDoomScrollThreshold(doomScrollThreshold - 10)
+                                rev++
+                            }) { Text("-10") }
+                            Text("$doomScrollThreshold scrolls", fontWeight = FontWeight.Medium)
+                            OutlinedButton(onClick = {
+                                prefs.setDoomScrollThreshold(doomScrollThreshold + 10)
+                                rev++
+                            }) { Text("+10") }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

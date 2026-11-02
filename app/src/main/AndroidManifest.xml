@@ -101,6 +101,15 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- Doom-scroll reminder — a nudge, not a block; see ScrollReminderActivity. -->
+        <activity
+            android:name=".ScrollReminderActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
         <!-- The real, survives-closing-the-app alarm screen (see AlarmRingActivity). -->
         <activity
             android:name=".AlarmRingActivity"
