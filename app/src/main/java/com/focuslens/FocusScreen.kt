@@ -398,11 +398,10 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     )
                 }
 
-                val featureName = when (app.packageName) {
-                    SectionDetector.INSTAGRAM -> "Reels"
-                    SectionDetector.YOUTUBE -> "Shorts"
-                    else -> null
-                }
+                // Reflects whatever's actually on this phone: any app on the device that
+                // FocusLens tracks sub-sections for (SectionDetector.feedFeature) gets this
+                // toggle automatically, not just Instagram/YouTube.
+                val featureName = SectionDetector.feedFeature[app.packageName]
                 if (featureName != null) {
                     val featureBlocked = remember(rev, app.packageName) {
                         prefs.isSectionBlocked(app.packageName, featureName)
