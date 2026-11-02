@@ -56,16 +56,19 @@ private fun isSystemish(pkg: String) =
 fun FocusScreen(repo: UsageRepository, tick: Int) {
     val context = LocalContext.current
     val prefs = remember { FocusPrefs(context) }
+    val history = remember { UsageHistoryRepository(context, repo) }
 
     var rev by remember { mutableIntStateOf(0) }          // bump to re-read saved settings
     var a11y by remember { mutableStateOf(isAccessibilityOn(context)) }
     var apps by remember { mutableStateOf<List<AppUsage>>(emptyList()) }
+    var peakHours by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }
 
     LaunchedEffect(tick) {
         a11y = isAccessibilityOn(context)
         apps = withContext(Dispatchers.IO) {
             repo.load(Range.WEEK).filter { !isSystemish(it.packageName) }.take(40)
         }
+        peakHours = withContext(Dispatchers.IO) { history.hourlyTotalsRecent(7) }
     }
 
     // Reading rev here makes the list refresh after every change below.
@@ -77,7 +80,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Column {
@@ -125,6 +128,17 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                         Text(
                             "If the switch is greyed out: Settings > Apps > FocusLens > menu (three dots) > " +
                                 "Allow restricted settings.",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Still won't turn on after that? Some Android builds block it from the switch " +
+                                "entirely for sideloaded apps, no matter what. With a computer and a USB cable, " +
+                                "turn on Settings > About phone > tap \"Build number\" 7 times > Developer " +
+                                "options > USB debugging, then run this once from the computer: " +
+                                "adb shell appops set --uid com.focuslens ACCESS_RESTRICTED_SETTINGS allow " +
+                                "— then the Accessibility switch above should work normally.",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -288,21 +302,58 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             item { RewardSuggestionCard(title = "You chose not to open a blocked app today — nice") }
         }
 
+        if (peakHours.values.any { it > 0 }) {
+            item {
+                val sorted = peakHours.entries.sortedByDescending { it.value }
+                val top = sorted.take(2).filter { it.value > 0 }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("When you actually pick up your phone", fontWeight = FontWeight.Medium, fontSize = 15.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (top.size == 1)
+                                "Over the last 7 days, you're most often on your phone around " +
+                                    "${formatHourLabel(top[0].key)}–${formatHourLabel((top[0].key + 1) % 24)} " +
+                                    "(${formatDurationHMS(top[0].value)} total in that hour across the week)."
+                            else
+                                "Over the last 7 days, your two busiest hours are around " +
+                                    "${formatHourLabel(top[0].key)} and ${formatHourLabel(top[1].key)} " +
+                                    "(${formatDurationHMS(top[0].value)} and ${formatDurationHMS(top[1].value)} " +
+                                    "total across the week, in those hours).",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+
         item {
+            Spacer(Modifier.height(4.dp))
             Text(
                 "Your most used apps (last 7 days)",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium
             )
+            if (!a11y) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Switches below save instantly, but nothing actually blocks until Accessibility " +
+                        "is on (see the card above) — turning a switch on here just queues it up.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
         }
 
         items(apps, key = { it.packageName }) { app ->
             val isBlocked = app.packageName in blocked
-            val avgMin = (app.millis / 7 / 60_000L).toInt()
+            val avgMillisPerDay = app.millis / 7
+            val avgMin = (avgMillisPerDay / 60_000L).toInt()
             val limit = remember(rev, app.packageName) { prefs.limitMin(app.packageName) }
 
-            Column(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -310,7 +361,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(app.label, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("about $avgMin min a day", fontSize = 12.sp, color = Color.Gray)
+                        Text("about ${formatDurationHMS(avgMillisPerDay)} a day", fontSize = 12.sp, color = Color.Gray)
                     }
                     Switch(checked = isBlocked, onCheckedChange = { on ->
                         if (on) {

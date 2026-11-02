@@ -291,6 +291,15 @@ fun formatDuration(millis: Long): String {
     }
 }
 
+/** Exact hour:minute:second duration, for readings where "about N min" is too coarse. */
+fun formatDurationHMS(millis: Long): String {
+    val totalSec = millis / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
 fun toCsv(range: Range, rows: List<AppUsage>): String {
     val sb = StringBuilder("range,app,package,minutes,launches\n")
     for (r in rows) {

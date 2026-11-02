@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -72,7 +74,14 @@ class MainActivity : ComponentActivity() {
                 )
             ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    FocusLensApp(UsageRepository(applicationContext))
+                    // targetSdk 36 means the system draws edge-to-edge by default and no longer
+                    // reserves space for the status/navigation bars on its own — without this,
+                    // the top tab row sits flush against the status bar/clock and bottom content
+                    // sits under the gesture bar. This is the one place that needs to know about
+                    // it; everything below keeps assuming a normal, inset-free canvas.
+                    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                        FocusLensApp(UsageRepository(applicationContext))
+                    }
                 }
             }
         }
