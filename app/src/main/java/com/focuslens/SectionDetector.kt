@@ -9,6 +9,9 @@ import android.view.accessibility.AccessibilityNodeInfo
  *
  * Privacy: it never keeps text from the screen. It only keeps the app's internal element
  * names (like "clips_tab") and a short fixed list of tab words (like "reels" or "home").
+ * One narrow exception on Instagram: it checks on-screen text against a short, fixed list of
+ * known button labels ("view full reel" and similar) to tell a reel embedded in Feed/Stories
+ * apart from ordinary content — only a match/no-match result is kept, never the text itself.
  *
  * Instagram and YouTube's detection also checks internal view-ID patterns, found by
  * sampling real screens; the other apps below rely on tab content-description words alone
@@ -60,6 +63,19 @@ object SectionDetector {
         val selectedIds = ArrayList<String>()
         val words = ArrayList<String>()
 
+        // Only for Instagram: a reel embedded in Feed/Explore/Stories shows a short, fixed
+        // banner/button label — "View full reel" / "Show full reel" — that genuine Stories or
+        // ordinary posts never do, plus a small reel-icon badge on the video itself (its
+        // accessible name is a short, exact "Reel"/"Reels", unlike a tab's longer label like
+        // "Reels, tab 2 of 5"). Both are stronger, more direct signals than ids/tab words alone,
+        // reported from the actual device, so they're checked specifically rather than guessed
+        // at. Narrow and privacy-bounded on purpose: only matches short, fixed labels, nothing
+        // else on screen is ever read or kept.
+        var hasFullReelBanner = false
+        val fullReelPhrases = listOf("view full reel", "show full reel", "watch full reel")
+        var hasReelIcon = false
+        val reelIconLabels = setOf("reel", "reels")
+
         val queue = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
         queue.add(root to 0)
         var visited = 0
@@ -78,6 +94,22 @@ object SectionDetector {
                     }?.let { words.add(it) }
                 }
             }
+            if (pkg == INSTAGRAM) {
+                if (!hasFullReelBanner) {
+                    val text = node.text?.toString()?.trim()?.lowercase() ?: ""
+                    if (text.isNotEmpty() && text.length <= 40 && fullReelPhrases.any { text == it || text.contains(it) }) {
+                        hasFullReelBanner = true
+                    }
+                }
+                if (!hasReelIcon && !node.isSelected) {
+                    // Deliberately NOT the same check as the tab-word match above: an icon
+                    // badge's accessible name is just "Reel"/"Reels" on its own, not a tab's
+                    // longer "Reels, tab 2 of 5" — checked as its own exact match so a random
+                    // unrelated element merely containing the word doesn't trigger it.
+                    val iconLabel = node.contentDescription?.toString()?.trim()?.lowercase() ?: ""
+                    if (iconLabel in reelIconLabels) hasReelIcon = true
+                }
+            }
             if (depth < 25) {
                 for (i in 0 until node.childCount) {
                     node.getChild(i)?.let { queue.add(it to depth + 1) }
@@ -86,7 +118,7 @@ object SectionDetector {
         }
 
         val result = when (pkg) {
-            INSTAGRAM -> instagram(ids, selectedIds, words)
+            INSTAGRAM -> instagram(ids, selectedIds, words, hasFullReelBanner || hasReelIcon)
             YOUTUBE -> youtube(ids, words)
             TIKTOK -> tiktok(words)
             SNAPCHAT -> snapchat(words)
@@ -104,19 +136,21 @@ object SectionDetector {
         return result
     }
 
-    private fun instagram(ids: Set<String>, selIds: List<String>, words: List<String>): String {
+    private fun instagram(ids: Set<String>, selIds: List<String>, words: List<String>, hasReelSignal: Boolean): String {
         fun has(vararg k: String) = ids.any { id -> k.any { id.contains(it) } }
         fun sel(vararg k: String) = selIds.any { id -> k.any { id.contains(it) } }
         return when {
             // Checked first, and wins even when Stories-viewer ids are also present: real
             // Reels-player elements (clips_viewer/clips_video/clips_swipe, the dedicated Reels
-            // tab, or a "reels" tab word) are the definitive signal that reel-style short video
-            // is actually on screen — which Instagram also shows embedded inside Feed/Explore
+            // tab, a "reels" tab word, the "View/Show full reel" banner, or a reel-icon badge —
+            // hasReelSignal covers the last two) are the definitive signal that reel-style short
+            // video is actually on screen — which Instagram shows embedded inside Feed/Explore
             // ("for you"-style recommendations) and inside the Stories tray/between Stories, not
             // only on the dedicated Reels tab. Blocking Reels is meant to catch all of those, per
             // explicit instruction, even though that means an Explore or Stories screen that
-            // happens to have a Reels unit mixed into it gets blocked too, not just the Reels tab.
-            sel("clips_tab") || has("clips_viewer", "clips_video", "clips_swipe") || "reels" in words -> "Reels"
+            // happens to have a Reels unit mixed into it gets blocked too.
+            sel("clips_tab") || has("clips_viewer", "clips_video", "clips_swipe") ||
+                "reels" in words || hasReelSignal -> "Reels"
             // Falls through here only when there is Stories-viewer evidence and no Reels-player
             // evidence at all — genuine Stories viewing, not mixed with a Reels unit.
             has("reel_viewer", "story_viewer", "stories_viewer") -> "Stories"
