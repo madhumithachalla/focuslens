@@ -246,6 +246,32 @@ fun PermissionScreen() {
             fontSize = 14.sp,
             color = Color.Gray
         )
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Got \"App was denied access\" instead of the switch? That's Android blocking a " +
+                "sensitive permission for apps installed outside the Play Store (this debug build is " +
+                "sideloaded) — it isn't anything wrong with FocusLens itself, and takes one extra step:",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Settings > Apps > FocusLens > menu (three dots, top right) > \"Allow restricted settings\" " +
+                "— then come back here and open Usage access settings again.",
+            fontSize = 13.sp,
+            color = Color.Gray
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = {
+            context.startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.fromParts("package", context.packageName, null)
+                )
+            )
+        }) {
+            Text("Open FocusLens app info")
+        }
     }
 }
 

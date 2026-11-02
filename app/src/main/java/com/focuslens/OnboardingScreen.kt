@@ -44,6 +44,7 @@ val GENDER_OPTIONS = listOf("Woman", "Man", "Non-binary", SELF_DESCRIBE, "Prefer
 /** Free-form life-context tags, not a fixed identity — used later to tailor journal prompts and suggestions. */
 val TOPIC_OPTIONS = listOf(
     "student" to "Student",
+    "graduate" to "Graduate",
     "working" to "Working professional",
     "parent" to "Parent / caregiver",
     "shift_worker" to "Shift worker",
