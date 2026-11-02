@@ -143,6 +143,9 @@ fun SettingsScreen() {
             Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold)
             Text("Everything from setup, editable any time — nothing here leaves this device unless you turn on screen-time sync below.", fontSize = 13.sp, color = Color.Gray)
 
+            Spacer(Modifier.height(16.dp))
+            UpdateCard()
+
             Spacer(Modifier.height(20.dp))
             Text("What should we call you?", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(8.dp))

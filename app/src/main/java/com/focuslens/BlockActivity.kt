@@ -120,12 +120,45 @@ class BlockActivity : ComponentActivity() {
             return
         }
 
+        val grantMin = 10
+
+        // Still under budget: a quick acknowledgement, not an obstacle — the challenge/quiz
+        // gate is for once you're actually over the limit, same idea as a lot of digital-
+        // wellbeing tools (friction scales with how far over you are, not a flat tax on
+        // every single open). This is the "Continue" path that was missing entirely before —
+        // under budget used to get exactly the same breathing/math/quiz gate as over budget.
+        // Grants access without counting as a "pass" — passesToday drives the daily skip
+        // limit (see skipLimitReached below), which exists to cap how many times the actual
+        // over-budget challenge gets beaten, not to penalize ordinary under-budget opens.
+        if (!over) {
+            setContent {
+                MaterialTheme(
+                    colorScheme = lightColorScheme(
+                        primary = Color(0xFF1F3A34),
+                        background = Color(0xFFF7F5F0),
+                        surface = Color(0xFFF7F5F0)
+                    )
+                ) {
+                    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                        BackHandler { goHome(prefs) }
+                        UnderLimitScreen(
+                            label = label,
+                            usedMin = usedMin,
+                            limit = limit,
+                            onContinue = { prefs.grant(pkg, grantMin); finish() },
+                            onGiveUp = { goHome(prefs) }
+                        )
+                    }
+                }
+            }
+            return
+        }
+
         val steps = when {
             passes == 0 -> listOf(Challenge.BREATHE)
             passes == 1 -> listOf(Challenge.BREATHE, Challenge.MATH)
             else -> listOf(Challenge.MATH, Challenge.PHRASE)
         }
-        val grantMin = 10
 
         // The quiz gate comes before the allow path. Each time it is shown counts as one attempt
         // today (read the config first so the first attempt starts at level 1).
@@ -280,6 +313,35 @@ fun BlockScreen(
             TextButton(onClick = onGiveUp) {
                 Text("Not now, take me home", fontSize = 16.sp)
             }
+        }
+    }
+}
+
+/** Shown while still under the daily limit — the "Continue" path. A brief check-in, not an
+ *  obstacle; the real friction (BlockScreen/LockedScreen) is reserved for once the budget's
+ *  actually spent. */
+@Composable
+fun UnderLimitScreen(label: String, usedMin: Long, limit: Int, onContinue: () -> Unit, onGiveUp: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, fontSize = 28.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "$usedMin of $limit min used today.",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(28.dp))
+        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth(0.7f)) {
+            Text("Continue", fontSize = 16.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+        TextButton(onClick = onGiveUp) {
+            Text("Actually, take me home", fontSize = 14.sp, color = Color.Gray)
         }
     }
 }

@@ -232,6 +232,23 @@ class FocusPrefs(context: Context) {
         sp.edit().putStringSet("academic_allow", customAcademicAllowlist() - domain).apply()
     }
 
+    // ---- Doom-scroll reminders: a nudge after continuous scrolling in a tracked app, not a
+    // block — see FocusAccessibilityService's scroll tracking. On by default, since it's a
+    // reminder, not a restriction. ----
+
+    fun doomScrollReminderEnabled(): Boolean = sp.getBoolean("doomscroll_enabled", true)
+
+    fun setDoomScrollReminderEnabled(on: Boolean) {
+        sp.edit().putBoolean("doomscroll_enabled", on).apply()
+    }
+
+    /** How many scroll events in one continuous streak before a reminder shows. */
+    fun doomScrollThreshold(): Int = sp.getInt("doomscroll_threshold", 40)
+
+    fun setDoomScrollThreshold(n: Int) {
+        sp.edit().putInt("doomscroll_threshold", n.coerceIn(10, 200)).apply()
+    }
+
     // ---- YouTube: "academic/podcast only" mode. Off by default; a best-effort keyword
     // check, not real content classification. ----
 

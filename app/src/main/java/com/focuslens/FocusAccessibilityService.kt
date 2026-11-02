@@ -24,6 +24,17 @@ class FocusAccessibilityService : AccessibilityService() {
     private var current: String? = null
     private var lastLaunch = 0L
 
+    // Doom-scroll tracking: counts TYPE_VIEW_SCROLLED events in one continuous streak within
+    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak — this is
+    // meant to catch continuous scrolling, not ordinary on-and-off browsing across a session.
+    private var scrollCount = 0
+    private var scrollStreakPkg: String? = null
+    private var lastScrollAt = 0L
+
+    companion object {
+        private const val SCROLL_IDLE_GAP_MS = 15_000L
+    }
+
     // Windows that should never change which app we think is open.
     private val ignored = setOf(
         "com.android.systemui", "android", "com.google.android.apps.wellbeing"
@@ -146,7 +157,12 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            trackScroll(event.packageName?.toString())
+            return
+        }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
         if (pkg in ignored || pkg.contains("inputmethod")) return
@@ -156,6 +172,36 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         current = pkg
         check(pkg)
+    }
+
+    /** A nudge, not a block — see ScrollReminderActivity. Only tracked social apps (the ones
+     *  actually built for an endless scroll) count; a long list in a shopping or news app
+     *  doesn't trip this. */
+    private fun trackScroll(pkg: String?) {
+        if (pkg == null || pkg !in SectionDetector.tracked) return
+        if (!prefs.doomScrollReminderEnabled()) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
+
+        val now = System.currentTimeMillis()
+        if (pkg != scrollStreakPkg || now - lastScrollAt > SCROLL_IDLE_GAP_MS) {
+            scrollStreakPkg = pkg
+            scrollCount = 0
+        }
+        scrollCount++
+        lastScrollAt = now
+
+        if (scrollCount >= prefs.doomScrollThreshold() && now - lastLaunch > 3_000L) {
+            lastLaunch = now
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            startActivity(
+                Intent(this, ScrollReminderActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("label", appName)
+                    putExtra("scrollCount", scrollCount)
+                }
+            )
+            scrollCount = 0
+        }
     }
 
     private fun defaultDialerPackage(): String? =
