@@ -1,6 +1,8 @@
 package com.focuslens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -134,10 +136,26 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
 
     val current = user
     if (current != null) {
-        Column(Modifier.fillMaxSize().padding(24.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
             Text("Account", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Signed in as ${current.displayName ?: current.email}", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(16.dp))
+            // Exactly what this sign-in actually fetched/stored, not just a one-line summary —
+            // name and email always come from Firebase Auth itself; the sign-in method and
+            // photo (Google only) are read from the same Firestore doc written at sign-in time.
+            Card {
+                Column(Modifier.padding(16.dp)) {
+                    Text("WHAT'S ON THIS ACCOUNT", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(Modifier.height(10.dp))
+                    AccountField("Name", current.displayName ?: "(not set)")
+                    AccountField("Email", current.email ?: "(not set)")
+                    AccountField("Signed in with", if (current.photoUrl != null) "Google" else "Email & password")
+                    if (current.photoUrl != null) {
+                        AccountField("Profile photo", "Fetched from Google — not shown here, no image loader in this app yet")
+                    }
+                    val createdAt = current.metadata?.creationTimestamp
+                    AccountField("Account created", if (createdAt != null && createdAt > 0) formatPickedDate(createdAt) else "(unknown)")
+                }
+            }
             Spacer(Modifier.height(16.dp))
             Card {
                 Column(Modifier.padding(16.dp)) {
@@ -157,7 +175,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Text("Account", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
@@ -264,5 +282,13 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
         ) {
             Text(if (mode == "signup") "Create account" else "Sign in")
         }
+    }
+}
+
+@Composable
+private fun AccountField(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(label, fontSize = 13.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.3f))
     }
 }
