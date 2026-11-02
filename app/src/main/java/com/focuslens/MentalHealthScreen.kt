@@ -19,6 +19,8 @@ import com.focuslens.data.AppDatabase
 import com.focuslens.data.CycleMode
 import com.focuslens.data.MissReason
 import com.focuslens.data.TaskRepository
+import com.focuslens.data.WeeklyCheckInEntity
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -47,8 +49,15 @@ private val MENTAL_HEALTH_TAG_IDS = setOf("anxiety", "depression", "other_health
  * content fits this person day-to-day. Only the topic tags the user picked are read — this
  * never infers a "discipline" from anything else (journal text, app usage, etc).
  */
-private fun pickSuggestion(context: Context, avgMoodScore: Double?, topMissReason: MissReason?, topics: Set<String>): Pair<LearnItem, String>? {
+private fun pickSuggestion(
+    context: Context,
+    avgMoodScore: Double?,
+    topMissReason: MissReason?,
+    topics: Set<String>,
+    latestStress: Int? = null
+): Pair<LearnItem, String>? {
     val (topic, why) = when {
+        latestStress != null && latestStress >= 4 -> LearnTopic.MENTAL_HEALTH to "your last check-in rated stress ${latestStress}/5"
         avgMoodScore != null && avgMoodScore < 2.5 -> LearnTopic.MENTAL_HEALTH to "your mood/energy trend has been low lately"
         topMissReason == MissReason.TIRED -> LearnTopic.SLEEP to "\"tired\" has been your top reason for missed tasks this week"
         topMissReason == MissReason.DISTRACTED -> LearnTopic.FOCUS_PRODUCTIVITY to "\"distracted\" has been your top reason for missed tasks this week"
@@ -71,14 +80,18 @@ private fun pickSuggestion(context: Context, avgMoodScore: Double?, topMissReaso
 fun MentalHealthScreen() {
     val context = LocalContext.current
     val db = remember { AppDatabase.get(context) }
+    val scope = rememberCoroutineScope()
     var days by remember { mutableStateOf<List<DayMood>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var suggestion by remember { mutableStateOf<Pair<LearnItem, String>?>(null) }
     var showNeurodivergentCard by remember { mutableStateOf(false) }
     var showMentalHealthScreenerCard by remember { mutableStateOf(false) }
     var disclosureWasNotSure by remember { mutableStateOf(false) }
+    var latestCheckIn by remember { mutableStateOf<WeeklyCheckInEntity?>(null) }
+    var showCheckInSheet by remember { mutableStateOf(false) }
+    var refreshTick by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshTick) {
         val profile = db.profileDao().get()
         // STRICT: "prefer_not_to_say" is mutually exclusive with every other tag at entry
         // (OnboardingScreen.kt), so if it's set, tags contains nothing else and neither card
@@ -100,28 +113,72 @@ fun MentalHealthScreen() {
         val cycleByDate = db.cycleLogDao().betweenOnce(dates.first(), dates.last())
             .filter { it.mode == CycleMode.GENERAL_ENERGY }
             .associateBy { it.date }
+        val sinceFirstDate = SimpleDateFormat("yyyyMMdd", Locale.US).parse(dates.first())?.time ?: 0L
+        val checkInByDate = db.weeklyCheckInDao().since(sinceFirstDate)
+            .associateBy { SimpleDateFormat("yyyyMMdd", Locale.US).format(java.util.Date(it.createdAt)) }
+        latestCheckIn = db.weeklyCheckInDao().latest()
 
         days = dates.map { date ->
             val journalMood = journalByDate[date]?.mood?.let { MOOD_SCORE[it] }
             val cycleEnergy = cycleByDate[date]?.energyLevel
-            DayMood(date, journalMood ?: cycleEnergy)
+            val checkInMood = checkInByDate[date]?.moodScore
+            DayMood(date, journalMood ?: cycleEnergy ?: checkInMood)
         }
         loading = false
 
         val avg = days.mapNotNull { it.score }.let { if (it.isEmpty()) null else it.average() }
         val reflection = TaskRepository(db.taskDao(), db.checkInDao()).weeklyReflection()
-        suggestion = pickSuggestion(context, avg, reflection.topMissReason, topics)
+        suggestion = pickSuggestion(context, avg, reflection.topMissReason, topics, latestCheckIn?.stressScore)
+    }
+
+    if (showCheckInSheet) {
+        WeeklyCheckInSheet(
+            onSubmit = { entry ->
+                scope.launch {
+                    db.weeklyCheckInDao().insert(entry)
+                    showCheckInSheet = false
+                    refreshTick++
+                }
+            },
+            onDismiss = { showCheckInSheet = false }
+        )
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Text("Mental health", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Your own logged mood over the last 14 days — from Journal entries and Cycle check-ins. Not a diagnosis, just your own pattern.",
+            "Your own logged mood over the last 14 days — from Journal entries, Cycle check-ins, and your own weekly check-ins. Not a diagnosis, just your own pattern.",
             fontSize = 13.sp,
             color = Color.Gray
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+
+        val due = isCheckInDue(latestCheckIn?.createdAt)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (due) Color(0xFFE3EFE8) else MaterialTheme.colorScheme.surfaceVariant
+            ),
+            onClick = { showCheckInSheet = true }
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    if (due) "Quick check-in" else "Quick check-in (not due yet, but always open)",
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    latestCheckIn?.let { c ->
+                        "Last one: mood ${c.moodScore}/5, stress ${c.stressScore}/5" +
+                            (c.topTimeSink?.let { " — \"$it\"" } ?: "")
+                    } ?: "You haven't done one yet — mood, stress, and what's taking up your time/energy lately.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
 
         if (loading) {
             CircularProgressIndicator()

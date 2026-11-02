@@ -198,3 +198,14 @@ interface AlarmDao {
     @Query("UPDATE alarms SET enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
 }
+
+@Dao
+interface WeeklyCheckInDao {
+    @Insert suspend fun insert(checkIn: WeeklyCheckInEntity): Long
+
+    @Query("SELECT * FROM weekly_checkins ORDER BY createdAt DESC LIMIT 1")
+    suspend fun latest(): WeeklyCheckInEntity?
+
+    @Query("SELECT * FROM weekly_checkins WHERE createdAt >= :since ORDER BY createdAt")
+    suspend fun since(since: Long): List<WeeklyCheckInEntity>
+}

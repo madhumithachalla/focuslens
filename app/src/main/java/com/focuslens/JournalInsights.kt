@@ -39,5 +39,19 @@ suspend fun usageAwareJournalPrompts(context: Context): List<Pair<String, String
         prompts.add("🕒" to "You tend to be on your phone most around ${formatHourLabel(peakHour.key)}. What's usually going on for you around then?")
     }
 
+    val lastCheckIn = com.focuslens.data.AppDatabase.get(context).weeklyCheckInDao().latest()
+    if (lastCheckIn != null) {
+        when {
+            lastCheckIn.stressScore >= 4 -> prompts.add(
+                "😮‍💨" to "Your last check-in rated stress ${lastCheckIn.stressScore}/5" +
+                    (lastCheckIn.topTimeSink?.let { ", mostly around \"$it\"" } ?: "") +
+                    ". What's actually in your control here, and what isn't?"
+            )
+            !lastCheckIn.topTimeSink.isNullOrBlank() -> prompts.add(
+                "🔍" to "You said \"${lastCheckIn.topTimeSink}\" has been taking up your time/energy lately. How do you actually feel about that, underneath it?"
+            )
+        }
+    }
+
     return prompts
 }

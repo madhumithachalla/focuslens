@@ -187,3 +187,24 @@ data class AlarmEntity(
     val days: String = "",
     val enabled: Boolean = true
 )
+
+/**
+ * A short recurring check-in — separate from the one-time Quick setup profile (ProfileEntity),
+ * which only captures who the user is, not how they're doing lately. Shown again once
+ * [CHECKIN_INTERVAL_DAYS] has passed since the last one; also always reachable manually from
+ * Mental Health. Feeds the mood trend on Mental Health (alongside Journal/Cycle mood) and the
+ * usage-aware Journal prompts (JournalInsights.kt) with a more direct, user-reported signal
+ * than inferring everything from app-usage numbers alone.
+ */
+@Entity(tableName = "weekly_checkins")
+data class WeeklyCheckInEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val moodScore: Int, // 1-5, same scale as Journal/Cycle mood
+    val stressScore: Int, // 1-5, 5 = most stressed
+    /** Free text — "what's been taking up most of your time/energy lately". Optional. */
+    val topTimeSink: String? = null,
+    val note: String? = null,
+    val createdAt: Long
+)
+
+const val CHECKIN_INTERVAL_DAYS = 7
