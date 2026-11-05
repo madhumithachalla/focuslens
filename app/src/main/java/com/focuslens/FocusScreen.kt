@@ -14,7 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -301,6 +306,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             val isBlocked = app.packageName in blocked
             val avgMin = (app.millis / 7 / 60_000L).toInt()
             val limit = remember(rev, app.packageName) { prefs.limitMin(app.packageName) }
+            var showEdit by remember(app.packageName) { mutableStateOf(false) }
 
             Column(Modifier.fillMaxWidth()) {
                 Row(
@@ -334,12 +340,53 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                             prefs.setLimitMin(app.packageName, limit - 5)
                             rev++
                         }) { Text("-5") }
-                        Text(if (limit == 0) "0 min" else "$limit min", fontWeight = FontWeight.Medium)
+                        Text(
+                            FocusPrefs.hhmm(limit),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable { showEdit = true }
+                        )
                         OutlinedButton(onClick = {
                             prefs.setLimitMin(app.packageName, limit + 5)
                             rev++
                         }) { Text("+5") }
                     }
+                    if (showEdit) {
+                        var hh by remember { mutableStateOf((limit / 60).toString()) }
+                        var mm by remember { mutableStateOf((limit % 60).toString()) }
+                        AlertDialog(
+                            onDismissRequest = { showEdit = false },
+                            title = { Text("Daily limit for ${app.label}") },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    OutlinedTextField(
+                                        value = hh, onValueChange = { hh = it.filter(Char::isDigit).take(2) },
+                                        label = { Text("HH") }, singleLine = true, modifier = Modifier.width(90.dp),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                    )
+                                    Text(" : ", fontSize = 20.sp)
+                                    OutlinedTextField(
+                                        value = mm, onValueChange = { mm = it.filter(Char::isDigit).take(2) },
+                                        label = { Text("MM") }, singleLine = true, modifier = Modifier.width(90.dp),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    val total = ((hh.toIntOrNull() ?: 0) * 60 + (mm.toIntOrNull() ?: 0)).coerceIn(0, 480)
+                                    prefs.setLimitMin(app.packageName, total)
+                                    showEdit = false
+                                    rev++
+                                }) { Text("Save") }
+                            },
+                            dismissButton = { TextButton(onClick = { showEdit = false }) { Text("Cancel") } }
+                        )
+                    }
+                    Text(
+                        "Limit is HH:MM per day, up to 08:00. The day resets at 06:00. Tap the time to change it.",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
                     Text(
                         "Under the limit: short challenge, then 10 minutes. Over it: three challenges, then 5 minutes.",
                         fontSize = 11.sp,
