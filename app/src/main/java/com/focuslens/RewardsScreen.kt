@@ -42,6 +42,16 @@ private val REWARD_ACTIVITIES = listOf(
     "Write down three things that went well today." to "Reflect",
     "Dance to one song you love, all the way through." to "Movement",
     "Do one kind thing for someone without telling them." to "People",
+    "Call someone you love and tell them one good thing about your week." to "People",
+    "Have your favourite meal, and eat it slowly." to "Treat",
+    "Take yourself on a solo date: a café, a walk, a bookshop, no phone." to "Treat",
+    "Watch an episode of something you genuinely love, guilt-free." to "Fun",
+    "Buy yourself a small flower or a treat you've wanted." to "Treat",
+    "Play a game or a puzzle just for fun for fifteen minutes." to "Fun",
+    "Take a long shower or bath with your favourite music." to "Rest",
+    "Message a friend a photo of something that made you smile today." to "People",
+    "Sit in the sun for ten minutes and do nothing at all." to "Rest",
+    "Make a playlist for your next focus block." to "Creative",
 )
 
 private const val REWARDS_PREFS = "rewards_prefs"

@@ -127,6 +127,14 @@ export const REWARD_IDEAS = [
   { category: "Tidy", text: "Reply to one message or email you've been avoiding." },
   { category: "Reflect", text: "Write down one thing you're grateful for today." },
   { category: "Reflect", text: "Write down what you want to do with the time you just got back." },
+  "Call someone you love and tell them one good thing about your week.",
+  "Have your favourite meal, and eat it slowly.",
+  "Take yourself on a solo date: a café, a walk, a bookshop, no phone.",
+  "Watch an episode of something you genuinely love, guilt-free.",
+  "Buy yourself a small flower or a treat you've wanted.",
+  "Play a game or a puzzle just for fun for fifteen minutes.",
+  "Take a long shower or bath with your favourite music.",
+  "Sit in the sun for ten minutes and do nothing at all.",
 ];
 
 // Commonly-cited "cycle syncing" guidance — widely circulated wellness framing, not a
