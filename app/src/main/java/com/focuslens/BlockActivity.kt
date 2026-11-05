@@ -78,7 +78,7 @@ class BlockActivity : ComponentActivity() {
         val repo = UsageRepository(this)
         val label = repo.labelFor(pkg)
         val usedMin = try {
-            (repo.load(Range.TODAY).firstOrNull { it.packageName == pkg }?.millis ?: 0L) / 60_000L
+            (repo.loadCustom(FocusPrefs.limitDayStartMs(), System.currentTimeMillis()).firstOrNull { it.packageName == pkg }?.millis ?: 0L) / 60_000L
         } catch (e: Exception) {
             0L
         }
@@ -312,9 +312,9 @@ fun LockedScreen(
         Spacer(Modifier.height(12.dp))
         Text(
             if (skipLimitReached) {
-                "You've used all $maxSkips of today's skips for $label. No challenge gets you back in — same as Minimalist's time-based app lock."
+                "You've used all $maxSkips of today's skips for $label. No challenge gets you back in."
             } else {
-                "You've reached today's $limit min limit on $label ($usedMin min used). It's locked, not just harder — same as Minimalist's time-based app lock."
+                "You've reached today's $limit min limit on $label ($usedMin min used). It's locked, not just harder."
             },
             fontSize = 15.sp,
             textAlign = TextAlign.Center

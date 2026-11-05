@@ -31,6 +31,8 @@ class FocusPrefs(context: Context) {
     /** Daily minutes the user allows themselves in this app. 0 means always use the hard challenge. */
     fun limitMin(pkg: String): Int = sp.getInt("limit_$pkg", 30)
 
+    }
+
     fun setLimitMin(pkg: String, minutes: Int) {
         sp.edit().putInt("limit_$pkg", minutes.coerceIn(0, 480)).apply()
     }
@@ -79,7 +81,24 @@ class FocusPrefs(context: Context) {
     }
 
     companion object {
-        private const val RESET_HOUR = 6
+        /** Minutes as "HH:MM" (e.g. 90 -> "01:30"). */
+        fun hhmm(minutes: Int): String = String.format(Locale.US, "%02d:%02d", minutes / 60, minutes % 60)
+
+        /**
+         * Start of the current limit day: the most recent 6am. Usage for the daily limit must be
+         * counted from here, not from midnight, so it matches the lock and skip day (which resets at 6am).
+         */
+        fun limitDayStartMs(now: Long = System.currentTimeMillis()): Long {
+            val cal = java.util.Calendar.getInstance()
+            cal.timeInMillis = now
+            cal.add(java.util.Calendar.HOUR_OF_DAY, -RESET_HOUR)
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            cal.set(java.util.Calendar.MINUTE, 0)
+            cal.set(java.util.Calendar.SECOND, 0)
+            cal.set(java.util.Calendar.MILLISECOND, 0)
+            cal.add(java.util.Calendar.HOUR_OF_DAY, RESET_HOUR)
+            return cal.timeInMillis
+            private const val RESET_HOUR = 6
     }
 
     fun passesToday(pkg: String): Int = sp.getInt("passes_${pkg}_${today()}", 0)
