@@ -24,6 +24,17 @@ class FocusAccessibilityService : AccessibilityService() {
     private var current: String? = null
     private var lastLaunch = 0L
 
+    // Doom-scroll tracking: counts TYPE_VIEW_SCROLLED events in one continuous streak within
+    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak — this is
+    // meant to catch continuous scrolling, not ordinary on-and-off browsing across a session.
+    private var scrollCount = 0
+    private var scrollStreakPkg: String? = null
+    private var lastScrollAt = 0L
+
+    companion object {
+        private const val SCROLL_IDLE_GAP_MS = 15_000L
+    }
+
     // Windows that should never change which app we think is open.
     private val ignored = setOf(
         "com.android.systemui", "android", "com.google.android.apps.wellbeing"
@@ -37,8 +48,8 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Every 4 seconds, while Instagram or YouTube is in front and the screen is on, note
-    // which section is showing and add the elapsed time to it.
+    // Every 4 seconds, while a tracked social app (SectionDetector.tracked) is in front and
+    // the screen is on, note which section is showing and add the elapsed time to it.
     private var lastSampleT = 0L
     private val sampler = object : Runnable {
         override fun run() {
@@ -79,11 +90,11 @@ class FocusAccessibilityService : AccessibilityService() {
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
-        // Count each time you open Reels (a new visit, not every refresh), and enforce the daily Reels limit.
+        // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
             prefs.addReelToday()
         }
-        lastReelsSection = if (pkg == SectionDetector.INSTAGRAM) section else lastReelsSection
+        if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         val reelCap = prefs.reelLimit()
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
             performGlobalAction(GLOBAL_ACTION_HOME)
@@ -96,16 +107,12 @@ class FocusAccessibilityService : AccessibilityService() {
         ) return
         if (now - lastLaunch < 3_000L) return
 
-        val blockedFeature = when {
-            pkg == SectionDetector.INSTAGRAM && section == "Reels" -> "Reels"
-            pkg == SectionDetector.YOUTUBE && section == "Shorts" -> "Shorts"
-            else -> null
-        }
-        if (blockedFeature != null && prefs.isSectionBlocked(pkg, blockedFeature)) {
-            val appName = if (pkg == SectionDetector.INSTAGRAM) "Instagram" else "YouTube"
+        val feedFeature = SectionDetector.feedFeature[pkg]
+        if (feedFeature != null && section == feedFeature && prefs.isSectionBlocked(pkg, feedFeature)) {
+            val appName = SectionDetector.displayName[pkg] ?: pkg
             launchFeatureBlock(
-                "$blockedFeature is blocked",
-                "You've turned off $blockedFeature specifically — the rest of $appName still works."
+                "$feedFeature is blocked",
+                "You've turned off $feedFeature specifically — the rest of $appName still works."
             )
             return
         }
@@ -161,7 +168,12 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            trackScroll(event.packageName?.toString())
+            return
+        }
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
         if (pkg in ignored || pkg.contains("inputmethod")) return
@@ -171,6 +183,36 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         current = pkg
         check(pkg)
+    }
+
+    /** A nudge, not a block — see ScrollReminderActivity. Only tracked social apps (the ones
+     *  actually built for an endless scroll) count; a long list in a shopping or news app
+     *  doesn't trip this. */
+    private fun trackScroll(pkg: String?) {
+        if (pkg == null || pkg !in SectionDetector.tracked) return
+        if (!prefs.doomScrollReminderEnabled()) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
+
+        val now = System.currentTimeMillis()
+        if (pkg != scrollStreakPkg || now - lastScrollAt > SCROLL_IDLE_GAP_MS) {
+            scrollStreakPkg = pkg
+            scrollCount = 0
+        }
+        scrollCount++
+        lastScrollAt = now
+
+        if (scrollCount >= prefs.doomScrollThreshold() && now - lastLaunch > 3_000L) {
+            lastLaunch = now
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            startActivity(
+                Intent(this, ScrollReminderActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("label", appName)
+                    putExtra("scrollCount", scrollCount)
+                }
+            )
+            scrollCount = 0
+        }
     }
 
     private fun defaultDialerPackage(): String? =
@@ -228,14 +270,17 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastReelsSection = ""
     private val usageCache = HashMap<String, Pair<Long, Int>>()
 
-    /** Minutes used today on [pkg], cached for a minute so it isn't recomputed on every window change. */
+    /** Minutes used today on [pkg] since the 6am limit day, cached for a minute. */
     private fun usedMinToday(pkg: String): Int {
         val now = System.currentTimeMillis()
         usageCache[pkg]?.let { (t, m) -> if (now - t < 60_000L) return m }
-        val m = try {
-            (UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
-                .firstOrNull { it.packageName == pkg }?.millis ?: 0L).div(60_000L).toInt()
-        } catch (e: Exception) { 0 }
+        val ms = try {
+            UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
+                .firstOrNull { it.packageName == pkg }?.millis ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+        val m = (ms / 60_000L).toInt()
         usageCache[pkg] = now to m
         return m
     }

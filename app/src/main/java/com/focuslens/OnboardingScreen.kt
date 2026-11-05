@@ -44,6 +44,7 @@ val GENDER_OPTIONS = listOf("Woman", "Man", "Non-binary", SELF_DESCRIBE, "Prefer
 /** Free-form life-context tags, not a fixed identity — used later to tailor journal prompts and suggestions. */
 val TOPIC_OPTIONS = listOf(
     "student" to "Student",
+    "graduate" to "Graduate",
     "working" to "Working professional",
     "parent" to "Parent / caregiver",
     "shift_worker" to "Shift worker",
@@ -102,7 +103,12 @@ val NEURODIVERGENT_OPTIONS = listOf(
  */
 @Composable
 fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
-    var name by remember { mutableStateOf("") }
+    // Pre-fill from whoever just signed in on WelcomeAuthScreen, so a name already given there
+    // (typed into the email sign-up form, or auto-fetched from Google) isn't asked for twice.
+    // Still blank, and still editable, for anyone who chose "Skip for now" instead.
+    var name by remember {
+        mutableStateOf(com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.displayName.orEmpty())
+    }
     var age by remember { mutableStateOf<AgeBracket?>(null) }
     var ageMenuOpen by remember { mutableStateOf(false) }
     var gender by remember { mutableStateOf<String?>(null) }
@@ -180,7 +186,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
             ) {
                 item {
                     Spacer(Modifier.height(32.dp))
-                    Text("Quick setup", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text("Quick setup", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Just enough to set sensible defaults — everything here is editable later in Settings.",

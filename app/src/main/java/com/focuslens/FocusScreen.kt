@@ -14,12 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.TextButton
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -61,16 +56,19 @@ private fun isSystemish(pkg: String) =
 fun FocusScreen(repo: UsageRepository, tick: Int) {
     val context = LocalContext.current
     val prefs = remember { FocusPrefs(context) }
+    val history = remember { UsageHistoryRepository(context, repo) }
 
     var rev by remember { mutableIntStateOf(0) }          // bump to re-read saved settings
     var a11y by remember { mutableStateOf(isAccessibilityOn(context)) }
     var apps by remember { mutableStateOf<List<AppUsage>>(emptyList()) }
+    var peakHours by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }
 
     LaunchedEffect(tick) {
         a11y = isAccessibilityOn(context)
         apps = withContext(Dispatchers.IO) {
             repo.load(Range.WEEK).filter { !isSystemish(it.packageName) }.take(40)
         }
+        peakHours = withContext(Dispatchers.IO) { history.hourlyTotalsRecent(7) }
     }
 
     // Reading rev here makes the list refresh after every change below.
@@ -82,12 +80,12 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Focus", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Focus", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Pick the apps that pull you in. When you open one, you get a short challenge first.",
                     fontSize = 14.sp,
@@ -130,6 +128,17 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                         Text(
                             "If the switch is greyed out: Settings > Apps > FocusLens > menu (three dots) > " +
                                 "Allow restricted settings.",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Still won't turn on after that? Some Android builds block it from the switch " +
+                                "entirely for sideloaded apps, no matter what. With a computer and a USB cable, " +
+                                "turn on Settings > About phone > tap \"Build number\" 7 times > Developer " +
+                                "options > USB debugging, then run this once from the computer: " +
+                                "adb shell appops set --uid com.focuslens ACCESS_RESTRICTED_SETTINGS allow " +
+                                "— then the Accessibility switch above should work normally.",
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -268,6 +277,50 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            val doomScrollOn = remember(rev) { prefs.doomScrollReminderEnabled() }
+            val doomScrollThreshold = remember(rev) { prefs.doomScrollThreshold() }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Doom-scroll reminders", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                            Text(
+                                "A nudge, not a block: after a continuous streak of scrolling in Instagram, " +
+                                    "TikTok, Snapchat and the other tracked apps, a quick \"still scrolling?\" check-in " +
+                                    "with the choice to keep going or take a break.",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(checked = doomScrollOn, onCheckedChange = {
+                            prefs.setDoomScrollReminderEnabled(it)
+                            rev++
+                        })
+                    }
+                    if (doomScrollOn) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Remind after", fontSize = 13.sp, color = Color.Gray)
+                            OutlinedButton(onClick = {
+                                prefs.setDoomScrollThreshold(doomScrollThreshold - 10)
+                                rev++
+                            }) { Text("-10") }
+                            Text("$doomScrollThreshold scrolls", fontWeight = FontWeight.Medium)
+                            OutlinedButton(onClick = {
+                                prefs.setDoomScrollThreshold(doomScrollThreshold + 10)
+                                rev++
+                            }) { Text("+10") }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -293,15 +346,52 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             item { RewardSuggestionCard(title = "You chose not to open a blocked app today — nice") }
         }
 
+        if (peakHours.values.any { it > 0 }) {
+            item {
+                val sorted = peakHours.entries.sortedByDescending { it.value }
+                val top = sorted.take(2).filter { it.value > 0 }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("When you actually pick up your phone", fontWeight = FontWeight.Medium, fontSize = 15.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (top.size == 1)
+                                "Over the last 7 days, you're most often on your phone around " +
+                                    "${formatHourLabel(top[0].key)}–${formatHourLabel((top[0].key + 1) % 24)} " +
+                                    "(${formatDurationHMS(top[0].value)} total in that hour across the week)."
+                            else
+                                "Over the last 7 days, your two busiest hours are around " +
+                                    "${formatHourLabel(top[0].key)} and ${formatHourLabel(top[1].key)} " +
+                                    "(${formatDurationHMS(top[0].value)} and ${formatDurationHMS(top[1].value)} " +
+                                    "total across the week, in those hours).",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+
         item {
+            Spacer(Modifier.height(4.dp))
             Text(
-                "Your most used apps (last 7 days)",
+                "Apps (last 7 days)",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium
             )
+            if (!a11y) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Switches below save instantly, but nothing actually blocks until Accessibility " +
+                        "is on (see the card above) — turning a switch on here just queues it up.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
         }
 
+        // ---- Section: Apps — whole-app block, on/off, with a daily limit once blocked ----
         item {
             var reelRev by remember { mutableStateOf(0) }
             val reelCap = remember(reelRev) { prefs.reelLimit() }
@@ -319,13 +409,13 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 }
             }
         }
-        items(apps, key = { it.packageName }) { app ->
+        items(apps, key = { "app-${it.packageName}" }) { app ->
             val isBlocked = app.packageName in blocked
-            val avgMin = (app.millis / 7 / 60_000L).toInt()
+            val avgMillisPerDay = app.millis / 7
+            val avgMin = (avgMillisPerDay / 60_000L).toInt()
             val limit = remember(rev, app.packageName) { prefs.limitMin(app.packageName) }
-            var showEdit by remember(app.packageName) { mutableStateOf(false) }
 
-            Column(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -333,7 +423,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(app.label, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("about $avgMin min a day", fontSize = 12.sp, color = Color.Gray)
+                        Text("about ${formatDurationHMS(avgMillisPerDay)} a day", fontSize = 12.sp, color = Color.Gray)
                     }
                     Switch(checked = isBlocked, onCheckedChange = { on ->
                         if (on) {
@@ -345,92 +435,61 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     })
                 }
                 if (isBlocked) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("Daily limit", fontSize = 13.sp, color = Color.Gray)
-                        OutlinedButton(onClick = {
-                            prefs.setLimitMin(app.packageName, limit - 5)
-                            rev++
-                        }) { Text("-5") }
-                        Text(
-                            FocusPrefs.hhmm(limit),
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clickable { showEdit = true }
-                        )
-                        OutlinedButton(onClick = {
-                            prefs.setLimitMin(app.packageName, limit + 5)
-                            rev++
-                        }) { Text("+5") }
-                    }
-                    if (showEdit) {
-                        var hh by remember { mutableStateOf((limit / 60).toString()) }
-                        var mm by remember { mutableStateOf((limit % 60).toString()) }
-                        AlertDialog(
-                            onDismissRequest = { showEdit = false },
-                            title = { Text("Daily limit for ${app.label}") },
-                            text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    OutlinedTextField(
-                                        value = hh, onValueChange = { hh = it.filter(Char::isDigit).take(2) },
-                                        label = { Text("HH") }, singleLine = true, modifier = Modifier.width(90.dp),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                    )
-                                    Text(" : ", fontSize = 20.sp)
-                                    OutlinedTextField(
-                                        value = mm, onValueChange = { mm = it.filter(Char::isDigit).take(2) },
-                                        label = { Text("MM") }, singleLine = true, modifier = Modifier.width(90.dp),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                    )
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    val total = ((hh.toIntOrNull() ?: 0) * 60 + (mm.toIntOrNull() ?: 0)).coerceIn(0, 480)
-                                    prefs.setLimitMin(app.packageName, total)
-                                    showEdit = false
-                                    rev++
-                                }) { Text("Save") }
-                            },
-                            dismissButton = { TextButton(onClick = { showEdit = false }) { Text("Cancel") } }
-                        )
-                    }
-                    Text(
-                        "Limit is HH:MM per day, up to 08:00. The day resets at 06:00. Tap the time to change it.",
-                        fontSize = 11.sp,
-                        color = Color.Gray
+                    Spacer(Modifier.height(6.dp))
+                    Text("Daily limit — ${formatMinutesHM(limit)}", fontSize = 13.sp, color = Color.Gray)
+                    Spacer(Modifier.height(6.dp))
+                    DurationPickerRow(
+                        selectedMinutes = limit.coerceAtLeast(5),
+                        onSelect = { prefs.setLimitMin(app.packageName, it); rev++ },
+                        maxMinutes = 480
                     )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "Under the limit: short challenge, then 10 minutes. Over it: three challenges, then 5 minutes.",
                         fontSize = 11.sp,
                         color = Color.Gray
                     )
                 }
+            }
+        }
 
-                val featureName = when (app.packageName) {
-                    SectionDetector.INSTAGRAM -> "Reels"
-                    SectionDetector.YOUTUBE -> "Shorts"
-                    else -> null
+        // ---- Section: Feature blocking — just the one addictive tab in an otherwise-allowed app ----
+        val featureApps = apps.filter { SectionDetector.feedFeature.containsKey(it.packageName) }
+        if (featureApps.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Feature blocking",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Block just the one addictive tab, keep the rest of the app usable — independent of " +
+                        "whether the app itself is blocked above.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            items(featureApps, key = { "feature-${it.packageName}" }) { app ->
+                val featureName = SectionDetector.feedFeature.getValue(app.packageName)
+                val featureBlocked = remember(rev, app.packageName) {
+                    prefs.isSectionBlocked(app.packageName, featureName)
                 }
-                if (featureName != null) {
-                    val featureBlocked = remember(rev, app.packageName) {
-                        prefs.isSectionBlocked(app.packageName, featureName)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(app.label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text("Block $featureName only — rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Block $featureName only (rest of ${app.label} still works)", fontSize = 12.sp, color = Color.Gray)
-                        Switch(checked = featureBlocked, onCheckedChange = {
-                            prefs.setSectionBlocked(app.packageName, featureName, it)
-                            rev++
-                        })
-                    }
+                    Switch(checked = featureBlocked, onCheckedChange = {
+                        prefs.setSectionBlocked(app.packageName, featureName, it)
+                        rev++
+                    })
                 }
             }
         }

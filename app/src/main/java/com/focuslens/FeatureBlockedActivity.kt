@@ -63,7 +63,7 @@ class FeatureBlockedActivity : ComponentActivity() {
                     ) {
                         Text("🚫", fontSize = 44.sp)
                         Spacer(Modifier.height(12.dp))
-                        Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(10.dp))
                         Text(message, fontSize = 15.sp, textAlign = TextAlign.Center, color = Color.Gray)
                         Spacer(Modifier.height(24.dp))

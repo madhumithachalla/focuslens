@@ -142,7 +142,7 @@ fun LearnScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Learn", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Learn", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Newsletters, articles and research hubs to learn from, on your own schedule — " +
                         "a few honest starting points, not a feed. $readCount of ${LEARN_ITEMS.size} marked read.",

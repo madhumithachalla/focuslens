@@ -45,6 +45,15 @@ android {
         // serverClientId for Credential Manager's Google ID flow in AccountScreen.kt.
         val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: ""
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+
+        // The CI workflow writes the GitHub Actions run number here (local.properties as
+        // BUILD_NUMBER=...) before building, and writes that exact same number to
+        // docs/version.txt right after publishing this build's APK — so the two can be
+        // compared directly (see UpdateChecker.kt) to tell whether a newer build than the
+        // one installed is live on the website. 0 locally, since local.properties never has
+        // this key outside CI — UpdateChecker treats 0 as "unknown, don't check."
+        val buildNumber = localProperties.getProperty("BUILD_NUMBER")?.toIntOrNull() ?: 0
+        buildConfigField("int", "BUILD_NUMBER", "$buildNumber")
     }
 
     buildFeatures {

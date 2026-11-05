@@ -141,7 +141,7 @@ fun BirthdaysScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Birthdays", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Birthdays", fontSize = 23.sp, fontWeight = FontWeight.Bold)
             Text("Upcoming birthdays, and a checklist of who's wished you on yours.", fontSize = 13.sp, color = Color.Gray)
         }
 

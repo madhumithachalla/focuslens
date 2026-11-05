@@ -17,10 +17,25 @@ import com.focuslens.data.JournalEntryEntity
 import com.focuslens.data.JournalRepository
 import kotlinx.coroutines.launch
 
+// Same prompt library as the web app (docs/content.js JOURNAL_CATEGORIES), minus the
+// category browsing UI — a flat, varied pool instead of three fixed questions.
 private val PROMPTS = listOf(
-    "🧠" to "What's one thing that took up space in your head today, even if it didn't need to?",
-    "🌤️" to "When did you feel most like yourself today?",
-    "🪨" to "What felt heavy today, and what's one small way to put it down?"
+    "🪞" to "What did I spend the most energy on today, and was it worth it?",
+    "🪞" to "What am I avoiding, and what is the smallest first step?",
+    "🙏" to "Who made my day easier recently, and what could I say to thank them?",
+    "🙏" to "What went right today that I didn't plan for?",
+    "🌊" to "What am I feeling right now, and where do I feel it in my body?",
+    "🌊" to "If a friend told me this worry, what would I say to them?",
+    "🌊" to "What is in my control here, and what isn't?",
+    "🏛️" to "What kind of person did I want to be today, and how close did I get?",
+    "🏛️" to "Which of my values did I honour today, and which did I neglect?",
+    "🤝" to "Is there a conversation I've been putting off? What's the kindest honest version of it?",
+    "🎓" to "What's blocking me on my biggest task, and who or what could help?",
+    "⚡" to "What helped me start today, and what made starting hard?",
+    "⚡" to "What did I hyperfocus on, and was it what I intended?",
+    "💚" to "What did I do well today that I'm not giving myself credit for?",
+    "💚" to "What can I forgive myself for this week?",
+    "🕊️" to "What is one small, gentle thing I can do for myself in the next hour?"
 )
 private val MOODS = listOf("😔" to "low", "😐" to "flat", "🙂" to "okay", "😊" to "good", "🤩" to "great")
 
@@ -29,11 +44,18 @@ private val MOODS = listOf("😔" to "low", "😐" to "flat", "🙂" to "okay", 
  *  about saving or reading an entry back treats a template differently from free writing. */
 private data class JournalTemplate(val emoji: String, val title: String, val scaffold: String)
 
+// Same set as the web app (docs/content.js JOURNAL_TEMPLATES) for parity across platforms.
 private val TEMPLATES = listOf(
     JournalTemplate("🙏", "Gratitude list", "Three things I'm grateful for today:\n1. \n2. \n3. \n"),
     JournalTemplate("✅", "Daily reflection", "What went well today:\n\nWhat didn't go as planned:\n\nOne thing to try tomorrow:\n"),
-    JournalTemplate("🧩", "Thought record", "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nA more balanced way to see it:\n"),
-    JournalTemplate("🌊", "Brain dump", "Just getting everything out, no particular order:\n\n")
+    JournalTemplate("🧩", "Thought record (CBT)", "Situation:\n\nWhat I thought in the moment:\n\nHow strongly I felt it (1–10):\n\nEvidence for the thought:\n\nEvidence against it:\n\nA more balanced way to see it:\n"),
+    JournalTemplate("🌊", "Brain dump (ADHD)", "Everything in my head, no order, no judging:\n\n\nPick ONE thing from above to do next:\n"),
+    JournalTemplate("🏛️", "Stoic evening review", "What did I do well today?\n\nWhere did I fall short of who I want to be?\n\nWhat was in my control, and what wasn't?\n\nWhat will I do differently tomorrow?\n"),
+    JournalTemplate("🌓", "Shadow work", "Something that really irritated me lately:\n\nWhat might it be touching in me?\n\nA quality I judge in others that I recognise in myself:\n\nHow could I treat that part of me with kindness?\n"),
+    JournalTemplate("🌙", "Dream log", "What I remember of the dream:\n\nHow it felt:\n\nAnything from yesterday it might connect to:\n"),
+    JournalTemplate("🌆", "Evening wind-down", "What's still on my mind:\n\nWhat can wait until tomorrow:\n\nOne thing that felt good today:\n\nTomorrow's first small step:\n"),
+    JournalTemplate("⏱️", "5-minute micro-journal", "Mood in one word:\n\nOne win:\n\nOne worry:\n\nOne kind thing I can do for myself:\n"),
+    JournalTemplate("🔎", "Sensory & focus check-in", "What pulled my attention today (apps, people, noise)?\n\nWhat helped me concentrate?\n\nAny sensory triggers (light, sound, texture, crowds)?\n\nOne adjustment for tomorrow:\n")
 )
 
 @Composable
@@ -51,6 +73,7 @@ fun JournalScreen() {
     var text by remember { mutableStateOf("") }
     var mood by remember { mutableStateOf<String?>(null) }
     var celebration by remember { mutableStateOf<Int?>(null) }
+    var suggestedPrompts by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
     suspend fun refresh() {
         entries = repo.recent(30)
@@ -58,6 +81,7 @@ fun JournalScreen() {
     }
 
     LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) { suggestedPrompts = usageAwareJournalPrompts(context) }
 
     celebration?.let { milestone ->
         CelebrationDialog(
@@ -69,6 +93,16 @@ fun JournalScreen() {
 
     if (writing) {
         Column(Modifier.fillMaxSize().padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = {
+                    writing = false
+                    text = ""
+                    mood = null
+                    activePrompt = null
+                    activeTemplateTitle = null
+                }) { Text("← Back") }
+            }
+            Spacer(Modifier.height(4.dp))
             activePrompt?.let {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
@@ -129,13 +163,39 @@ fun JournalScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Journal", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Journal", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you — nothing here leaves your device",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
             }
+        }
+
+        if (suggestedPrompts.isNotEmpty()) {
+            item {
+                Text("SUGGESTED FOR YOU", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "From your own usage this week — not a fixed list.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            items(suggestedPrompts) { (emoji, prompt) ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    onClick = { activePrompt = prompt; writing = true }
+                ) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(emoji, fontSize = 20.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(prompt, fontSize = 13.sp)
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(6.dp)) }
         }
 
         item {

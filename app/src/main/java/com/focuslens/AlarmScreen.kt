@@ -38,7 +38,7 @@ fun AlarmScreen() {
         ) {
             item {
                 Spacer(Modifier.height(16.dp))
-                Text("Alarms", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Alarms", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "A real alarm — fires even if FocusLens is fully closed or your phone is locked.",
@@ -77,7 +77,7 @@ fun AlarmScreen() {
         FloatingActionButton(
             onClick = { showAdd = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
-        ) { Text("+", fontSize = 24.sp) }
+        ) { Text("+", fontSize = 20.sp) }
     }
 
     if (showAdd) {
@@ -134,7 +134,7 @@ private fun AddAlarmSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
-            Text("New alarm", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("New alarm", fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
             TimePicker(state = timeState)
             Spacer(Modifier.height(16.dp))

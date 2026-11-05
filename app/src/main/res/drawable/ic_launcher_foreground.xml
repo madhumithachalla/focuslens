@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground layer for the adaptive launcher icon: the same hand-drawn eye/bird symbol
+     used as the web app's favicon (docs/icon.svg) and in its header next to the wordmark —
+     this is the one piece of that branding the Android app was missing a real launcher icon
+     for (it was using a generic system icon, android:drawable/ic_menu_view). The inner group
+     shrinks and centers the symbol within the adaptive icon's safe zone so launchers that
+     mask to a circle/squircle don't clip it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <group
+        android:pivotX="96"
+        android:pivotY="96"
+        android:scaleX="0.82"
+        android:scaleY="0.82">
+        <group
+            android:translateX="26.88"
+            android:translateY="39.73"
+            android:scaleX="0.6284"
+            android:scaleY="0.6284">
+            <path
+                android:fillColor="#4EA8F7"
+                android:pathData="M 5 80 C 10 68, 22 58, 40 56 C 55 54, 62 46, 72 36 C 95 16, 135 10, 168 22 C 198 33, 210 58, 200 82 C 193 98, 175 110, 155 113 C 130 117, 100 115, 78 104 C 58 95, 42 88, 30 86 C 20 85, 11 84, 5 80 Z" />
+            <path
+                android:strokeColor="#4EA8F7"
+                android:strokeWidth="10"
+                android:strokeLineCap="round"
+                android:pathData="M 70 40 C 80 32, 95 28, 108 30" />
+            <path
+                android:fillColor="#102420"
+                android:pathData="M 78,52 a 14,14 0 1,0 28,0 a 14,14 0 1,0 -28,0" />
+            <path
+                android:fillColor="#F7F5F0"
+                android:pathData="M 86.8,54 a 8.2,8.2 0 1,0 16.4,0 a 8.2,8.2 0 1,0 -16.4,0" />
+            <path
+                android:fillColor="#102420"
+                android:pathData="M 96.1,50.5 a 2.4,2.4 0 1,0 4.8,0 a 2.4,2.4 0 1,0 -4.8,0" />
+        </group>
+    </group>
+</vector>
