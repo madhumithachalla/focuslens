@@ -194,18 +194,18 @@ fun FocusLensMain(repo: UsageRepository) {
                         Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(22.dp))
                     }
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        DRAWER_GROUPS.forEach { (group, items) ->
+                        DRAWER_GROUPS.forEach { group ->
                             Text(
-                                group.uppercase(),
+                                group.first.uppercase(),
                                 modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 4.dp),
                                 fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray
                             )
-                            items.forEach { (index, label) ->
+                            group.second.forEach { item ->
                                 NavigationDrawerItem(
-                                    label = { Text(label) },
-                                    selected = tab == index,
+                                    label = { Text(item.second) },
+                                    selected = tab == item.first,
                                     onClick = {
-                                        tab = index
+                                        tab = item.first
                                         scope.launch { drawerState.close() }
                                     },
                                     modifier = Modifier.padding(horizontal = 12.dp)
@@ -218,7 +218,7 @@ fun FocusLensMain(repo: UsageRepository) {
             }
         ) {
             Column(Modifier.fillMaxSize()) {
-                // Top bar: menu button opens the drawer with every page, so nothing crowds the top.
+                // Top bar: the menu button opens the drawer with every page.
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -233,7 +233,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     Spacer(Modifier.weight(1f))
                     Text(TAB_LABELS.getOrElse(tab) { "" }, fontSize = 14.sp, color = Color.Gray)
                 }
-            Box(Modifier.weight(1f)) {
+                Box(Modifier.weight(1f)) {
                 when (tab) {
                     0 -> Dashboard(repo, refreshTick)
                     1 -> FocusScreen(repo, refreshTick)
@@ -258,6 +258,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     else -> QuizSettingsScreen()
                 }
                 }
+            }
         }
     } else {
         PermissionScreen()
@@ -558,7 +559,7 @@ private val TAB_LABELS = listOf(
 )
 
 /** Every page, grouped for the menu. The numbers are the tab indexes used by the screen switch. */
-private val DRAWER_GROUPS = listOf(
+private val DRAWER_GROUPS: List<Pair<String, List<Pair<Int, String>>>> = listOf(
     "Overview" to listOf(0 to "Usage", 9 to "Focus Score", 18 to "Coach", 17 to "Watch & vitals"),
     "Focus" to listOf(1 to "Focus", 2 to "Study", 15 to "Alarms", 16 to "Schedules", 20 to "Quiz"),
     "Body & mind" to listOf(4 to "Tracking", 5 to "Journal", 6 to "Mental health", 19 to "Meds", 10 to "Playlists"),
