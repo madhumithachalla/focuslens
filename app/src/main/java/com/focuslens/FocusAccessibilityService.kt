@@ -79,6 +79,17 @@ class FocusAccessibilityService : AccessibilityService() {
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
+        // Count each time you open Reels (a new visit, not every refresh), and enforce the daily Reels limit.
+        if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
+            prefs.addReelToday()
+        }
+        lastReelsSection = if (pkg == SectionDetector.INSTAGRAM) section else lastReelsSection
+        val reelCap = prefs.reelLimit()
+        if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            launchFeatureBlock("Reels limit reached", "You've opened Reels $reelCap times today, your limit. Back tomorrow after 6am.")
+            return
+        }
 
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing ||
             SchedulePauseActivity.showing
@@ -205,11 +216,28 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (now - lastLaunch < 1_500L) return
         lastLaunch = now
+        // Screen time used up: send you to the home screen first, then show the lock.
+        if (usedMinToday(pkg) >= prefs.limitMin(pkg)) performGlobalAction(GLOBAL_ACTION_HOME)
         val intent = Intent(this, BlockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             putExtra("pkg", pkg)
         }
         startActivity(intent)
+    }
+
+    private var lastReelsSection = ""
+    private val usageCache = HashMap<String, Pair<Long, Int>>()
+
+    /** Minutes used today on [pkg], cached for a minute so it isn't recomputed on every window change. */
+    private fun usedMinToday(pkg: String): Int {
+        val now = System.currentTimeMillis()
+        usageCache[pkg]?.let { (t, m) -> if (now - t < 60_000L) return m }
+        val m = try {
+            (UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
+                .firstOrNull { it.packageName == pkg }?.millis ?: 0L).div(60_000L).toInt()
+        } catch (e: Exception) { 0 }
+        usageCache[pkg] = now to m
+        return m
     }
 
     override fun onInterrupt() {}

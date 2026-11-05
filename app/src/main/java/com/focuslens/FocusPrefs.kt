@@ -103,6 +103,12 @@ class FocusPrefs(context: Context) {
 
     fun passesToday(pkg: String): Int = sp.getInt("passes_${pkg}_${today()}", 0)
 
+    /** Max times per day you may open Reels (0 = no limit). Counted per limit day, which resets at 6am. */
+    fun reelLimit(): Int = sp.getInt("reel_limit", 0)
+    fun setReelLimit(n: Int) { sp.edit().putInt("reel_limit", n.coerceIn(0, 500)).apply() }
+    fun reelsToday(): Int = sp.getInt("reels_${today()}", 0)
+    fun addReelToday() { sp.edit().putInt("reels_${today()}", reelsToday() + 1).apply() }
+
     fun addPass(pkg: String) {
         sp.edit().putInt("passes_${pkg}_${today()}", passesToday(pkg) + 1).apply()
     }
