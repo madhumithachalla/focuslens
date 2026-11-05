@@ -333,6 +333,49 @@ fun SettingsScreen() {
                 },
                 enabled = signedIn && !syncBusy
             ) { Text("Delete my synced usage") }
+            Spacer(Modifier.height(16.dp))
+            var personal by remember { mutableStateOf(PrivacyPrefs.personalised(context)) }
+            var confirmDelete by remember { mutableStateOf(false) }
+            var deleting by remember { mutableStateOf(false) }
+            Text("Privacy & your data", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Spacer(Modifier.height(4.dp))
+            Text(PrivacyPrefs.CONSENT_TEXT, fontSize = 12.sp, color = Color.Gray)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text("Learn from my data on this phone", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Switch(checked = personal, onCheckedChange = { on ->
+                    personal = on
+                    PrivacyPrefs.setPersonalised(context, on)
+                })
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { confirmDelete = true }, enabled = !deleting) {
+                Text("Delete all my data on this phone")
+            }
+            if (confirmDelete) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { confirmDelete = false },
+                    title = { Text("Delete all data on this phone?") },
+                    text = { Text("This removes your tasks, check-ins, journal, cycle, sleep, screen-time history and settings from this phone. It cannot be undone.") },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            confirmDelete = false
+                            deleting = true
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                PrivacyPrefs.deleteAllLocalData(context)
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    personal = false
+                                    deleting = false
+                                    syncMessage = "All data on this phone was deleted."
+                                }
+                            }
+                        }) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+                    }
+                )
+            }
             if (syncMessage != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(syncMessage ?: "", fontSize = 12.sp, color = Color.Gray)
