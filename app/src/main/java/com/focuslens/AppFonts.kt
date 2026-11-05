@@ -24,4 +24,23 @@ val AppMonoFontFamily = FontFamily(
     Font(R.font.jetbrains_mono_bold, FontWeight.Bold),
 )
 
-val AppTypography = Typography(defaultFontFamily = AppFontFamily)
+/** Material text styles with the website font applied to every one. */
+val AppTypography: Typography = Typography().let { t ->
+    Typography(
+        displayLarge = t.displayLarge.copy(fontFamily = AppFontFamily),
+        displayMedium = t.displayMedium.copy(fontFamily = AppFontFamily),
+        displaySmall = t.displaySmall.copy(fontFamily = AppFontFamily),
+        headlineLarge = t.headlineLarge.copy(fontFamily = AppFontFamily),
+        headlineMedium = t.headlineMedium.copy(fontFamily = AppFontFamily),
+        headlineSmall = t.headlineSmall.copy(fontFamily = AppFontFamily),
+        titleLarge = t.titleLarge.copy(fontFamily = AppFontFamily),
+        titleMedium = t.titleMedium.copy(fontFamily = AppFontFamily),
+        titleSmall = t.titleSmall.copy(fontFamily = AppFontFamily),
+        bodyLarge = t.bodyLarge.copy(fontFamily = AppFontFamily),
+        bodyMedium = t.bodyMedium.copy(fontFamily = AppFontFamily),
+        bodySmall = t.bodySmall.copy(fontFamily = AppFontFamily),
+        labelLarge = t.labelLarge.copy(fontFamily = AppFontFamily),
+        labelMedium = t.labelMedium.copy(fontFamily = AppFontFamily),
+        labelSmall = t.labelSmall.copy(fontFamily = AppFontFamily),
+    )
+}
