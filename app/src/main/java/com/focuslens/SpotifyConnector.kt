@@ -32,7 +32,12 @@ class SpotifyConnector(private val context: Context) {
 
     fun connect(onState: (SpotifyState) -> Unit) {
         if (BuildConfig.SPOTIFY_CLIENT_ID.isBlank()) {
-            onState(SpotifyState.Failed("No Spotify Client ID configured — see build.gradle.kts"))
+            onState(SpotifyState.Failed(
+                "Spotify isn't set up for this build yet. One-time fix: create an app at " +
+                    "developer.spotify.com/dashboard to get a Client ID, then add it as a GitHub " +
+                    "repo secret named SPOTIFY_CLIENT_ID (Settings > Secrets and variables > Actions) " +
+                    "and rebuild — the next CI build picks it up automatically."
+            ))
             return
         }
         onState(SpotifyState.Connecting)

@@ -95,7 +95,7 @@ fun MediaSuggestionsScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Explore", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("Explore", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Books, movies and series worth your reclaimed time — a short curated starter list, " +
                         "not a live catalog. Pick an interest to narrow it down.",

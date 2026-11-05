@@ -54,6 +54,13 @@ jobs:
         # still succeeds — the Account screen's Google button just shows "not configured".
         run: echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> local.properties
 
+      - name: Write build number
+        # github.run_number is a plain incrementing integer for this workflow, unique per
+        # run — baked into this build as BuildConfig.BUILD_NUMBER, and published to
+        # docs/version.txt below. The in-app update check (UpdateChecker.kt) compares the
+        # two to tell whether a newer build than the one installed is live on the website.
+        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> local.properties
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
 
@@ -65,12 +72,13 @@ jobs:
       # collaborator (that's what was actually happening, not a tag-name collision). Pages
       # (docs/) is the one thing here that's already reachable by a plain visitor, so ship the
       # APK as a plain static file there instead of as a Release asset.
-      - name: Publish APK into docs/ (served by GitHub Pages, no auth needed)
+      - name: Publish APK + version.txt into docs/ (served by GitHub Pages, no auth needed)
         run: |
           cp focuslens-debug.apk docs/focuslens-debug.apk
+          echo "${{ github.run_number }}" > docs/version.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/focuslens-debug.apk
+          git add docs/focuslens-debug.apk docs/version.txt
           if git diff --cached --quiet; then
             echo "APK unchanged, nothing to commit"
           else

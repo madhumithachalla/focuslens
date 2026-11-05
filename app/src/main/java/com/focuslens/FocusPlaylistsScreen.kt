@@ -1,6 +1,8 @@
 package com.focuslens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,8 +23,8 @@ fun FocusPlaylistsScreen() {
         onDispose { connector.disconnect() }
     }
 
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Focus playlists", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
+        Text("Focus playlists", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             "Plays in your own Spotify app — FocusLens just tells it what to queue.",

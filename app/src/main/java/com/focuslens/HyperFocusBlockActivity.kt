@@ -111,6 +111,7 @@ private fun HyperFocusScreen(prefs: FocusPrefs, onEnded: () -> Unit, onGiveUp: (
         onEnded()
     }
 
+    val indefinite = prefs.isHyperFocusIndefinite()
     val mins = remainingMs / 60_000L
     val secs = (remainingMs / 1000L) % 60L
 
@@ -121,7 +122,7 @@ private fun HyperFocusScreen(prefs: FocusPrefs, onEnded: () -> Unit, onGiveUp: (
     ) {
         Text("🧘", fontSize = 48.sp)
         Spacer(Modifier.height(10.dp))
-        Text("Hyper Focus", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text("Hyper Focus", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(Modifier.height(8.dp))
         Text(
             "Everything is paused except calls — no challenge to beat here, this one's just a timer.",
@@ -131,8 +132,8 @@ private fun HyperFocusScreen(prefs: FocusPrefs, onEnded: () -> Unit, onGiveUp: (
         )
         Spacer(Modifier.height(20.dp))
         Text(
-            String.format("%02d:%02d", mins, secs),
-            fontSize = 44.sp,
+            if (indefinite) "No time limit" else String.format("%02d:%02d", mins, secs),
+            fontSize = if (indefinite) 22.sp else 44.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )

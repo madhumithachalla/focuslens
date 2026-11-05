@@ -65,7 +65,7 @@ fun BlockSchedulesScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Block schedules", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Block schedules", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(
                 "Your blocked apps (Focus tab) are shut during these windows.",
                 fontSize = 13.sp
@@ -174,7 +174,7 @@ private fun ScheduleEditor(
         modifier = Modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Edit schedule", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Edit schedule", fontSize = 19.sp, fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },

@@ -19,13 +19,20 @@ private val MISS_SUGGESTIONS = mapOf(
 
 class TaskRepository(private val taskDao: TaskDao, private val checkInDao: CheckInDao) {
 
-    suspend fun addTask(title: String, type: TaskType, scheduledAt: Long, recallNote: String?): Long =
+    suspend fun addTask(
+        title: String,
+        type: TaskType,
+        scheduledAt: Long,
+        recallNote: String?,
+        calendarEventId: Long? = null
+    ): Long =
         taskDao.insert(
             TaskEntity(
                 title = title,
                 type = type,
                 scheduledAt = scheduledAt,
-                recallNote = recallNote
+                recallNote = recallNote,
+                calendarEventId = calendarEventId
             )
         )
 

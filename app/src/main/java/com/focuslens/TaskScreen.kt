@@ -1,5 +1,7 @@
 package com.focuslens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,9 +42,10 @@ fun TaskScreen() {
 
     if (showAdd) {
         AddTaskSheet(
-            onAdd = { title, type ->
+            onAdd = { title, type, scheduledAt, addToCalendar ->
                 scope.launch {
-                    repo.addTask(title, type, System.currentTimeMillis(), null)
+                    val eventId = if (addToCalendar) CalendarSync.addEvent(context, title, scheduledAt) else null
+                    repo.addTask(title, type, scheduledAt, null, eventId)
                     showAdd = false
                 }
             },
@@ -73,7 +76,7 @@ fun TaskScreen() {
         ) {
             item {
                 Spacer(Modifier.height(16.dp))
-                Text("To-do", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                Text("To-do", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
             }
 
@@ -113,7 +116,12 @@ fun TaskScreen() {
                             missReasonFor = task
                         }
                     },
-                    onDelete = { scope.launch { repo.deleteTask(task.id) } }
+                    onDelete = {
+                        scope.launch {
+                            task.calendarEventId?.let { CalendarSync.removeEvent(context, it) }
+                            repo.deleteTask(task.id)
+                        }
+                    }
                 )
             }
 
@@ -124,7 +132,7 @@ fun TaskScreen() {
             onClick = { showAdd = true },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
         ) {
-            Text("+", fontSize = 24.sp)
+            Text("+", fontSize = 20.sp)
         }
     }
 }
@@ -152,10 +160,38 @@ private fun TaskRow(task: TaskEntity, onToggle: () -> Unit, onDelete: () -> Unit
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun AddTaskSheet(onAdd: (String, TaskType) -> Unit, onDismiss: () -> Unit) {
+private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(TaskType.ADMIN) }
+    var addToCalendar by remember { mutableStateOf(false) }
+    var hasCalendarPermission by remember { mutableStateOf(CalendarSync.hasPermission(context)) }
+
+    val cal = remember { java.util.Calendar.getInstance().apply { add(java.util.Calendar.HOUR_OF_DAY, 1) } }
+    var dateMillis by remember { mutableStateOf(cal.timeInMillis) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val timeState = rememberTimePickerState(
+        initialHour = cal.get(java.util.Calendar.HOUR_OF_DAY),
+        initialMinute = cal.get(java.util.Calendar.MINUTE),
+        is24Hour = false
+    )
+
+    fun scheduledAtMillis(): Long {
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = dateMillis }
+        c.set(java.util.Calendar.HOUR_OF_DAY, timeState.hour)
+        c.set(java.util.Calendar.MINUTE, timeState.minute)
+        c.set(java.util.Calendar.SECOND, 0)
+        return c.timeInMillis
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCalendarPermission = granted
+        addToCalendar = granted
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -179,13 +215,47 @@ private fun AddTaskSheet(onAdd: (String, TaskType) -> Unit, onDismiss: () -> Uni
                         )
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        if (!addToCalendar && !hasCalendarPermission) {
+                            permissionLauncher.launch(android.Manifest.permission.WRITE_CALENDAR)
+                        } else {
+                            addToCalendar = !addToCalendar
+                        }
+                    },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = addToCalendar, onCheckedChange = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add to Calendar", fontSize = 14.sp)
+                }
+                if (addToCalendar) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("When:", fontSize = 13.sp, color = Color.Gray)
+                        TextButton(onClick = { showDatePicker = true }) { Text(formatPickedDate(dateMillis)) }
+                    }
+                    TimePicker(state = timeState)
+                }
             }
         },
         confirmButton = {
-            Button(enabled = title.isNotBlank(), onClick = { onAdd(title.trim(), type) }) { Text("Add") }
+            Button(
+                enabled = title.isNotBlank(),
+                onClick = { onAdd(title.trim(), type, if (addToCalendar) scheduledAtMillis() else System.currentTimeMillis(), addToCalendar) }
+            ) { Text("Add") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+
+    if (showDatePicker) {
+        DatePickerDialogPicker(
+            initial = dateMillis,
+            onPicked = { dateMillis = it; showDatePicker = false },
+            onDismiss = { showDatePicker = false }
+        )
+    }
 }
 
 @Composable

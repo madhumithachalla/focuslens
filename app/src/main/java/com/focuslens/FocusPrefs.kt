@@ -31,8 +31,6 @@ class FocusPrefs(context: Context) {
     /** Daily minutes the user allows themselves in this app. 0 means always use the hard challenge. */
     fun limitMin(pkg: String): Int = sp.getInt("limit_$pkg", 30)
 
-    }
-
     fun setLimitMin(pkg: String, minutes: Int) {
         sp.edit().putInt("limit_$pkg", minutes.coerceIn(0, 480)).apply()
     }
@@ -81,12 +79,13 @@ class FocusPrefs(context: Context) {
     }
 
     companion object {
+        private const val RESET_HOUR = 6
         /** Minutes as "HH:MM" (e.g. 90 -> "01:30"). */
         fun hhmm(minutes: Int): String = String.format(Locale.US, "%02d:%02d", minutes / 60, minutes % 60)
 
         /**
-         * Start of the current limit day: the most recent 6am. Usage for the daily limit must be
-         * counted from here, not from midnight, so it matches the lock and skip day (which resets at 6am).
+         * Start of the current limit day: the most recent 6am. Usage for the daily limit is counted
+         * from here, not midnight, so it matches the lock and skip day (which resets at 6am).
          */
         fun limitDayStartMs(now: Long = System.currentTimeMillis()): Long {
             val cal = java.util.Calendar.getInstance()
@@ -98,7 +97,8 @@ class FocusPrefs(context: Context) {
             cal.set(java.util.Calendar.MILLISECOND, 0)
             cal.add(java.util.Calendar.HOUR_OF_DAY, RESET_HOUR)
             return cal.timeInMillis
-            private const val RESET_HOUR = 6
+        }
+        const val HYPERFOCUS_INDEFINITE = Long.MAX_VALUE
     }
 
     fun passesToday(pkg: String): Int = sp.getInt("passes_${pkg}_${today()}", 0)
@@ -189,12 +189,20 @@ class FocusPrefs(context: Context) {
 
     // ---- Hyper Focus: blocks every app device-wide, not just the ones toggled on ----
 
-    /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this time. */
+    /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this
+     *  time — or, if this equals [HYPERFOCUS_INDEFINITE], until [endHyperFocus] is called. */
     fun hyperFocusUntil(): Long = sp.getLong("hyperfocus_until", 0L)
 
     fun startHyperFocus(minutes: Int) {
         sp.edit().putLong("hyperfocus_until", System.currentTimeMillis() + minutes * 60_000L).apply()
     }
+
+    /** "Stay on until I turn it off" — no auto-end time, same block everything else. */
+    fun startHyperFocusIndefinite() {
+        sp.edit().putLong("hyperfocus_until", HYPERFOCUS_INDEFINITE).apply()
+    }
+
+    fun isHyperFocusIndefinite(): Boolean = hyperFocusUntil() == HYPERFOCUS_INDEFINITE
 
     fun endHyperFocus() {
         sp.edit().putLong("hyperfocus_until", 0L).apply()
@@ -246,6 +254,23 @@ class FocusPrefs(context: Context) {
 
     fun removeAcademicAllow(domain: String) {
         sp.edit().putStringSet("academic_allow", customAcademicAllowlist() - domain).apply()
+    }
+
+    // ---- Doom-scroll reminders: a nudge after continuous scrolling in a tracked app, not a
+    // block — see FocusAccessibilityService's scroll tracking. On by default, since it's a
+    // reminder, not a restriction. ----
+
+    fun doomScrollReminderEnabled(): Boolean = sp.getBoolean("doomscroll_enabled", true)
+
+    fun setDoomScrollReminderEnabled(on: Boolean) {
+        sp.edit().putBoolean("doomscroll_enabled", on).apply()
+    }
+
+    /** How many scroll events in one continuous streak before a reminder shows. */
+    fun doomScrollThreshold(): Int = sp.getInt("doomscroll_threshold", 40)
+
+    fun setDoomScrollThreshold(n: Int) {
+        sp.edit().putInt("doomscroll_threshold", n.coerceIn(10, 200)).apply()
     }
 
     // ---- YouTube: "academic/podcast only" mode. Off by default; a best-effort keyword

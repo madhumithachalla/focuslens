@@ -42,9 +42,16 @@
          manually). Declining it just means typing birthdays in by hand instead. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- Optional: only requested if the user turns on "Add to Calendar" while adding a To-do
+         task — writes (and, if the task is deleted, removes) a single event on the device's
+         default calendar. Declining it just means the task stays local-only, same as before. -->
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
     <application
         android:allowBackup="false"
-        android:icon="@android:drawable/ic_menu_view"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -88,6 +95,15 @@
         <!-- Shown for a specific blocked feature (Reels, Shorts) or a blocked site in Chrome. -->
         <activity
             android:name=".FeatureBlockedActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+
+        <!-- Doom-scroll reminder — a nudge, not a block; see ScrollReminderActivity. -->
+        <activity
+            android:name=".ScrollReminderActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"

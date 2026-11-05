@@ -75,7 +75,7 @@ fun MedsScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Medication", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("Medication", fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Text(
                 "Stays on this phone. Not synced, not uploaded, not in cloud backup.",

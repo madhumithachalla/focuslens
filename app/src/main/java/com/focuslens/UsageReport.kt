@@ -74,7 +74,7 @@ fun HourlyUsageCard(hours: List<HourTotal>) {
     }
 }
 
-private fun formatHourLabel(hour: Int): String {
+fun formatHourLabel(hour: Int): String {
     val h = if (hour % 12 == 0) 12 else hour % 12
     val suffix = if (hour < 12) "am" else "pm"
     return "$h$suffix"

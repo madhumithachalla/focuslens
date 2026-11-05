@@ -46,8 +46,8 @@ private class CoachData(
     val risks: List<RiskedTask>,
     val signals: List<CoachInsight>,
     val loadedAt: Long,
-    val learned: LearnedModel?,
-    val personal: Boolean
+    val learned: LearnedModel? = null,
+    val personal: Boolean = true
 )
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
@@ -243,7 +243,7 @@ fun CoachScreen() {
     ) {
         item {
             Spacer(Modifier.height(16.dp))
-            Text("Coach", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text("Coach", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         }
         if (d == null) {
             item { Text("Reading your data...", color = Color.Gray) }
