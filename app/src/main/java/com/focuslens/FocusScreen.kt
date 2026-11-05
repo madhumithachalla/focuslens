@@ -302,6 +302,23 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             )
         }
 
+        item {
+            var reelRev by remember { mutableStateOf(0) }
+            val reelCap = remember(reelRev) { prefs.reelLimit() }
+            Column(Modifier.fillMaxWidth()) {
+                Text("Reels per day", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "How many times you can open Instagram Reels each day. " +
+                        "Used today: ${prefs.reelsToday()}. 0 means no limit.",
+                    fontSize = 12.sp, color = Color.Gray
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = { prefs.setReelLimit(reelCap - 1); reelRev++ }) { Text("-1") }
+                    Text(if (reelCap == 0) "No limit" else "$reelCap a day", fontWeight = FontWeight.Medium)
+                    OutlinedButton(onClick = { prefs.setReelLimit(reelCap + 1); reelRev++ }) { Text("+1") }
+                }
+            }
+        }
         items(apps, key = { it.packageName }) { app ->
             val isBlocked = app.packageName in blocked
             val avgMin = (app.millis / 7 / 60_000L).toInt()
