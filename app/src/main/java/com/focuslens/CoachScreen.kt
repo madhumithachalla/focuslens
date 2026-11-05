@@ -45,7 +45,9 @@ private class CoachData(
     val plan: DayPlan,
     val risks: List<RiskedTask>,
     val signals: List<CoachInsight>,
-    val loadedAt: Long
+    val loadedAt: Long,
+    val learned: LearnedModel?,
+    val personal: Boolean
 )
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
@@ -176,23 +178,56 @@ fun CoachScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(visible) {
+    var reloadKey by remember { mutableStateOf(0) }
+    var consentOpen by remember { mutableStateOf(!PrivacyPrefs.answered(context)) }
+    if (consentOpen) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Use your data to predict?") },
+            text = { Text(PrivacyPrefs.CONSENT_TEXT, fontSize = 14.sp) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    PrivacyPrefs.setPersonalised(context, true); consentOpen = false; reloadKey++
+                }) { Text("Agree") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    PrivacyPrefs.setPersonalised(context, false); consentOpen = false; reloadKey++
+                }) { Text("Not now") }
+            }
+        )
+    }
+
+    LaunchedEffect(visible, reloadKey) {
         while (visible) {
             data = withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             val tasks = db.taskDao().all().first().map {
                 CoachTask(it.id, it.title, it.type.name, it.scheduledAt, it.completedAt)
             }
-            val checkIns = db.checkInDao().allOnce().map {
+            // Opted out: nothing from your history is used for predictions or insights.
+            val personal = PrivacyPrefs.personalised(context)
+            val checkIns = if (!personal) emptyList() else db.checkInDao().allOnce().map {
                 CoachCheckIn(it.taskId, it.completed, it.reason?.name)
             }
-            val moods = db.journalDao().recentOnce(30).map { CoachMoodEntry(it.date, it.mood) }
+            val moods = if (!personal) emptyList() else db.journalDao().recentOnce(30).map { CoachMoodEntry(it.date, it.mood) }
+            val learned = if (personal) trainOnDevice(tasks, checkIns) else null
+            val risks = if (learned != null) {
+                val overall = missProfile(tasks, checkIns).overall
+                tasks.filter { it.completedAt == null && it.scheduledAt < now + DAY_MS }
+                    .map { RiskedTask(it, learnedTaskRisk(it, learned, overall, now)) }
+                    .sortedWith(compareByDescending<RiskedTask> { it.risk.risk }.thenBy { it.task.scheduledAt })
+            } else {
+                openTasksByRisk(tasks, checkIns, now)
+            }
             CoachData(
                 insights = coachInsights(tasks, checkIns, moods),
                 plan = planDay(tasks, checkIns, now),
-                risks = openTasksByRisk(tasks, checkIns, now),
+                risks = risks,
                 signals = loadSmartSignals(context, now),
-                loadedAt = now
+                loadedAt = now,
+                learned = learned,
+                personal = personal
             )
             }
             delay(60_000L)
@@ -285,6 +320,11 @@ fun CoachScreen() {
             item { SectionLabel("OPEN TASK RISK") }
             if (d.risks.isEmpty()) {
                 item { Text("No open tasks due today or overdue.", color = Color.Gray) }
+            }
+            if (!d.personal) {
+                item { Text("Personal predictions are off. Turn them on in Settings → Privacy & your data.", color = Color.Gray, fontSize = 13.sp) }
+            } else if (d.learned != null) {
+                item { Text("Learned on this phone from ${d.learned.samples} past tasks (fit ${Math.round(d.learned.fitAccuracy * 100)}%).", color = Color.Gray, fontSize = 12.sp) }
             }
             items(d.risks) { r ->
                 Card(Modifier.fillMaxWidth()) {
