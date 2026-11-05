@@ -15,6 +15,7 @@ import kotlin.math.exp
 data class LearnedModel(val weights: DoubleArray, val samples: Int, val fitAccuracy: Double)
 
 const val MIN_SAMPLES = 20
+private const val HOUR_MS = 3_600_000L
 private const val EPOCHS = 300
 private const val LEARNING_RATE = 0.3
 private const val L2 = 0.01
