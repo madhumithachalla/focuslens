@@ -1,6 +1,7 @@
 package com.focuslens
 
 import android.content.Context
+import com.focuslens.data.AppDatabase
 import java.io.File
 
 /**
