@@ -74,6 +74,7 @@ class AlarmRingActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme(
+                typography = AppTypography,
                 colorScheme = lightColorScheme(primary = Color(0xFFB3261E), background = Color(0xFFB3261E))
             ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFB3261E)) {

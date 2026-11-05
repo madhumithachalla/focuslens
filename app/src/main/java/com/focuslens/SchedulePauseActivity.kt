@@ -65,6 +65,7 @@ class SchedulePauseActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme(
+                typography = AppTypography,
                 colorScheme = lightColorScheme(
                     primary = Color(0xFF1F3A34),
                     background = Color(0xFF14201C),
