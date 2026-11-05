@@ -38,9 +38,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
@@ -65,12 +63,20 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.verticalScroll
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(
+                typography = AppTypography,
                 colorScheme = lightColorScheme(
                     primary = Color(0xFF1F3A34),
                     background = Color(0xFFF7F5F0),
@@ -175,41 +181,58 @@ fun FocusLensMain(repo: UsageRepository) {
 
     if (hasPermission) {
         var tab by remember { mutableIntStateOf(0) }
-        Column(Modifier.fillMaxSize()) {
-            // Same brand header as the web app (docs/index.html): the hand-drawn eye symbol
-            // next to the hand-traced wordmark — this app had neither before, just plain tab
-            // text and a generic system launcher icon.
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(painterResource(R.drawable.ic_focuslens_symbol), contentDescription = null, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(8.dp))
-                Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(22.dp))
+        val drawerState = rememberDrawerState(DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.padding(horizontal = 28.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Image(painterResource(R.drawable.ic_focuslens_symbol), contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(22.dp))
+                    }
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        DRAWER_GROUPS.forEach { (group, items) ->
+                            Text(
+                                group.uppercase(),
+                                modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 4.dp),
+                                fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray
+                            )
+                            items.forEach { (index, label) ->
+                                NavigationDrawerItem(
+                                    label = { Text(label) },
+                                    selected = tab == index,
+                                    onClick = {
+                                        tab = index
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
             }
-            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Usage") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Focus") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Study") })
-                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("To-do") })
-                Tab(selected = tab == 4, onClick = { tab = 4 }, text = { Text("Tracking") })
-                Tab(selected = tab == 5, onClick = { tab = 5 }, text = { Text("Journal") })
-                Tab(selected = tab == 6, onClick = { tab = 6 }, text = { Text("Mental health") })
-                Tab(selected = tab == 7, onClick = { tab = 7 }, text = { Text("Learn") })
-                Tab(selected = tab == 8, onClick = { tab = 8 }, text = { Text("Explore") })
-                Tab(selected = tab == 9, onClick = { tab = 9 }, text = { Text("Focus Score") })
-                Tab(selected = tab == 10, onClick = { tab = 10 }, text = { Text("Playlists") })
-                Tab(selected = tab == 11, onClick = { tab = 11 }, text = { Text("Account") })
-                Tab(selected = tab == 12, onClick = { tab = 12 }, text = { Text("Birthdays") })
-                Tab(selected = tab == 13, onClick = { tab = 13 }, text = { Text("Settings") })
-                Tab(selected = tab == 14, onClick = { tab = 14 }, text = { Text("Guide") })
-                Tab(selected = tab == 15, onClick = { tab = 15 }, text = { Text("Alarms") })
-                Tab(selected = tab == 16, onClick = { tab = 16 }, text = { Text("Schedules") })
-                Tab(selected = tab == 17, onClick = { tab = 17 }, text = { Text("Watch & vitals") })
-                Tab(selected = tab == 18, onClick = { tab = 18 }, text = { Text("Coach") })
-                Tab(selected = tab == 19, onClick = { tab = 19 }, text = { Text("Meds") })
-                Tab(selected = tab == 20, onClick = { tab = 20 }, text = { Text("Quiz") })
-            }
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                // Top bar: menu button opens the drawer with every page, so nothing crowds the top.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        Text("☰", fontSize = 22.sp)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    Image(painterResource(R.drawable.ic_focuslens_symbol), contentDescription = null, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(20.dp))
+                    Spacer(Modifier.weight(1f))
+                    Text(TAB_LABELS.getOrElse(tab) { "" }, fontSize = 14.sp, color = Color.Gray)
+                }
             Box(Modifier.weight(1f)) {
                 when (tab) {
                     0 -> Dashboard(repo, refreshTick)
@@ -234,7 +257,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     19 -> MedsScreen()
                     else -> QuizSettingsScreen()
                 }
-            }
+                }
         }
     } else {
         PermissionScreen()
@@ -526,3 +549,19 @@ fun DatePickerDialogPicker(initial: Long?, onPicked: (Long) -> Unit, onDismiss: 
 
 fun formatPickedDate(millis: Long): String =
     java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.US).format(java.util.Date(millis))
+
+
+private val TAB_LABELS = listOf(
+    "Usage", "Focus", "Study", "To-do", "Tracking", "Journal", "Mental health", "Learn", "Explore",
+    "Focus Score", "Playlists", "Account", "Birthdays", "Settings", "Guide", "Alarms", "Schedules",
+    "Watch & vitals", "Coach", "Meds", "Quiz"
+)
+
+/** Every page, grouped for the menu. The numbers are the tab indexes used by the screen switch. */
+private val DRAWER_GROUPS = listOf(
+    "Overview" to listOf(0 to "Usage", 9 to "Focus Score", 18 to "Coach", 17 to "Watch & vitals"),
+    "Focus" to listOf(1 to "Focus", 2 to "Study", 15 to "Alarms", 16 to "Schedules", 20 to "Quiz"),
+    "Body & mind" to listOf(4 to "Tracking", 5 to "Journal", 6 to "Mental health", 19 to "Meds", 10 to "Playlists"),
+    "Learn" to listOf(7 to "Learn", 8 to "Explore", 14 to "Guide"),
+    "Me" to listOf(3 to "To-do", 11 to "Account", 12 to "Birthdays", 13 to "Settings")
+)

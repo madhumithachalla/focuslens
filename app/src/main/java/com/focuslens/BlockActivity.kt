@@ -97,6 +97,7 @@ class BlockActivity : ComponentActivity() {
         if (locked) {
             setContent {
                 MaterialTheme(
+                    typography = AppTypography,
                     colorScheme = lightColorScheme(
                         primary = Color(0xFF1F3A34),
                         background = Color(0xFFF7F5F0),
@@ -133,6 +134,7 @@ class BlockActivity : ComponentActivity() {
         if (!over) {
             setContent {
                 MaterialTheme(
+                    typography = AppTypography,
                     colorScheme = lightColorScheme(
                         primary = Color(0xFF1F3A34),
                         background = Color(0xFFF7F5F0),
@@ -168,6 +170,7 @@ class BlockActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme(
+                typography = AppTypography,
                 colorScheme = lightColorScheme(
                     primary = Color(0xFF1F3A34),
                     background = Color(0xFFF7F5F0),
