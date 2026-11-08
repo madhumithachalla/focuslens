@@ -66,7 +66,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
     LaunchedEffect(tick) {
         a11y = isAccessibilityOn(context)
         apps = withContext(Dispatchers.IO) {
-            repo.load(Range.WEEK).filter { !isSystemish(it.packageName) }.take(40)
+            val used = repo.load(Range.WEEK).filter { !isSystemish(it.packageName) }.take(40)
+            // Always offer the feature-block apps (Instagram, YouTube, ...) when they're installed,
+            // even with no recent usage recorded, so their Reels/Shorts switch is never missing.
+            val usedPkgs = used.map { it.packageName }.toSet()
+            val extra = SectionDetector.feedFeature.keys
+                .filter { it !in usedPkgs && isInstalled(context, it) }
+                .map { AppUsage(it, repo.labelFor(it), 0L, 0) }
+            used + extra
         }
         peakHours = withContext(Dispatchers.IO) { history.hourlyTotalsRecent(7) }
     }
@@ -496,4 +503,11 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
 
         item { Spacer(Modifier.height(24.dp)) }
     }
+}
+
+private fun isInstalled(context: android.content.Context, pkg: String): Boolean = try {
+    context.packageManager.getPackageInfo(pkg, 0)
+    true
+} catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+    false
 }
