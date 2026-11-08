@@ -96,7 +96,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
             .sortedByDescending { it.millis }
     }
 
-    /** How many days FocusLens has stored in [fromMillis, toMillis), and how many days the range has. */
+    /** Days FocusLens has stored from fromMillis up to toMillis, and how many days that range spans. */
     suspend fun coverage(fromMillis: Long, toMillis: Long): Pair<Int, Int> {
         val from = fmt.format(Date(fromMillis))
         val to = fmt.format(Date(toMillis - 1))
