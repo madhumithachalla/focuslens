@@ -333,6 +333,7 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     var wbRows by remember { mutableStateOf<List<AppUsage>>(emptyList()) }
     var flRows by remember { mutableStateOf<List<AppUsage>?>(null) }
     var flCover by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var buckets by remember { mutableStateOf<List<Pair<String, Long>>>(emptyList()) }
     var source by remember { mutableStateOf(0) } // 0 = Digital Wellbeing, 1 = FocusLens history
     var loading by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf<String?>(null) }
@@ -379,9 +380,10 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         }
     }
 
-    LaunchedEffect(range, refreshTick, customStart, customEnd) {
+    LaunchedEffect(range, refreshTick, customStart, customEnd, source) {
         if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
+        var bk: List<Pair<String, Long>> = emptyList()
         val result = withContext(Dispatchers.IO) {
             val (from, to) = when (range) {
                 Range.CUSTOM -> customStart!! to customEnd!!
@@ -392,11 +394,28 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             val wellbeing = if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
             val exact = if (from != null && to != null) history.tryExact(from, to) else null
             val cover = if (from != null && to != null) history.coverage(from, to) else null
+
+            // Over-time bars use the same source as the totals, one bar per day (or per month for long ranges).
+            val now = System.currentTimeMillis()
+            val window: Pair<Long, Long>? = when (range) {
+                Range.WEEK -> (now - 7L * 24 * 60 * 60 * 1000) to now
+                Range.MONTH -> (now - 30L * 24 * 60 * 60 * 1000) to now
+                Range.YEAR -> (now - 365L * 24 * 60 * 60 * 1000) to now
+                Range.CUSTOM -> customStart!! to customEnd!!
+                else -> null
+            }
+            bk = window?.let { (a, b) ->
+                bucketTotals(a, b) { x, y ->
+                    if (source == 1) history.tryExact(x, y) ?: emptyList() else repo.loadCustom(x, y)
+                }
+            } ?: emptyList()
+
             Triple(wellbeing, exact, cover)
         }
         wbRows = result.first
         flRows = result.second
         flCover = result.third
+        buckets = bk
         breakdown = withContext(Dispatchers.IO) {
             try {
                 if (range == Range.CUSTOM) emptyMap() else repo.screenBreakdown(range)
@@ -410,10 +429,12 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         loading = false
     }
 
-    // Digital Wellbeing is the default. FocusLens history is shown only when the user picks it
-    // and it covers the range; otherwise the screen falls back to Digital Wellbeing as before.
     val rows = if (source == 1 && flRows != null) flRows!! else wbRows
-    val total = rows.sumOf { it.millis }
+    val appRows = rows.filter { !BrowserApps.isBrowser(it.packageName) }
+    val browserRows = rows.filter { BrowserApps.isBrowser(it.packageName) }
+    val appTotal = appRows.sumOf { it.millis }
+    val browserTotal = browserRows.sumOf { it.millis }
+    val total = appTotal + browserTotal
     val max = rows.maxOfOrNull { it.millis } ?: 1L
 
     Column(
@@ -421,30 +442,34 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        Text("FocusLens", fontSize = 14.sp, color = Color.Gray)
-        Spacer(Modifier.height(4.dp))
         Text(formatDuration(total), fontSize = 44.sp, fontWeight = FontWeight.Bold)
-        Text("time in apps, ${range.title.lowercase()}", fontSize = 14.sp, color = Color.Gray)
-        Spacer(Modifier.height(10.dp))
+        Text(range.title, fontSize = 13.sp, color = Color.Gray)
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            DonutSplit(appTotal, browserTotal, Modifier.size(96.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LegendRow(UsageColors.Apps, "Apps", formatDuration(appTotal))
+                LegendRow(UsageColors.Browsers, "Browsers", formatDuration(browserTotal))
+            }
+        }
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Digital Wellbeing", "FocusLens").forEachIndexed { i, label ->
                 FilterChip(selected = source == i, onClick = { source = i }, label = { Text(label) })
             }
         }
-        Text(
-            "Digital Wellbeing: ${formatDuration(wbRows.sumOf { it.millis })}" +
-                (flRows?.let { "  ·  FocusLens: ${formatDuration(it.sumOf { a -> a.millis })}" } ?: ""),
-            fontSize = 12.sp, color = Color.Gray
-        )
-        flCover?.let { (have, expected) ->
-            Text(
-                if (have >= expected) "FocusLens has all $expected days of this range."
-                else "FocusLens has $have of $expected days stored. Earlier days are only in Digital Wellbeing.",
-                fontSize = 12.sp, color = Color.Gray
+        flCover?.takeIf { source == 1 }?.let { (have, expected) ->
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { have.toFloat() / expected.coerceAtLeast(1).toFloat() },
+                modifier = Modifier.fillMaxWidth(),
+                color = UsageColors.Apps,
+                trackColor = UsageColors.Track
             )
+            Text("$have of $expected days stored", fontSize = 11.sp, color = Color.Gray)
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -483,22 +508,16 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             }
         }
         if (range.approximate) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Older history is only kept by Android as monthly or yearly totals, " +
-                    "so this view is approximate and has no open counts.",
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
+            Text("Older data is approximate", fontSize = 11.sp, color = Color.Gray)
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         if (loading) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Reading usage data...", color = Color.Gray)
+                Text("Loading…", color = Color.Gray)
             }
         } else if (rows.isEmpty()) {
-            Text("No usage recorded for this period yet.", color = Color.Gray)
+            Text("No usage yet.", color = Color.Gray)
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -507,40 +526,43 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                 if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {
                     item { HourlyUsageCard(hourlyToday) }
                 }
+                if (buckets.isNotEmpty()) {
+                    item { OverTimeCard(buckets) }
+                }
                 item { WeeklyReportCard(repo, history) }
                 item { InsightsCard(rows, breakdown, range) }
-                items(rows, key = { it.packageName }) { app ->
-                    Column(
-                        Modifier.clickable {
+
+                item { SectionTitle("Apps", appTotal) }
+                items(appRows, key = { "app:" + it.packageName }) { app ->
+                    AppUsageItem(
+                        app = app,
+                        max = max,
+                        color = UsageColors.Apps,
+                        open = expanded == app.packageName,
+                        onToggle = {
                             expanded = if (expanded == app.packageName) null else app.packageName
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(app.label, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                            Text(formatDuration(app.millis), fontSize = 16.sp)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        LinearProgressIndicator(
-                            progress = { app.millis.toFloat() / max.toFloat() },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color(0xFFE3E0D8)
+                        },
+                        screens = breakdown[app.packageName].orEmpty(),
+                        range = range,
+                        prefs = prefs
+                    )
+                }
+
+                if (browserRows.isNotEmpty()) {
+                    item { SectionTitle("Browsers", browserTotal) }
+                    items(browserRows, key = { "browser:" + it.packageName }) { app ->
+                        AppUsageItem(
+                            app = app,
+                            max = max,
+                            color = UsageColors.Browsers,
+                            open = expanded == app.packageName,
+                            onToggle = {
+                                expanded = if (expanded == app.packageName) null else app.packageName
+                            },
+                            screens = breakdown[app.packageName].orEmpty(),
+                            range = range,
+                            prefs = prefs
                         )
-                        if (app.launches > 0) {
-                            Text(
-                                "${app.launches} opens",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        }
-                        if (expanded != app.packageName) {
-                            Text("Tap for details", fontSize = 11.sp, color = Color.LightGray)
-                        } else {
-                            AppDetails(app, breakdown[app.packageName].orEmpty(), range, prefs)
-                        }
                     }
                 }
             }

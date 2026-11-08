@@ -2,6 +2,7 @@ package com.focuslens
 
 import android.content.Context
 import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -112,6 +113,7 @@ fun InsightsCard(
     val context = LocalContext.current
     val prefs = remember { FocusPrefs(context) }
     var showWhy by remember { mutableStateOf(false) }
+    var open by remember { mutableStateOf(false) }
     val lines = remember(rows, breakdown, range) { buildInsights(context, rows, breakdown, range, prefs) }
 
     Card(
@@ -119,7 +121,22 @@ fun InsightsCard(
         colors = CardDefaults.cardColors(containerColor = Color(0xFFEDEAE0))
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("What your data says", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            // Collapsed by default: the graphs carry the story, the written notes are one tap away.
+            Row(
+                Modifier.fillMaxWidth().clickable { open = !open },
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("What your data says", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(if (open) "Hide" else "${lines.size} notes", fontSize = 13.sp, color = Color.Gray)
+            }
+        }
+    }
+    if (open) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEDEAE0))
+        ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (lines.isEmpty()) {
                 Text("Not enough data yet.", fontSize = 13.sp, color = Color.Gray)
             }
@@ -141,6 +158,7 @@ fun InsightsCard(
                 }
                 Spacer(Modifier.height(2.dp))
             }
+        }
         }
     }
 }

@@ -2,6 +2,7 @@ package com.focuslens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focuslens.data.AppDatabase
@@ -26,50 +28,26 @@ import com.focuslens.data.TaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** A compact 24-bar chart of today's screen time by hour — Android itself never offers this
- *  view, so this reads whatever UsageHistoryRepository has (live for today, always available
- *  since today's raw event log is always present). */
+/** Today's screen time as 24 hourly bars. */
 @Composable
 fun HourlyUsageCard(hours: List<HourTotal>) {
-    val max = hours.maxOfOrNull { it.millis }?.coerceAtLeast(1L) ?: 1L
-    val busiest = hours.maxByOrNull { it.millis }
-
+    val sorted = hours.sortedBy { it.hour }
+    val busiest = sorted.maxByOrNull { it.millis }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text("Today by hour", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Spacer(Modifier.height(2.dp))
-            if (busiest != null && busiest.millis > 0) {
-                Text(
-                    "Busiest so far: around ${formatHourLabel(busiest.hour)} (${formatDuration(busiest.millis)}).",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth().height(64.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                hours.sortedBy { it.hour }.forEach { h ->
-                    val frac = (h.millis.toFloat() / max.toFloat()).coerceIn(0f, 1f)
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight(if (h.millis > 0) frac.coerceAtLeast(0.03f) else 0.015f)
-                                .background(
-                                    if (h.millis > 0) Color(0xFF3A5245) else Color(0xFFE3E0D8)
-                                )
-                        )
-                    }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Today by hour", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                if (busiest != null && busiest.millis > 0) {
+                    Text(formatHourLabel(busiest.hour), fontSize = 13.sp, color = Color.Gray)
                 }
             }
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("12am", fontSize = 10.sp, color = Color.Gray)
-                Text("12pm", fontSize = 10.sp, color = Color.Gray)
-                Text("11pm", fontSize = 10.sp, color = Color.Gray)
-            }
+            Spacer(Modifier.height(10.dp))
+            BarChart(
+                values = sorted.map { it.millis },
+                firstLabel = "12am",
+                lastLabel = "11pm",
+                color = UsageColors.Apps
+            )
         }
     }
 }
@@ -80,18 +58,20 @@ fun formatHourLabel(hour: Int): String {
     return "$h$suffix"
 }
 
-data class ReportLine(val text: String)
+private data class WeeklyStats(
+    val thisTotal: Long,
+    val lastTotal: Long,
+    val peakHour: Int?,
+    val topLabel: String?,
+    val topMillis: Long,
+    val missReason: MissReason?
+)
 
-/**
- * Rule-based (not AI), each line tied to a specific in-app toggle so the suggestion is
- * actually actionable, not just a number — "ensure the user gets it fixed" means naming the
- * real screen/control, not just surfacing the data and leaving it there.
- */
-private suspend fun buildWeeklyReport(
+private suspend fun loadWeeklyStats(
     repo: UsageRepository,
     history: UsageHistoryRepository,
     taskRepo: TaskRepository
-): List<ReportLine> {
+): WeeklyStats {
     val now = System.currentTimeMillis()
     val dayMs = 24L * 60 * 60 * 1000
     val thisWeekStart = now - 7 * dayMs
@@ -99,66 +79,55 @@ private suspend fun buildWeeklyReport(
 
     val thisWeekRows = history.tryExact(thisWeekStart, now) ?: repo.loadCustom(thisWeekStart, now)
     val lastWeekRows = history.tryExact(lastWeekStart, thisWeekStart) ?: repo.loadCustom(lastWeekStart, thisWeekStart)
-    val thisTotal = thisWeekRows.sumOf { it.millis }
-    val lastTotal = lastWeekRows.sumOf { it.millis }
-    val topApp = thisWeekRows.maxByOrNull { it.millis }
-    val hourly = history.hourlyTotalsRecent(7)
-    val busiest = hourly.entries.maxByOrNull { it.value }
+    val top = thisWeekRows.maxByOrNull { it.millis }
+    val busiest = history.hourlyTotalsRecent(7).entries.maxByOrNull { it.value }
     val reflection = taskRepo.weeklyReflection()
 
-    val lines = mutableListOf<ReportLine>()
+    return WeeklyStats(
+        thisTotal = thisWeekRows.sumOf { it.millis },
+        lastTotal = lastWeekRows.sumOf { it.millis },
+        peakHour = busiest?.takeIf { it.value > 0 }?.key,
+        topLabel = top?.takeIf { it.millis > 0 }?.label,
+        topMillis = top?.millis ?: 0L,
+        missReason = reflection.topMissReason
+    )
+}
 
-    if (lastTotal > 0 && thisTotal > (lastTotal * 1.15).toLong()) {
-        val pct = ((thisTotal - lastTotal) * 100 / lastTotal)
-        lines.add(
-            ReportLine(
-                "Screen time is up ${pct}% from last week (${formatDuration(thisTotal)} vs ${formatDuration(lastTotal)}). " +
-                    "A lower daily limit in Focus, or a scheduled Study Mode session, directly targets that."
-            )
-        )
-    } else if (lastTotal > 0 && thisTotal < (lastTotal * 0.85).toLong()) {
-        val pct = ((lastTotal - thisTotal) * 100 / lastTotal)
-        lines.add(ReportLine("Screen time is down ${pct}% from last week (${formatDuration(thisTotal)} vs ${formatDuration(lastTotal)}). Whatever you changed, it's working."))
-    }
-
-    if (busiest != null && busiest.value > 0) {
-        lines.add(
-            ReportLine(
-                "Your busiest hour recently is around ${formatHourLabel(busiest.key)} (${formatDuration(busiest.value)} total " +
-                    "over the last week). A Study Mode session or a Focus limit timed for then would hit the actual peak, " +
-                    "not just an average."
-            )
-        )
-    }
-
-    if (topApp != null && topApp.millis > 0) {
-        lines.add(
-            ReportLine(
-                "${topApp.label} is your top app this week (${formatDuration(topApp.millis)}). Focus lets you set a daily " +
-                    "limit on it, or Hard daily locks for a firmer stop once you hit it."
-            )
-        )
-    }
-
-    when (reflection.topMissReason) {
-        MissReason.TIRED -> lines.add(ReportLine("\"Tired\" was your top reason for missed tasks this week — Tracking's Sleep tracker, or moving a task earlier in the day, targets that more directly than a stricter block would."))
-        MissReason.DISTRACTED -> lines.add(ReportLine("\"Distracted\" was your top reason for missed tasks this week — Hyper Focus, or a tighter limit on your top app above, directly targets that."))
-        MissReason.TOO_BIG -> lines.add(ReportLine("\"Too big\" was your top reason for missed tasks this week — splitting it into smaller to-dos measurably finishes more often than one large one."))
-        MissReason.FORGOT -> lines.add(ReportLine("\"Forgot\" was your top reason for missed tasks this week — To-do's calendar button adds a reminder outside the app, for exactly this."))
-        else -> {}
-    }
-
-    return lines
+private fun missLabel(r: MissReason): String = when (r) {
+    MissReason.TIRED -> "Tired"
+    MissReason.DISTRACTED -> "Distracted"
+    MissReason.TOO_BIG -> "Too big"
+    MissReason.FORGOT -> "Forgot"
+    else -> "Other"
 }
 
 @Composable
+private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .background(Color.White.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .padding(10.dp)
+    ) {
+        Text(label, fontSize = 11.sp, color = Color.Gray)
+        Text(
+            value,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** This week against last week as bars, plus a change badge and three short tiles. No prose. */
+@Composable
 fun WeeklyReportCard(repo: UsageRepository, history: UsageHistoryRepository) {
     val context = LocalContext.current
-    var lines by remember { mutableStateOf<List<ReportLine>?>(null) }
+    var stats by remember { mutableStateOf<WeeklyStats?>(null) }
 
     LaunchedEffect(Unit) {
         val taskRepo = TaskRepository(AppDatabase.get(context).taskDao(), AppDatabase.get(context).checkInDao())
-        lines = withContext(Dispatchers.IO) { buildWeeklyReport(repo, history, taskRepo) }
+        stats = withContext(Dispatchers.IO) { loadWeeklyStats(repo, history, taskRepo) }
         // Opt-in account sync (no-op unless enabled + signed in; throttled to once per 30 min).
         UsageSync.maybeSync(context, repo, history)
     }
@@ -167,16 +136,39 @@ fun WeeklyReportCard(repo: UsageRepository, history: UsageHistoryRepository) {
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE3EFE8))
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Weekly report", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            when {
-                lines == null -> CircularProgressIndicator(modifier = Modifier.padding(4.dp))
-                lines!!.isEmpty() -> Text("Nothing stands out yet — keep logging and this fills in.", fontSize = 13.sp, color = Color.Gray)
-                else -> lines!!.forEach {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("•", color = Color.Gray)
-                        Text(it.text, fontSize = 13.sp)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("This week vs last", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            val s = stats
+            if (s == null) {
+                CircularProgressIndicator(modifier = Modifier.padding(4.dp))
+            } else {
+                val max = maxOf(s.thisTotal, s.lastTotal).coerceAtLeast(1L)
+                UsageBarRow("This week", s.thisTotal, max, UsageColors.Apps)
+                UsageBarRow("Last week", s.lastTotal, max, Color(0xFF9AA59E))
+                if (s.lastTotal > 0) {
+                    val pct = (s.thisTotal - s.lastTotal) * 100 / s.lastTotal
+                    val color = when {
+                        pct > 15 -> Color(0xFFB3261E)
+                        pct < -15 -> Color(0xFF2E7D32)
+                        else -> Color.Gray
                     }
+                    val text = if (pct >= 0) "▲ $pct%" else "▼ ${-pct}%"
+                    Box(
+                        Modifier
+                            .background(color.copy(alpha = 0.14f), RoundedCornerShape(50))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (s.peakHour != null) {
+                        StatTile("Peak hour", formatHourLabel(s.peakHour), Modifier.weight(1f))
+                    }
+                    if (s.topLabel != null) {
+                        StatTile("Top app", "${s.topLabel} · ${formatDuration(s.topMillis)}", Modifier.weight(1f))
+                    }
+                    s.missReason?.let { StatTile("Missed tasks", missLabel(it), Modifier.weight(1f)) }
                 }
             }
         }
