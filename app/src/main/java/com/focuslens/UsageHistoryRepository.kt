@@ -96,6 +96,14 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
             .sortedByDescending { it.millis }
     }
 
+    /** How many days FocusLens has stored in [fromMillis, toMillis), and how many days the range has. */
+    suspend fun coverage(fromMillis: Long, toMillis: Long): Pair<Int, Int> {
+        val from = fmt.format(Date(fromMillis))
+        val to = fmt.format(Date(toMillis - 1))
+        val expected = ((toMillis - fromMillis) / DAY_MS).toInt().coerceAtLeast(1)
+        return dao.datesBetween(from, to).size to expected
+    }
+
     private fun startOfDay(millis: Long): Long {
         val cal = Calendar.getInstance()
         cal.timeInMillis = millis

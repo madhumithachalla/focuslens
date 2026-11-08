@@ -330,7 +330,10 @@ fun PermissionScreen() {
 fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     val context = LocalContext.current
     var range by remember { mutableStateOf(Range.TODAY) }
-    var rows by remember { mutableStateOf<List<AppUsage>>(emptyList()) }
+    var wbRows by remember { mutableStateOf<List<AppUsage>>(emptyList()) }
+    var flRows by remember { mutableStateOf<List<AppUsage>?>(null) }
+    var flCover by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var source by remember { mutableStateOf(0) } // 0 = Digital Wellbeing, 1 = FocusLens history
     var loading by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf<String?>(null) }
     var breakdown by remember { mutableStateOf<Map<String, List<ScreenTime>>>(emptyMap()) }
@@ -379,16 +382,21 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     LaunchedEffect(range, refreshTick, customStart, customEnd) {
         if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
-        rows = withContext(Dispatchers.IO) {
+        val result = withContext(Dispatchers.IO) {
             val (from, to) = when (range) {
                 Range.CUSTOM -> customStart!! to customEnd!!
                 Range.MONTH -> (System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
                 Range.YEAR -> (System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
                 else -> null to null
             }
+            val wellbeing = if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
             val exact = if (from != null && to != null) history.tryExact(from, to) else null
-            exact ?: if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
+            val cover = if (from != null && to != null) history.coverage(from, to) else null
+            Triple(wellbeing, exact, cover)
         }
+        wbRows = result.first
+        flRows = result.second
+        flCover = result.third
         breakdown = withContext(Dispatchers.IO) {
             try {
                 if (range == Range.CUSTOM) emptyMap() else repo.screenBreakdown(range)
@@ -402,6 +410,9 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         loading = false
     }
 
+    // Digital Wellbeing is the default. FocusLens history is shown only when the user picks it
+    // and it covers the range; otherwise the screen falls back to Digital Wellbeing as before.
+    val rows = if (source == 1 && flRows != null) flRows!! else wbRows
     val total = rows.sumOf { it.millis }
     val max = rows.maxOfOrNull { it.millis } ?: 1L
 
@@ -414,6 +425,24 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         Spacer(Modifier.height(4.dp))
         Text(formatDuration(total), fontSize = 44.sp, fontWeight = FontWeight.Bold)
         Text("time in apps, ${range.title.lowercase()}", fontSize = 14.sp, color = Color.Gray)
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Digital Wellbeing", "FocusLens").forEachIndexed { i, label ->
+                FilterChip(selected = source == i, onClick = { source = i }, label = { Text(label) })
+            }
+        }
+        Text(
+            "Digital Wellbeing: ${formatDuration(wbRows.sumOf { it.millis })}" +
+                (flRows?.let { "  ·  FocusLens: ${formatDuration(it.sumOf { a -> a.millis })}" } ?: ""),
+            fontSize = 12.sp, color = Color.Gray
+        )
+        flCover?.let { (have, expected) ->
+            Text(
+                if (have >= expected) "FocusLens has all $expected days of this range."
+                else "FocusLens has $have of $expected days stored. Earlier days are only in Digital Wellbeing.",
+                fontSize = 12.sp, color = Color.Gray
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
         Row(
