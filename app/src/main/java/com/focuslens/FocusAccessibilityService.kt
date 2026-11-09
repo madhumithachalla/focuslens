@@ -119,6 +119,8 @@ class FocusAccessibilityService : AccessibilityService() {
             prefs.addReelToday()
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
+        // The Reels switch is checked first, by its own rule, so no other rule can skip it.
+        if (pkg == SectionDetector.INSTAGRAM && checkReelsBlock(section)) return
         // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
         // Shown only when the screen has reels on it (the reel symbol, banner or player), not everywhere.
         if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
@@ -381,6 +383,29 @@ class FocusAccessibilityService : AccessibilityService() {
                     "Take $minutes minutes away. Break $taken of $limit today."
             )
         }
+    }
+
+    /**
+     * The Reels block, on its own: if the Reels switch is on and Instagram shows Reels,
+     * send the person home with the reason. Every decision is logged as "reels check",
+     * so a block that does not fire can be traced to the exact condition that failed.
+     */
+    private fun checkReelsBlock(section: String): Boolean {
+        val now = System.currentTimeMillis()
+        val switchOn = prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels")
+        val busy = BlockActivity.showing || FeatureBlockedActivity.showing ||
+            HyperFocusBlockActivity.showing || SchedulePauseActivity.showing
+        val fire = switchOn && section == "Reels" && !busy && now - lastLaunch >= 1_500L
+        android.util.Log.d(TAG, "reels check: section=$section switchOn=$switchOn busy=$busy fire=$fire")
+        if (!fire) return false
+        lastLaunch = now
+        kickHome("reels block")
+        launchFeatureBlock(
+            "Reels is blocked",
+            "You turned Reels off for Instagram in FocusLens. The rest of Instagram still works. " +
+                "Turn it back on under Focus → Feature blocking."
+        )
+        return true
     }
 
     /** Sends the person home, and logs why, so the cause is visible in logcat. */
