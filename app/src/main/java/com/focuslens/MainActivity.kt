@@ -258,6 +258,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     20 -> QuizSettingsScreen()
                     21 -> RewardsScreen()
                     22 -> AchievementsScreen()
+                    23 -> AppUpdatesScreen()
                     else -> QuizSettingsScreen()
                 }
                 }
@@ -464,6 +465,8 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     ) {
         Text(formatDuration(total), fontSize = 44.sp, fontWeight = FontWeight.Bold)
         Text(range.title, fontSize = 13.sp, color = Color.Gray)
+        Spacer(Modifier.height(10.dp))
+        UpdateCard()
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             DonutSplit(appTotal, browserTotal, Modifier.size(96.dp))
@@ -543,7 +546,6 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                item { UpdateCard() }
                 if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {
                     item { HourlyUsageCard(hourlyToday) }
                 }
@@ -641,7 +643,7 @@ fun formatPickedDate(millis: Long): String =
 private val TAB_LABELS = listOf(
     "Usage", "Focus", "Study", "To-do", "Tracking", "Journal", "Mental health", "Learn", "Explore",
     "Focus Score", "Playlists", "Account", "Birthdays", "Settings", "Guide", "Alarms", "Schedules",
-    "Watch & vitals", "Coach", "Meds", "Quiz", "Rewards", "Achievements"
+    "Watch & vitals", "Coach", "Meds", "Quiz", "Rewards", "Achievements", "App updates"
 )
 
 /** Every page, grouped for the menu. The numbers are the tab indexes used by the screen switch. */
@@ -650,5 +652,5 @@ private val DRAWER_GROUPS: List<Pair<String, List<Pair<Int, String>>>> = listOf(
     "Focus" to listOf(1 to "Focus", 2 to "Study", 15 to "Alarms", 16 to "Schedules", 20 to "Quiz"),
     "Body & mind" to listOf(4 to "Tracking", 5 to "Journal", 6 to "Mental health", 19 to "Meds", 10 to "Playlists"),
     "Learn" to listOf(7 to "Learn", 8 to "Explore", 14 to "Guide", 21 to "Rewards"),
-    "Me" to listOf(3 to "To-do", 11 to "Account", 12 to "Birthdays", 13 to "Settings")
+    "Me" to listOf(3 to "To-do", 11 to "Account", 12 to "Birthdays", 13 to "Settings", 23 to "App updates")
 )
