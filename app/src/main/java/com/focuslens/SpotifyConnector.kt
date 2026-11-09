@@ -31,6 +31,10 @@ class SpotifyConnector(private val context: Context) {
     private var remote: SpotifyAppRemote? = null
 
     fun connect(onState: (SpotifyState) -> Unit) {
+        if (!FocusPrefs(context).spotifyOn()) {
+            onState(SpotifyState.Failed("Spotify is off. Turn it on in Settings → Connections if you want to use it."))
+            return
+        }
         if (BuildConfig.SPOTIFY_CLIENT_ID.isBlank()) {
             onState(SpotifyState.Failed(
                 "Spotify isn't set up for this build yet. One-time fix: create an app at " +

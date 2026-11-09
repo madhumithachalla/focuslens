@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -340,6 +341,29 @@ fun SettingsScreen() {
             var personal by remember { mutableStateOf(PrivacyPrefs.personalised(context)) }
             var confirmDelete by remember { mutableStateOf(false) }
             var deleting by remember { mutableStateOf(false) }
+            // Connections: optional. Nothing connects until you turn it on here.
+            var spotifyOn by remember { mutableStateOf(FocusPrefs(context).spotifyOn()) }
+            androidx.compose.material3.Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Connections", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                        Text(
+                            "Spotify (optional): plays focus playlists in your own Spotify app. " +
+                                "Off means FocusLens never talks to Spotify.",
+                            fontSize = 12.sp, color = androidx.compose.ui.graphics.Color.Gray
+                        )
+                    }
+                    androidx.compose.material3.Switch(checked = spotifyOn, onCheckedChange = {
+                        FocusPrefs(context).setSpotifyOn(it)
+                        spotifyOn = it
+                    })
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             Text("Privacy & your data", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
             Spacer(Modifier.height(4.dp))
             Text(PrivacyPrefs.CONSENT_TEXT, fontSize = 12.sp, color = Color.Gray)

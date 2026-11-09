@@ -305,6 +305,11 @@ class FocusPrefs(context: Context) {
 
     fun doomScrollReminderEnabled(): Boolean = sp.getBoolean("doomscroll_enabled", true)
 
+    /** Spotify is optional: off until you turn it on in Settings. */
+    fun spotifyOn(): Boolean = sp.getBoolean("spotify_on", false)
+
+    fun setSpotifyOn(on: Boolean) = sp.edit().putBoolean("spotify_on", on).apply()
+
     fun skipReelEnabled(): Boolean = sp.getBoolean("skip_reel_enabled", false)
 
     fun setSkipReelEnabled(on: Boolean) = sp.edit().putBoolean("skip_reel_enabled", on).apply()
