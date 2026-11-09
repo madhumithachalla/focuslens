@@ -380,6 +380,26 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         }
     }
 
+    // Saves the plain HTML report (both sources side by side) to a file the person picks.
+    val reportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/html")
+    ) { uri ->
+        if (uri != null) {
+            status = "Making the report..."
+            scope.launch {
+                status = try {
+                    val html = SimpleReport.html(context)
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)!!.use { it.write(html.toByteArray()) }
+                    }
+                    "Report saved. Open it in a browser, or print it to PDF."
+                } catch (e: Exception) {
+                    "Report failed: ${e.message}"
+                }
+            }
+        }
+    }
+
     LaunchedEffect(range, refreshTick, customStart, customEnd, source) {
         if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
@@ -583,6 +603,17 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Export everything (ZIP of CSV files)")
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = {
+                val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.US)
+                    .format(java.util.Date())
+                reportLauncher.launch("focuslens_report_$stamp.html")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Download simple report (HTML, both sources)")
         }
     }
 }
