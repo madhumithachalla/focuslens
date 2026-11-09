@@ -298,9 +298,46 @@ private val BANK: Map<String, Map<Int, List<BankItem>>> = mapOf(
         ),
 )
 
+/** Harder questions for levels 4 and 5. At those levels only these are used, never the easy ones. */
+private val BANK_HARD: Map<String, Map<Int, List<BankItem>>> = mapOf(
+    "language" to mapOf(
+        4 to listOf(
+            BankItem("The best antonym of 'ephemeral' is:", "Permanent", listOf("Fleeting", "Brief", "Ancient"), "Ephemeral means lasting a very short time; permanent is its opposite."),
+            BankItem("'Obsequious' most nearly means:", "Excessively eager to please", listOf("Openly hostile", "Deeply curious", "Physically strong"), "Obsequious describes servile, over-eager flattery."),
+            BankItem("Her argument was ___ and hard to refute.", "cogent", listOf("tepid", "frivolous", "vacuous"), "Cogent means clear, logical and convincing."),
+        ),
+        5 to listOf(
+            BankItem("'Ascend up' is an example of:", "Redundancy", listOf("Metaphor", "Irony", "Alliteration"), "'Ascend' already means 'go up', so 'up' repeats it."),
+            BankItem("'Sanguine' describes someone who is:", "Cheerfully optimistic", listOf("Extremely angry", "Very pale", "Easily frightened"), "Sanguine means hopeful and confident."),
+        ),
+    ),
+    "science" to mapOf(
+        4 to listOf(
+            BankItem("Which gas makes up the largest share of Earth's atmosphere?", "Nitrogen", listOf("Oxygen", "Carbon dioxide", "Argon"), "Nitrogen is about 78% of dry air; oxygen is about 21%."),
+            BankItem("The SI unit of electrical resistance is the:", "Ohm", listOf("Volt", "Ampere", "Watt"), "Resistance is measured in ohms (symbol Ω)."),
+            BankItem("The speed of light in a vacuum is about:", "300,000 km per second", listOf("3,000 km per second", "30,000 km per second", "3,000,000 km per second"), "Light travels roughly 300,000 km every second."),
+        ),
+        5 to listOf(
+            BankItem("Which element has the highest electronegativity?", "Fluorine", listOf("Oxygen", "Chlorine", "Nitrogen"), "Fluorine attracts electrons more strongly than any other element."),
+            BankItem("How many chromosomes do typical human body cells contain?", "46", listOf("23", "44", "48"), "Humans have 23 pairs, so 46 chromosomes in most body cells."),
+            BankItem("Avogadro's number, to two significant figures, is:", "6.0 × 10²³", listOf("6.0 × 10²⁶", "3.0 × 10²³", "6.0 × 10⁻²³"), "Avogadro's number is about 6.02 × 10²³ per mole."),
+        ),
+    ),
+    "general" to mapOf(
+        4 to listOf(
+            BankItem("Which river is generally regarded as the longest in Africa?", "Nile", listOf("Congo", "Niger", "Zambezi"), "The Nile is usually counted as the longest river in Africa."),
+            BankItem("In which year did the Berlin Wall fall?", "1989", listOf("1961", "1991", "1979"), "The wall was built in 1961 and opened in November 1989."),
+        ),
+        5 to listOf(
+            BankItem("Who wrote 'The Brothers Karamazov'?", "Fyodor Dostoevsky", listOf("Leo Tolstoy", "Anton Chekhov", "Ivan Turgenev"), "Dostoevsky published it in 1880."),
+            BankItem("Which conflict was ended by the Treaty of Westphalia in 1648?", "The Thirty Years' War", listOf("The Hundred Years' War", "The Seven Years' War", "The Napoleonic Wars"), "Westphalia ended the Thirty Years' War in Europe."),
+        ),
+    ),
+)
+
 private fun bankQuestion(rng: Random, category: String, level: Int): QuizQuestion {
     val byLevel = BANK[category] ?: BANK.getValue("general")
-    val pool = byLevel[level] ?: byLevel.getValue(1)
+    val pool = BANK_HARD[category]?.get(level) ?: byLevel[level] ?: byLevel.getValue(1)
     val item = pickOne(rng, pool)
     val all = shuffled(rng, listOf(item.correct) + item.wrong)
     return QuizQuestion("", category, level, item.prompt, all, all.indexOf(item.correct), item.explain)
