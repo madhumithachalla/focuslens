@@ -180,11 +180,14 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
     val cal = remember { java.util.Calendar.getInstance().apply { add(java.util.Calendar.HOUR_OF_DAY, 1) } }
     var dateMillis by remember { mutableStateOf(cal.timeInMillis) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val timeState = rememberTimePickerState(
-        initialHour = cal.get(java.util.Calendar.HOUR_OF_DAY),
-        initialMinute = cal.get(java.util.Calendar.MINUTE),
-        is24Hour = false
-    )
+    // The quick time buttons change the picker by building a new one (new key), because the
+    // picker's hour can't be assigned directly.
+    var presetKey by remember { mutableStateOf(0) }
+    var presetHour by remember { mutableStateOf(cal.get(java.util.Calendar.HOUR_OF_DAY)) }
+    var presetMinute by remember { mutableStateOf(cal.get(java.util.Calendar.MINUTE)) }
+    val timeState = key(presetKey) {
+        rememberTimePickerState(initialHour = presetHour, initialMinute = presetMinute, is24Hour = false)
+    }
 
     fun scheduledAtMillis(): Long {
         val c = java.util.Calendar.getInstance().apply { timeInMillis = dateMillis }
@@ -226,7 +229,7 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
                     listOf("Morning" to 9, "Afternoon" to 14, "Evening" to 19).forEach { (label, hour) ->
                         FilterChip(
                             selected = timeState.hour == hour && timeState.minute == 0,
-                            onClick = { timeState.hour = hour; timeState.minute = 0 },
+                            onClick = { presetHour = hour; presetMinute = 0; presetKey++ },
                             label = { Text(label) }
                         )
                     }
