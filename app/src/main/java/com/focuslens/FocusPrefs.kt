@@ -304,6 +304,10 @@ class FocusPrefs(context: Context) {
 
     fun doomScrollReminderEnabled(): Boolean = sp.getBoolean("doomscroll_enabled", true)
 
+    fun skipReelEnabled(): Boolean = sp.getBoolean("skip_reel_enabled", false)
+
+    fun setSkipReelEnabled(on: Boolean) = sp.edit().putBoolean("skip_reel_enabled", on).apply()
+
     fun setDoomScrollReminderEnabled(on: Boolean) {
         sp.edit().putBoolean("doomscroll_enabled", on).apply()
     }

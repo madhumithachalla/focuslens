@@ -172,6 +172,38 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            var skipOn by remember(rev) { mutableStateOf(prefs.skipReelEnabled()) }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Skip reel button on Instagram", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                        Text(
+                            "A Skip reel button while you scroll the feed, stories or Reels. Needs \"Display over other apps\".",
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                    }
+                    Switch(checked = skipOn, onCheckedChange = { on ->
+                        if (on && !android.provider.Settings.canDrawOverlays(context)) {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    android.net.Uri.parse("package:" + context.packageName)
+                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        } else {
+                            prefs.setSkipReelEnabled(on)
+                            skipOn = on
+                        }
+                    })
+                }
+            }
+        }
+
+        item {
             val hyperActive = remember(rev, tick) { prefs.isHyperFocusActive() }
             Card(
                 modifier = Modifier.fillMaxWidth(),

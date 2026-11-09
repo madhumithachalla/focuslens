@@ -16,6 +16,7 @@
     <!-- Spotify's App Remote SDK talks to the installed Spotify app over this. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Alarms: vibration when one rings, and re-arming every alarm after the phone reboots
          (AlarmManager entries don't survive a restart on their own). setAlarmClock itself

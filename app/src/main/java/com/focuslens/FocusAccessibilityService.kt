@@ -40,6 +40,9 @@ class FocusAccessibilityService : AccessibilityService() {
         /** True only while Android has this service connected (diagnostic, read by the Focus tab). */
         @Volatile var connected = false
 
+        /** The running service, so the Skip reel button can ask it to move on. */
+        @Volatile var instance: FocusAccessibilityService? = null
+
         /** Filter with: adb logcat -s FocusLens */
         const val TAG = "FocusLens"
     }
@@ -115,6 +118,15 @@ class FocusAccessibilityService : AccessibilityService() {
             prefs.addReelToday()
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
+        // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
+        if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
+            android.provider.Settings.canDrawOverlays(this) &&
+            section in setOf("Feed", "Stories", "Reels")
+        ) {
+            SkipReelOverlay.show(this) { skipReel() }
+        } else if (pkg == SectionDetector.INSTAGRAM) {
+            SkipReelOverlay.hide(this)
+        }
         val reelCap = prefs.reelLimit()
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
             performGlobalAction(GLOBAL_ACTION_HOME)
@@ -196,9 +208,27 @@ class FocusAccessibilityService : AccessibilityService() {
         )
     }
 
+    /** Moves Instagram to the next reel or post: scrolls the first scrollable area forward. */
+    fun skipReel() {
+        val root = rootInActiveWindow ?: return
+        val target = findScrollable(root, 0) ?: return
+        target.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+    }
+
+    private fun findScrollable(node: AccessibilityNodeInfo, depth: Int): AccessibilityNodeInfo? {
+        if (depth > 25) return null
+        if (node.isScrollable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findScrollable(child, depth + 1)?.let { return it }
+        }
+        return null
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         connected = true
+        instance = this
         android.util.Log.d(TAG, "service connected")
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(sampler)
@@ -221,6 +251,8 @@ class FocusAccessibilityService : AccessibilityService() {
             current = null
             return
         }
+        // The Skip reel button only belongs to Instagram.
+        if (pkg != SectionDetector.INSTAGRAM) SkipReelOverlay.hide(this)
         current = pkg
         check(pkg)
     }
@@ -380,6 +412,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         connected = false
+        instance = null
+        SkipReelOverlay.hide(this)
         android.util.Log.d(TAG, "service unbound")
         return super.onUnbind(intent)
     }
