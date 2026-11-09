@@ -1,5 +1,6 @@
 package com.focuslens
 
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
@@ -79,6 +80,12 @@ object SectionDetector {
         var hasReelIcon = false
         val reelIconLabels = setOf("reel", "reels")
 
+        // Instagram's bottom navigation bar always has a Reels button labelled "Reels", on every
+        // screen. Only icon badges above that bar count, so the home feed is not read as Reels.
+        val rootRect = Rect()
+        root.getBoundsInScreen(rootRect)
+        val navCutTop = rootRect.top + (rootRect.height() * 0.85f).toInt()
+
         val queue = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
         queue.add(root to 0)
         var visited = 0
@@ -110,7 +117,11 @@ object SectionDetector {
                     // longer "Reels, tab 2 of 5" — checked as its own exact match so a random
                     // unrelated element merely containing the word doesn't trigger it.
                     val iconLabel = node.contentDescription?.toString()?.trim()?.lowercase() ?: ""
-                    if (iconLabel in reelIconLabels) hasReelIcon = true
+                    if (iconLabel in reelIconLabels) {
+                        val r = Rect()
+                        node.getBoundsInScreen(r)
+                        if (r.top < navCutTop) hasReelIcon = true
+                    }
                 }
             }
             if (depth < 25) {
