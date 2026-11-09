@@ -283,6 +283,15 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
                     label = { Text("Label instructions (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Text("Quick times (tap to add)", fontSize = 13.sp)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Morning" to "08:00", "Afternoon" to "13:00", "Evening" to "20:00").forEach { (label, t) ->
+                        AssistChip(
+                            onClick = { if (t !in times) times.add(t) },
+                            label = { Text("$label $t") }
+                        )
+                    }
+                }
                 Text("Times (24-hour HH:mm)", fontSize = 13.sp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     times.sorted().forEach { t ->
