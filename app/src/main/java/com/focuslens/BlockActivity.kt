@@ -109,6 +109,7 @@ class BlockActivity : ComponentActivity() {
                 ) {
                     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         BackHandler { goHome(prefs) }
+                        val qp = QuizPrefs(this@BlockActivity)
                         LockedScreen(
                             label = label,
                             usedMin = usedMin,
@@ -116,7 +117,17 @@ class BlockActivity : ComponentActivity() {
                             skipLimitReached = skipLimitReached,
                             maxSkips = maxSkips,
                             resetAt = prefs.nextResetAt(),
-                            onGiveUp = { goHome(prefs) }
+                            onGiveUp = { goHome(prefs) },
+                            quizGate = qp.gateConfig(),
+                            canUnlock = qp.canUnlock(pkg),
+                            unlockAllowance = qp.unlocksPerDayAllowed(),
+                            unlocksUsed = qp.unlocksLast24h(pkg),
+                            unlockMinutes = qp.unlockMinutes(),
+                            onUnlocked = {
+                                qp.recordUnlock(pkg)
+                                prefs.grant(pkg, qp.unlockMinutes())
+                                finish()
+                            }
                         )
                     }
                 }
@@ -361,8 +372,29 @@ fun LockedScreen(
     skipLimitReached: Boolean,
     maxSkips: Int,
     resetAt: Long,
-    onGiveUp: () -> Unit
+    onGiveUp: () -> Unit,
+    quizGate: QuizGateConfig? = null,
+    canUnlock: Boolean = false,
+    unlockAllowance: Int = 1,
+    unlocksUsed: Int = 0,
+    unlockMinutes: Int = 5,
+    onUnlocked: () -> Unit = {}
 ) {
+    var showGate by remember { mutableStateOf(false) }
+    if (showGate && quizGate != null) {
+        Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+            Text("Answer to unlock $label for $unlockMinutes minutes", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(12.dp))
+            QuizGate(
+                config = quizGate,
+                accent = Color(0xFF1F3A34),
+                onSuccess = onUnlocked,
+                onHome = onGiveUp
+            )
+        }
+        return
+    }
+
     val minutesToReset = remember {
         ((resetAt - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0L)
     }
@@ -393,7 +425,22 @@ fun LockedScreen(
             fontSize = 13.sp,
             color = Color.Gray
         )
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
+        if (quizGate != null) {
+            Text(
+                "Unlocks used in the last 24 hours: $unlocksUsed of $unlockAllowance",
+                fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(enabled = canUnlock, onClick = { showGate = true }) {
+                Text(
+                    if (canUnlock) "Unlock for $unlockMinutes min (quiz)"
+                    else "No unlocks left for 24 hours",
+                    fontSize = 15.sp
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
         TextButton(onClick = onGiveUp) {
             Text("Take me home", fontSize = 16.sp)
         }

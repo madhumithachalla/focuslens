@@ -34,7 +34,8 @@ class QuizPrefs(context: Context) {
 
     // ---- Questions needed ----
 
-    fun questionsNeeded(): Int = sp.getInt("needed", 3)
+    /** Fixed: the quiz is not user-configurable (3 correct answers). */
+    fun questionsNeeded(): Int = QUIZ_FIXED_NEEDED
 
     fun setQuestionsNeeded(n: Int) {
         sp.edit().putInt("needed", n.coerceIn(1, 10)).apply()
@@ -42,11 +43,39 @@ class QuizPrefs(context: Context) {
 
     // ---- Delay and emergency passes (shared with block schedules) ----
 
-    fun delaySeconds(): Int = schedules.delaySeconds()
+    /** Fixed: 10 seconds before the first question. */
+    fun delaySeconds(): Int = QUIZ_FIXED_DELAY_SECONDS
 
     fun setDelaySeconds(s: Int) = schedules.setDelaySeconds(s.coerceIn(0, 60))
 
     fun passesPerDay(): Int = schedules.passesPerDay()
+
+    // ---- Temporary unlock: a quiz (or your own question) opens a blocked app for a few minutes ----
+
+    /** Unlocks allowed per app in any 24 hours: default 1, you can raise it to 3. */
+    fun unlocksPerDayAllowed(): Int = sp.getInt("unlock_allowance", 1).coerceIn(1, 3)
+
+    fun setUnlocksPerDayAllowed(n: Int) = sp.edit().putInt("unlock_allowance", n.coerceIn(1, 3)).apply()
+
+    /** Minutes an unlock lasts: default 5, adjustable from 1 to 10. */
+    fun unlockMinutes(): Int = sp.getInt("unlock_minutes", 5).coerceIn(1, 10)
+
+    fun setUnlockMinutes(n: Int) = sp.edit().putInt("unlock_minutes", n.coerceIn(1, 10)).apply()
+
+    /** Unlocks of [pkg] in the last 24 hours. */
+    fun unlocksLast24h(pkg: String, now: Long = System.currentTimeMillis()): Int {
+        val cutoff = now - 24L * 60 * 60 * 1000
+        return (sp.getString("unlocks_$pkg", "") ?: "").split(",").mapNotNull { it.toLongOrNull() }.count { it > cutoff }
+    }
+
+    fun canUnlock(pkg: String): Boolean = unlocksLast24h(pkg) < unlocksPerDayAllowed()
+
+    /** Records one unlock of [pkg] now. */
+    fun recordUnlock(pkg: String, now: Long = System.currentTimeMillis()) {
+        val cutoff = now - 24L * 60 * 60 * 1000
+        val kept = (sp.getString("unlocks_$pkg", "") ?: "").split(",").mapNotNull { it.toLongOrNull() }.filter { it > cutoff }
+        sp.edit().putString("unlocks_$pkg", (kept + now).joinToString(",")).apply()
+    }
 
     fun setPassesPerDay(n: Int) = schedules.setPassesPerDay(n)
 

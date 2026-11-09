@@ -20,6 +20,10 @@ val QUIZ_CATEGORIES: List<QuizCategory> = listOf(
 
 const val QUIZ_MAX_LEVEL = 5
 
+/** The quiz is not user-configurable: 3 correct answers, 10 seconds before the first question. */
+const val QUIZ_FIXED_NEEDED = 3
+const val QUIZ_FIXED_DELAY_SECONDS = 10
+
 data class QuizQuestion(
     val id: String,
     val category: String,

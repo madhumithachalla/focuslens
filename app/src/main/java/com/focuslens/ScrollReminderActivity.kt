@@ -44,7 +44,7 @@ class ScrollReminderActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val label = intent.getStringExtra("label") ?: "this app"
-        val scrollCount = intent.getIntExtra("scrollCount", 0)
+        val scrollMinutes = intent.getIntExtra("scrollMinutes", 0)
         showing = true
 
         setContent {
@@ -68,7 +68,7 @@ class ScrollReminderActivity : ComponentActivity() {
                         Text("Still scrolling?", fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            "That's $scrollCount scrolls in a row in $label. No judgement — just checking this is where you meant to be.",
+                            "You've been scrolling $label for $scrollMinutes minutes. No judgement, just checking this is where you meant to be.",
                             fontSize = 15.sp,
                             textAlign = TextAlign.Center,
                             color = Color.Gray

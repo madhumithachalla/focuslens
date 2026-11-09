@@ -315,6 +315,44 @@ class FocusPrefs(context: Context) {
     /** How many scroll events in one continuous streak before a reminder shows. */
     fun doomScrollThreshold(): Int = sp.getInt("doomscroll_threshold", 40)
 
+    // ---- Scrolling limits (time based): a reminder every N minutes, and a break after a long run ----
+
+    /** Minutes between scrolling reminders while you keep scrolling. Default 4. */
+    fun scrollReminderMinutes(): Int = sp.getInt("scroll_reminder_min", 4).coerceIn(1, 60)
+
+    fun setScrollReminderMinutes(n: Int) = sp.edit().putInt("scroll_reminder_min", n.coerceIn(1, 60)).apply()
+
+    /** Continuous scrolling, in minutes, before a break starts. Default 30. */
+    fun scrollBreakAfterMinutes(): Int = sp.getInt("scroll_break_after_min", 30).coerceIn(5, 180)
+
+    fun setScrollBreakAfterMinutes(n: Int) = sp.edit().putInt("scroll_break_after_min", n.coerceIn(5, 180)).apply()
+
+    /** How long a break lasts. Default 15 minutes. */
+    fun breakMinutes(): Int = sp.getInt("break_min", 15).coerceIn(1, 120)
+
+    fun setBreakMinutes(n: Int) = sp.edit().putInt("break_min", n.coerceIn(1, 120)).apply()
+
+    /** Breaks allowed per app per day. Past this, the app is locked until 6am. Default 3. */
+    fun breaksPerDayLimit(): Int = sp.getInt("breaks_per_day_limit", 3).coerceIn(1, 10)
+
+    fun setBreaksPerDayLimit(n: Int) = sp.edit().putInt("breaks_per_day_limit", n.coerceIn(1, 10)).apply()
+
+    fun breaksToday(pkg: String): Int = sp.getInt("breaks_${pkg}_${today()}", 0)
+
+    fun addBreak(pkg: String) = sp.edit().putInt("breaks_${pkg}_${today()}", breaksToday(pkg) + 1).apply()
+
+    /** Until when [pkg] is on a break (epoch millis), 0 if not. */
+    fun breakUntil(pkg: String): Long = sp.getLong("break_until_$pkg", 0L)
+
+    fun startBreak(pkg: String, until: Long) = sp.edit().putLong("break_until_$pkg", until).apply()
+
+    /** Until when [pkg] is locked for the rest of the day (epoch millis), 0 if not. */
+    fun dayLockUntil(pkg: String): Long = sp.getLong("day_lock_$pkg", 0L)
+
+    fun setDayLockUntil(pkg: String, until: Long) = sp.edit().putLong("day_lock_$pkg", until).apply()
+
+    /** Skip reel: the button shows on Instagram when turned on (see SkipReelOverlay). */
+
     fun setDoomScrollThreshold(n: Int) {
         sp.edit().putInt("doomscroll_threshold", n.coerceIn(10, 200)).apply()
     }

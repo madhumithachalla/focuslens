@@ -29,13 +29,14 @@ class FocusAccessibilityService : AccessibilityService() {
     // Doom-scroll tracking: counts TYPE_VIEW_SCROLLED events in one continuous streak within
     // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak — this is
     // meant to catch continuous scrolling, not ordinary on-and-off browsing across a session.
-    private var scrollCount = 0
+    private var streakStart = 0L
+    private var lastReminderAt = 0L
     private var scrollStreakPkg: String? = null
     private var lastScrollAt = 0L
     private var lastSwipeCountAt = 0L
 
     companion object {
-        private const val SCROLL_IDLE_GAP_MS = 15_000L
+        private const val SCROLL_IDLE_GAP_MS = 120_000L
 
         /** True only while Android has this service connected (diagnostic, read by the Focus tab). */
         @Volatile var connected = false
@@ -120,8 +121,7 @@ class FocusAccessibilityService : AccessibilityService() {
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
         if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
-            android.provider.Settings.canDrawOverlays(this) &&
-            section in setOf("Feed", "Stories", "Reels")
+            android.provider.Settings.canDrawOverlays(this)
         ) {
             SkipReelOverlay.show(this) { skipReel() }
         } else if (pkg == SectionDetector.INSTAGRAM) {
@@ -138,6 +138,20 @@ class FocusAccessibilityService : AccessibilityService() {
             SchedulePauseActivity.showing
         ) return
         if (now - lastLaunch < 3_000L) return
+
+        // On a break, or locked for the day: sent out even if the app is already open.
+        if (now - lastLaunch > 1_500L && (now < prefs.dayLockUntil(pkg) || now < prefs.breakUntil(pkg))) {
+            lastLaunch = now
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            if (now < prefs.dayLockUntil(pkg)) {
+                launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
+            } else {
+                val mins = ((prefs.breakUntil(pkg) - now) / 60_000L).coerceAtLeast(1L)
+                launchFeatureBlock("On a break from $appName", "Back in about $mins minutes.")
+            }
+            return
+        }
 
         // Daily screen-time limit reached while using the app: locked until 6am, no challenge.
         if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.allowedUntil(pkg) &&
@@ -169,11 +183,12 @@ class FocusAccessibilityService : AccessibilityService() {
             (section == "Watching a video" || section == "Shorts")
         ) {
             val text = YoutubeContent.visibleText(root)
-            if (!YoutubeContent.looksAcademic(text)) {
+            val kind = YoutubeContent.classify(text)
+            if (kind == YoutubeContent.Kind.ENTERTAINMENT || kind == YoutubeContent.Kind.UNRECOGNISED) {
                 launchFeatureBlock(
-                    "Entertainment is off",
-                    "Academic/podcast-only mode is on for YouTube, and this doesn't look like either. " +
-                        "Best-effort keyword check, not a real content check — turn it off in Focus settings if it's wrong."
+                    "This video is off",
+                    "Academic and podcast mode is on. This looks ${kind.label}. " +
+                        "It is a keyword check on the title and channel text, so it can be wrong."
                 )
             }
         }
@@ -210,9 +225,21 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /** Moves Instagram to the next reel or post: scrolls the first scrollable area forward. */
     fun skipReel() {
-        val root = rootInActiveWindow ?: return
-        val target = findScrollable(root, 0) ?: return
-        target.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+        // A real swipe up through the middle of the screen, the same as the person would do.
+        // It avoids the Skip button in the bottom-right corner.
+        val dm = resources.displayMetrics
+        val x = dm.widthPixels / 2f
+        val path = android.graphics.Path().apply {
+            moveTo(x, dm.heightPixels * 0.78f)
+            lineTo(x, dm.heightPixels * 0.22f)
+        }
+        val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 250L)
+        val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
+        val sent = dispatchGesture(gesture, null, null)
+        if (!sent) {
+            // Fall back to asking the scrollable area to scroll forward.
+            rootInActiveWindow?.let { findScrollable(it, 0)?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) }
+        }
     }
 
     private fun findScrollable(node: AccessibilityNodeInfo, depth: Int): AccessibilityNodeInfo? {
@@ -282,14 +309,24 @@ class FocusAccessibilityService : AccessibilityService() {
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
 
         val now = System.currentTimeMillis()
+        // A run of scrolling starts fresh after a couple of minutes without any.
         if (pkg != scrollStreakPkg || now - lastScrollAt > SCROLL_IDLE_GAP_MS) {
             scrollStreakPkg = pkg
-            scrollCount = 0
+            streakStart = now
+            lastReminderAt = now
         }
-        scrollCount++
         lastScrollAt = now
 
-        if (scrollCount >= prefs.doomScrollThreshold() && now - lastLaunch > 3_000L) {
+        val runMinutes = (now - streakStart) / 60_000L
+        if (runMinutes >= prefs.scrollBreakAfterMinutes()) {
+            startBreakFor(pkg, now)
+            streakStart = now
+            lastReminderAt = now
+            return
+        }
+        val sinceReminderMinutes = (now - lastReminderAt) / 60_000L
+        if (sinceReminderMinutes >= prefs.scrollReminderMinutes() && now - lastLaunch > 3_000L) {
+            lastReminderAt = now
             lastLaunch = now
             prefs.bump(pkg, "scroll_reminders")
             val appName = SectionDetector.displayName[pkg] ?: pkg
@@ -297,10 +334,33 @@ class FocusAccessibilityService : AccessibilityService() {
                 Intent(this, ScrollReminderActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                     putExtra("label", appName)
-                    putExtra("scrollCount", scrollCount)
+                    putExtra("scrollMinutes", runMinutes.toInt())
                 }
             )
-            scrollCount = 0
+        }
+    }
+
+    /** Scrolled too long: a break from the app, or a lock for the rest of the day after too many breaks. */
+    private fun startBreakFor(pkg: String, now: Long) {
+        val appName = SectionDetector.displayName[pkg] ?: pkg
+        val limit = prefs.breaksPerDayLimit()
+        prefs.addBreak(pkg)
+        val taken = prefs.breaksToday(pkg)
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        if (taken > limit) {
+            prefs.setDayLockUntil(pkg, prefs.nextResetAt())
+            launchFeatureBlock(
+                "$appName locked for today",
+                "You've taken $limit breaks from $appName today, so it's locked until 6am."
+            )
+        } else {
+            val minutes = prefs.breakMinutes()
+            prefs.startBreak(pkg, now + minutes * 60_000L)
+            launchFeatureBlock(
+                "Break from $appName",
+                "You've scrolled $appName for ${prefs.scrollBreakAfterMinutes()} minutes. " +
+                    "Take $minutes minutes away. Break $taken of $limit today."
+            )
         }
     }
 
@@ -311,6 +371,24 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun check(pkg: String) {
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
         val now = System.currentTimeMillis()
+
+        // On a break, or locked for the day after too many breaks.
+        if (pkg in SectionDetector.tracked && now - lastLaunch > 1_500L) {
+            val lockedUntil = prefs.dayLockUntil(pkg)
+            val breakUntil = prefs.breakUntil(pkg)
+            if (now < lockedUntil || now < breakUntil) {
+                lastLaunch = now
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                val appName = SectionDetector.displayName[pkg] ?: pkg
+                if (now < lockedUntil) {
+                    launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
+                } else {
+                    val mins = ((breakUntil - now) / 60_000L).coerceAtLeast(1L)
+                    launchFeatureBlock("On a break from $appName", "Back in about $mins minutes.")
+                }
+                return
+            }
+        }
 
         if (prefs.isHyperFocusActive()) {
             val allowed = pkg in prefs.hyperFocusAllowlist() || pkg == defaultDialerPackage()

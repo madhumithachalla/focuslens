@@ -24,9 +24,34 @@ object YoutubeContent {
         "workshop", "ted-ed", "khan academy", "lesson"
     )
 
-    fun looksAcademic(visibleText: String): Boolean {
+    /** What a video looks like from its title, channel and on-screen text. */
+    enum class Kind(val label: String) {
+        ACADEMIC("academic"),
+        PODCAST("podcast"),
+        ENTERTAINMENT("entertainment"),
+        UNRECOGNISED("not recognised as academic or a podcast")
+    }
+
+    private val PODCAST_WORDS = listOf("podcast", "episode", "interview", "talk show", "conversation with")
+    private val ENTERTAINMENT_WORDS = listOf(
+        "official video", "music video", "lyrics", "trailer", "vlog", "prank", "reaction",
+        "gameplay", "funny", "compilation", "challenge", "meme", "#shorts", "full movie"
+    )
+
+    /** Sorts the visible text into a kind. Academic words win over entertainment words. */
+    fun classify(visibleText: String): Kind {
         val t = " ${visibleText.lowercase()} "
-        return KEYWORDS.any { t.contains(it) }
+        return when {
+            KEYWORDS.any { t.contains(it) } && PODCAST_WORDS.none { t.contains(it) } -> Kind.ACADEMIC
+            PODCAST_WORDS.any { t.contains(it) } -> Kind.PODCAST
+            ENTERTAINMENT_WORDS.any { t.contains(it) } -> Kind.ENTERTAINMENT
+            else -> Kind.UNRECOGNISED
+        }
+    }
+
+    fun looksAcademic(visibleText: String): Boolean {
+        val k = classify(visibleText)
+        return k == Kind.ACADEMIC || k == Kind.PODCAST
     }
 
     fun visibleText(root: AccessibilityNodeInfo, maxChars: Int = 500): String {

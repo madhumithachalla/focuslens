@@ -15,7 +15,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,11 +37,10 @@ fun QuizSettingsScreen() {
     val context = LocalContext.current
     val prefs = remember { QuizPrefs(context) }
 
-    var enabled by remember { mutableStateOf(prefs.enabledCategories()) }
     var caps by remember { mutableStateOf(QUIZ_CATEGORIES.associate { it.id to prefs.categoryCap(it.id) }) }
-    var needed by remember { mutableIntStateOf(prefs.questionsNeeded()) }
-    var delaySec by remember { mutableIntStateOf(prefs.delaySeconds()) }
     var passes by remember { mutableIntStateOf(prefs.passesPerDay()) }
+    var unlockAllowance by remember { mutableIntStateOf(prefs.unlocksPerDayAllowed()) }
+    var unlockMinutes by remember { mutableIntStateOf(prefs.unlockMinutes()) }
     var custom by remember { mutableStateOf(prefs.customQuestions()) }
 
     var newPrompt by remember { mutableStateOf("") }
@@ -60,36 +58,44 @@ fun QuizSettingsScreen() {
             Spacer(Modifier.height(16.dp))
             Text("Quiz gate", fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Before a blocked app opens you answer a few questions. Each unlock attempt today " +
-                    "starts a little harder. Switch every category off to turn the quiz off.",
+                "The quiz is fixed: 3 correct answers, a 10-second wait, and questions never repeat, " +
+                    "so the same question is not asked again on a later day. Only the limits below can be changed.",
                 fontSize = 13.sp,
                 color = Color.Gray
             )
             Text("Attempts today: ${prefs.attemptsToday()}", fontSize = 13.sp, color = Color.Gray)
         }
 
-        item { QuizLabel("CATEGORIES (0 in Max per day = no limit)") }
+        item { QuizLabel("TEMPORARY UNLOCK") }
+        item {
+            Text(
+                "Answer the quiz (or one of your own questions) to open a blocked app for a short time.",
+                fontSize = 12.sp, color = Color.Gray
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Unlocks per app per 24 hours (default 1, max 3)", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+                QuizStepper(unlockAllowance, 1, 3) {
+                    prefs.setUnlocksPerDayAllowed(it)
+                    unlockAllowance = prefs.unlocksPerDayAllowed()
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Minutes unlocked (default 5)", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+                QuizStepper(unlockMinutes, 1, 10) {
+                    prefs.setUnlockMinutes(it)
+                    unlockMinutes = prefs.unlockMinutes()
+                }
+            }
+        }
+
+        item { QuizLabel("MAX QUESTIONS PER DAY, BY CATEGORY (0 = no limit)") }
         items(QUIZ_CATEGORIES) { c ->
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(c.label, fontSize = 15.sp)
-                Switch(
-                    checked = c.id in enabled,
-                    onCheckedChange = {
-                        prefs.setCategoryEnabled(c.id, it)
-                        enabled = prefs.enabledCategories()
-                    }
-                )
-            }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Max per day", fontSize = 13.sp, color = Color.Gray)
+                Text(c.label, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 QuizStepper(caps[c.id] ?: 0, 0, 200) { v ->
                     prefs.setCategoryCap(c.id, v)
                     caps = caps + (c.id to v)
@@ -98,16 +104,6 @@ fun QuizSettingsScreen() {
         }
 
         item {
-            QuizLabel("QUESTIONS NEEDED")
-            QuizStepper(needed, 1, 10) {
-                prefs.setQuestionsNeeded(it)
-                needed = prefs.questionsNeeded()
-            }
-            QuizLabel("DELAY BEFORE THE FIRST QUESTION (SECONDS)")
-            QuizStepper(delaySec, 0, 60) {
-                prefs.setDelaySeconds(it)
-                delaySec = prefs.delaySeconds()
-            }
             QuizLabel("EMERGENCY PASSES PER DAY")
             QuizStepper(passes, 0, 20) {
                 prefs.setPassesPerDay(it)

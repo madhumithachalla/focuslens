@@ -359,17 +359,17 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     }
                     if (doomScrollOn) {
                         Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Remind after", fontSize = 13.sp, color = Color.Gray)
-                            OutlinedButton(onClick = {
-                                prefs.setDoomScrollThreshold(doomScrollThreshold - 10)
-                                rev++
-                            }) { Text("-10") }
-                            Text("$doomScrollThreshold scrolls", fontWeight = FontWeight.Medium)
-                            OutlinedButton(onClick = {
-                                prefs.setDoomScrollThreshold(doomScrollThreshold + 10)
-                                rev++
-                            }) { Text("+10") }
+                        MinuteRow("Remind every (minutes)", prefs.scrollReminderMinutes(), 1, 60) {
+                            prefs.setScrollReminderMinutes(it); rev++
+                        }
+                        MinuteRow("Break after (minutes of scrolling)", prefs.scrollBreakAfterMinutes(), 5, 180) {
+                            prefs.setScrollBreakAfterMinutes(it); rev++
+                        }
+                        MinuteRow("Break length (minutes)", prefs.breakMinutes(), 1, 120) {
+                            prefs.setBreakMinutes(it); rev++
+                        }
+                        MinuteRow("Breaks per day before locked until 6am", prefs.breaksPerDayLimit(), 1, 10) {
+                            prefs.setBreaksPerDayLimit(it); rev++
                         }
                     }
                 }
@@ -559,4 +559,19 @@ private fun isInstalled(context: android.content.Context, pkg: String): Boolean 
     true
 } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
     false
+}
+
+/** A label with − and + buttons for a whole number between [min] and [max]. */
+@Composable
+private fun MinuteRow(label: String, value: Int, min: Int, max: Int, onChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(label, fontSize = 13.sp, color = Color.Gray, modifier = Modifier.weight(1f))
+        OutlinedButton(onClick = { if (value > min) onChange(value - 1) }) { Text("-") }
+        Text("$value", fontWeight = FontWeight.Medium)
+        OutlinedButton(onClick = { if (value < max) onChange(value + 1) }) { Text("+") }
+    }
 }
