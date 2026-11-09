@@ -32,6 +32,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private var scrollCount = 0
     private var scrollStreakPkg: String? = null
     private var lastScrollAt = 0L
+    private var lastSwipeCountAt = 0L
 
     companion object {
         private const val SCROLL_IDLE_GAP_MS = 15_000L
@@ -169,6 +170,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun launchFeatureBlock(title: String, message: String) {
         lastLaunch = System.currentTimeMillis()
+        prefs.bump("all", "feature: $title")
         startActivity(
             Intent(this, FeatureBlockedActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
@@ -212,6 +214,12 @@ class FocusAccessibilityService : AccessibilityService() {
      *  doesn't trip this. */
     private fun trackScroll(pkg: String?) {
         if (pkg == null || pkg !in SectionDetector.tracked) return
+        // One "swipe" per burst of scrolling, not one per scroll event.
+        val tNow = System.currentTimeMillis()
+        if (tNow - lastSwipeCountAt > 2_000L) {
+            prefs.bump(pkg, "swipes")
+            lastSwipeCountAt = tNow
+        }
         if (!prefs.doomScrollReminderEnabled()) return
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
 
@@ -225,6 +233,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
         if (scrollCount >= prefs.doomScrollThreshold() && now - lastLaunch > 3_000L) {
             lastLaunch = now
+            prefs.bump(pkg, "scroll_reminders")
             val appName = SectionDetector.displayName[pkg] ?: pkg
             startActivity(
                 Intent(this, ScrollReminderActivity::class.java).apply {
@@ -280,6 +289,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (now - lastLaunch < 1_500L) return
         lastLaunch = now
+        prefs.bump(pkg, "blocked_attempts")
         // Screen time used up: say why, send you to the home screen, then show the lock.
         val usedToday = usedMinToday(pkg)
         val limitToday = prefs.limitMin(pkg)

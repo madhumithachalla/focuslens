@@ -125,6 +125,23 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
         }
         sb.append("</table></div>")
 
+        val events = FocusPrefs(context).eventTotals(days)
+        sb.append("<h2>What FocusLens did</h2><div class=\"card\"><table><tr><th>App</th><th>Swipe bursts</th>" +
+            "<th>Scroll reminders</th><th>Blocked open attempts</th></tr>")
+        events.filterKeys { it != "all" }.toSortedMap().forEach { (pkg, kinds) ->
+            sb.append("<tr><td>${esc(SectionDetector.displayName[pkg] ?: pkg)}</td>" +
+                "<td>${kinds["swipes"] ?: 0}</td><td>${kinds["scroll_reminders"] ?: 0}</td>" +
+                "<td>${kinds["blocked_attempts"] ?: 0}</td></tr>")
+        }
+        sb.append("</table>")
+        val features = events["all"].orEmpty().entries.sortedByDescending { it.value }
+        if (features.isNotEmpty()) {
+            sb.append("<div style=\"margin-top:10px\"><b>Feature blocks:</b></div>")
+            features.forEach { (k, v) -> sb.append("<div>${esc(k.removePrefix("feature: "))}: $v time(s)</div>") }
+        }
+        if (events.isEmpty()) sb.append("<div class=\"muted\">Nothing recorded yet.</div>")
+        sb.append("</div>")
+
         sb.append("""<h2>How to read this</h2><div class="card">
 <div>"Android" is the total Android reports for each day, the same source Digital Wellbeing uses.</div>
 <div>"FocusLens saved" is the copy FocusLens keeps each day. If the two match, the app is reading the phone correctly.</div>

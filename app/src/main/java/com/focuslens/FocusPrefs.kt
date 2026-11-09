@@ -123,6 +123,34 @@ class FocusPrefs(context: Context) {
 
     data class SectionRow(val date: String, val pkg: String, val section: String, val ms: Long)
 
+    /** Counts one thing that happened today: an open attempt, a reminder, a block. */
+    fun bump(pkg: String, kind: String, n: Long = 1L) {
+        val k = "ev|${today()}|$pkg|$kind"
+        sp.edit().putLong(k, sp.getLong(k, 0L) + n).apply()
+    }
+
+    /** Counts per app and kind over the last [days] limit-days (6am-shifted, like the limits). */
+    fun eventTotals(days: Int, now: Long = System.currentTimeMillis()): Map<String, Map<String, Long>> {
+        val keep = (0 until days).map { back ->
+            val cal = java.util.Calendar.getInstance()
+            cal.timeInMillis = now - back * 24L * 60 * 60 * 1000
+            cal.add(java.util.Calendar.HOUR_OF_DAY, -RESET_HOUR)
+            SimpleDateFormat("yyyyMMdd", Locale.US).format(cal.time)
+        }.toSet()
+        val out = HashMap<String, HashMap<String, Long>>()
+        for ((key, value) in sp.all) {
+            if (!key.startsWith("ev|")) continue
+            val parts = key.split("|")
+            if (parts.size < 4 || parts[1] !in keep) continue
+            val pkg = parts[2]
+            val kind = parts.subList(3, parts.size).joinToString("|")
+            val n = (value as? Long) ?: continue
+            val byKind = out.getOrPut(pkg) { HashMap() }
+            byKind[kind] = (byKind[kind] ?: 0L) + n
+        }
+        return out
+    }
+
     /** Last section FocusLens worked out for a tracked app, for the status line on the Focus tab. */
     fun setLastSeen(pkg: String, section: String, capped: Boolean = false) {
         sp.edit().putString("seen_pkg", pkg).putString("seen_section", section)
