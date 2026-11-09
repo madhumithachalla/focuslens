@@ -43,7 +43,9 @@ class FeatureBlockedActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra("title") ?: "Blocked"
-        val message = intent.getStringExtra("message") ?: ""
+        // Always say why: if no reason was given, say it is one of the person's own rules.
+        val message = intent.getStringExtra("message")?.takeIf { it.isNotBlank() }
+            ?: "Blocked by a rule you set in FocusLens."
         showing = true
 
         setContent {
@@ -78,6 +80,7 @@ class FeatureBlockedActivity : ComponentActivity() {
     }
 
     private fun goHome() {
+        FocusPrefs(this).bump("all", "chose_leave")
         startActivity(
             Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)

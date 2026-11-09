@@ -125,6 +125,7 @@ class BlockActivity : ComponentActivity() {
                             unlockMinutes = qp.unlockMinutes(),
                             onUnlocked = {
                                 qp.recordUnlock(pkg)
+                                prefs.bump(pkg, "chose_open")
                                 prefs.grant(pkg, qp.unlockMinutes())
                                 finish()
                             }
@@ -161,7 +162,7 @@ class BlockActivity : ComponentActivity() {
                             label = label,
                             usedMin = usedMin,
                             limit = limit,
-                            onContinue = { prefs.grant(pkg, grantMin); finish() },
+                            onContinue = { prefs.bump(pkg, "chose_open"); prefs.grant(pkg, grantMin); finish() },
                             onGiveUp = { goHome(prefs) }
                         )
                     }
@@ -204,6 +205,7 @@ class BlockActivity : ComponentActivity() {
                         grantMin = grantMin,
                         quizGate = quizGate,
                         onPass = {
+                            prefs.bump(pkg, "chose_open")
                             prefs.grant(pkg, grantMin)
                             prefs.addPass(pkg)
                             finish()
@@ -216,6 +218,7 @@ class BlockActivity : ComponentActivity() {
     }
 
     private fun goHome(prefs: FocusPrefs) {
+        prefs.bump(pkg, "chose_leave")
         prefs.addGaveUp(pkg)
         startActivity(
             Intent(Intent.ACTION_MAIN).apply {

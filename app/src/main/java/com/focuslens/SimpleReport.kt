@@ -127,11 +127,12 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
 
         val events = FocusPrefs(context).eventTotals(days)
         sb.append("<h2>What FocusLens did</h2><div class=\"card\"><table><tr><th>App</th><th>Swipe bursts</th>" +
-            "<th>Scroll reminders</th><th>Blocked open attempts</th></tr>")
+            "<th>Scroll reminders</th><th>Blocked open attempts</th><th>Chose to leave</th><th>Chose to open</th></tr>")
         events.filterKeys { it != "all" }.toSortedMap().forEach { (pkg, kinds) ->
             sb.append("<tr><td>${esc(SectionDetector.displayName[pkg] ?: pkg)}</td>" +
                 "<td>${kinds["swipes"] ?: 0}</td><td>${kinds["scroll_reminders"] ?: 0}</td>" +
-                "<td>${kinds["blocked_attempts"] ?: 0}</td></tr>")
+                "<td>${kinds["blocked_attempts"] ?: 0}</td>" +
+                "<td>${kinds["chose_leave"] ?: 0}</td><td>${kinds["chose_open"] ?: 0}</td></tr>")
         }
         sb.append("</table>")
         val features = events["all"].orEmpty().entries.sortedByDescending { it.value }
