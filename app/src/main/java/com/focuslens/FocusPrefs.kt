@@ -124,9 +124,9 @@ class FocusPrefs(context: Context) {
     data class SectionRow(val date: String, val pkg: String, val section: String, val ms: Long)
 
     /** Last section FocusLens worked out for a tracked app, for the status line on the Focus tab. */
-    fun setLastSeen(pkg: String, section: String) {
+    fun setLastSeen(pkg: String, section: String, capped: Boolean = false) {
         sp.edit().putString("seen_pkg", pkg).putString("seen_section", section)
-            .putLong("seen_at", System.currentTimeMillis()).apply()
+            .putBoolean("seen_capped", capped).putLong("seen_at", System.currentTimeMillis()).apply()
     }
 
     fun lastSeen(): Triple<String, String, Long>? {
@@ -134,6 +134,8 @@ class FocusPrefs(context: Context) {
         val section = sp.getString("seen_section", null) ?: return null
         return Triple(pkg, section, sp.getLong("seen_at", 0L))
     }
+
+    fun lastSeenCapped(): Boolean = sp.getBoolean("seen_capped", false)
 
     fun addSection(pkg: String, section: String, ms: Long) {
         val k = "sec|${today()}|$pkg|$section"

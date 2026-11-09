@@ -33,6 +33,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val SCROLL_IDLE_GAP_MS = 15_000L
+
+        /** True only while Android has this service connected (diagnostic, read by the Focus tab). */
+        @Volatile var connected = false
     }
 
     // Windows that should never change which app we think is open.
@@ -90,7 +93,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
-        prefs.setLastSeen(pkg, section)
+        prefs.setLastSeen(pkg, section, SectionDetector.lastScanCapped)
         // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
             prefs.addReelToday()
@@ -162,6 +165,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        connected = true
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(sampler)
         handler.post(ticker)
@@ -288,7 +292,13 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {}
 
+    override fun onUnbind(intent: android.content.Intent?): Boolean {
+        connected = false
+        return super.onUnbind(intent)
+    }
+
     override fun onDestroy() {
+        connected = false
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(sampler)
         super.onDestroy()

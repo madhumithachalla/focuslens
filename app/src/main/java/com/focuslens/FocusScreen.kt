@@ -158,10 +158,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             val seen = remember(tick) { prefs.lastSeen() }
             val ago = seen?.let { (System.currentTimeMillis() - it.third) / 1000 }
             val reelsOn = remember(rev) { prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels") }
+            val capped = remember(tick) { prefs.lastSeenCapped() }
             Text(
-                "Reels check: Accessibility ${if (a11y) "on" else "OFF"} · Reels switch ${if (reelsOn) "on" else "off"}" +
+                "Reels check: Accessibility ${if (a11y) "on" else "OFF"} · " +
+                    "service connected ${if (FocusAccessibilityService.connected) "yes" else "NO"} · " +
+                    "Reels switch ${if (reelsOn) "on" else "off"}" +
                     (if (seen != null) " · last seen in ${SectionDetector.displayName[seen.first] ?: seen.first}: " +
-                        "${seen.second} (${ago}s ago)" else " · no app screen seen yet"),
+                        "${seen.second} (${ago}s ago)" + (if (capped) " · scan hit limit" else "")
+                    else " · no app screen seen yet"),
                 fontSize = 12.sp,
                 color = Color.Gray
             )

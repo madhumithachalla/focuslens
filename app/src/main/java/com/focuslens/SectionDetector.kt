@@ -58,6 +58,9 @@ object SectionDetector {
         "inbox", "camera", "lenses"
     )
 
+    /** Diagnostic: true when the last scan stopped at its node cap before finishing. */
+    @Volatile var lastScanCapped = false
+
     fun detect(pkg: String, root: AccessibilityNodeInfo, prefs: FocusPrefs): String {
         val ids = HashSet<String>()
         val selectedIds = ArrayList<String>()
@@ -117,6 +120,7 @@ object SectionDetector {
             }
         }
 
+        lastScanCapped = queue.isNotEmpty()
         val result = when (pkg) {
             INSTAGRAM -> instagram(ids, selectedIds, words, hasFullReelBanner || hasReelIcon)
             YOUTUBE -> youtube(ids, words)
