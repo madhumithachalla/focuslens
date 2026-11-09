@@ -291,13 +291,15 @@ class FocusAccessibilityService : AccessibilityService() {
         if (pkg == null || pkg !in SectionDetector.tracked) return
         // One "swipe" per burst of scrolling, not one per scroll event.
         val tNow = System.currentTimeMillis()
-        if (tNow - lastSwipeCountAt > 2_000L) {
+        // Quick swipes count too: a swipe is one burst of scroll events, about a second or less.
+        if (tNow - lastSwipeCountAt > 900L) {
             prefs.bump(pkg, "swipes")
             lastSwipeCountAt = tNow
             // In Reels, each swipe moves to the next reel, so each one counts toward the limit.
             if (pkg == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
                 prefs.addReelToday()
                 val cap = prefs.reelLimit()
+                android.util.Log.d(TAG, "reel counted ${prefs.reelsToday()} of $cap")
                 if (cap > 0 && prefs.reelsToday() > cap && System.currentTimeMillis() - lastLaunch > 1_500L) {
                     lastLaunch = System.currentTimeMillis()
                     performGlobalAction(GLOBAL_ACTION_HOME)

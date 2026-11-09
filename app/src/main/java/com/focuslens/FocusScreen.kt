@@ -83,6 +83,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
     val enabled = remember(rev) { prefs.enabled }
     val resisted = remember(rev, tick) { prefs.totalGaveUpToday() }
 
+    var showAllApps by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -428,6 +429,46 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
+        // ---- Section: Feature blocking — just the one addictive tab in an otherwise-allowed app ----
+        val featureApps = apps.filter { SectionDetector.feedFeature.containsKey(it.packageName) }
+        if (featureApps.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Feature blocking",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Block just the one addictive tab, keep the rest of the app usable — independent of " +
+                        "whether the app itself is blocked above.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            items(featureApps, key = { "feature-${it.packageName}" }) { app ->
+                val featureName = SectionDetector.feedFeature.getValue(app.packageName)
+                val featureBlocked = remember(rev, app.packageName) {
+                    prefs.isSectionBlocked(app.packageName, featureName)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(app.label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text("Block $featureName only — rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
+                    }
+                    Switch(checked = featureBlocked, onCheckedChange = {
+                        prefs.setSectionBlocked(app.packageName, featureName, it)
+                        rev++
+                    })
+                }
+            }
+        }
         item {
             Spacer(Modifier.height(4.dp))
             Text(
@@ -465,7 +506,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 }
             }
         }
-        items(apps, key = { "app-${it.packageName}" }) { app ->
+        items(if (showAllApps) apps else apps.take(6), key = { "app-${it.packageName}" }) { app ->
             val isBlocked = app.packageName in blocked
             val avgMillisPerDay = app.millis / 7
             val avgMin = (avgMillisPerDay / 60_000L).toInt()
@@ -509,46 +550,15 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
-        // ---- Section: Feature blocking — just the one addictive tab in an otherwise-allowed app ----
-        val featureApps = apps.filter { SectionDetector.feedFeature.containsKey(it.packageName) }
-        if (featureApps.isNotEmpty()) {
+        if (apps.size > 6) {
             item {
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "Feature blocking",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Block just the one addictive tab, keep the rest of the app usable — independent of " +
-                        "whether the app itself is blocked above.",
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
-            }
-            items(featureApps, key = { "feature-${it.packageName}" }) { app ->
-                val featureName = SectionDetector.feedFeature.getValue(app.packageName)
-                val featureBlocked = remember(rev, app.packageName) {
-                    prefs.isSectionBlocked(app.packageName, featureName)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(app.label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        Text("Block $featureName only — rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
-                    }
-                    Switch(checked = featureBlocked, onCheckedChange = {
-                        prefs.setSectionBlocked(app.packageName, featureName, it)
-                        rev++
-                    })
+                OutlinedButton(onClick = { showAllApps = !showAllApps }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (showAllApps) "Show top 6 only" else "Show all ${apps.size} apps")
                 }
             }
         }
+
+
 
         item { Spacer(Modifier.height(24.dp)) }
     }
