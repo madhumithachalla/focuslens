@@ -127,6 +127,21 @@ class FocusAccessibilityService : AccessibilityService() {
         ) return
         if (now - lastLaunch < 3_000L) return
 
+        // Daily screen-time limit reached while using the app: locked until 6am, no challenge.
+        if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.allowedUntil(pkg) &&
+            usedMinToday(pkg) >= prefs.limitMin(pkg)
+        ) {
+            lastLaunch = now
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            startActivity(
+                Intent(this, BlockActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("pkg", pkg)
+                }
+            )
+            return
+        }
+
         val feedFeature = SectionDetector.feedFeature[pkg]
         if (feedFeature != null && section == feedFeature && prefs.isSectionBlocked(pkg, feedFeature)) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
@@ -219,6 +234,16 @@ class FocusAccessibilityService : AccessibilityService() {
         if (tNow - lastSwipeCountAt > 2_000L) {
             prefs.bump(pkg, "swipes")
             lastSwipeCountAt = tNow
+            // In Reels, each swipe moves to the next reel, so each one counts toward the limit.
+            if (pkg == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
+                prefs.addReelToday()
+                val cap = prefs.reelLimit()
+                if (cap > 0 && prefs.reelsToday() > cap && System.currentTimeMillis() - lastLaunch > 1_500L) {
+                    lastLaunch = System.currentTimeMillis()
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    launchFeatureBlock("Reels limit reached", "You've watched $cap Reels today, your limit. Back tomorrow after 6am.")
+                }
+            }
         }
         if (!prefs.doomScrollReminderEnabled()) return
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
@@ -310,7 +335,7 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private var lastReelsSection = ""
-    private val usageCache = HashMap<String, Pair<Long, Int>>()
+    private val usageCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Int>>()
 
     /** Minutes used today on [pkg] since the 6am limit day, cached for a minute. */
     private fun saveHistoryInBackground() {
@@ -327,18 +352,26 @@ class FocusAccessibilityService : AccessibilityService() {
         }.start()
     }
 
+    /** Minutes used today, read from a background cache. Never queries on the service thread,
+     *  which is what made Instagram hang while the limit was being checked. */
     private fun usedMinToday(pkg: String): Int {
         val now = System.currentTimeMillis()
-        usageCache[pkg]?.let { (t, m) -> if (now - t < 60_000L) return m }
-        val ms = try {
-            UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
-                .firstOrNull { it.packageName == pkg }?.millis ?: 0L
-        } catch (e: Exception) {
-            0L
-        }
-        val m = (ms / 60_000L).toInt()
-        usageCache[pkg] = now to m
-        return m
+        val cached = usageCache[pkg]
+        if (cached == null || now - cached.first > 30_000L) refreshUsage(pkg)
+        return cached?.second ?: 0
+    }
+
+    private fun refreshUsage(pkg: String) {
+        val now = System.currentTimeMillis()
+        Thread {
+            val ms = try {
+                UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
+                    .firstOrNull { it.packageName == pkg }?.millis ?: 0L
+            } catch (e: Exception) {
+                0L
+            }
+            usageCache[pkg] = System.currentTimeMillis() to (ms / 60_000L).toInt()
+        }.start()
     }
 
     override fun onInterrupt() {}
