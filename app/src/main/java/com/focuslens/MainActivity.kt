@@ -523,6 +523,7 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                item { UpdateCard() }
                 if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {
                     item { HourlyUsageCard(hourlyToday) }
                 }
