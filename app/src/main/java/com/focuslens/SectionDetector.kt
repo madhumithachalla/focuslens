@@ -172,7 +172,10 @@ object SectionDetector {
     private fun youtube(ids: Set<String>, words: List<String>): String {
         fun has(vararg k: String) = ids.any { id -> k.any { id.contains(it) } }
         return when {
-            has("reel_player", "reel_recycler", "shorts_") || "shorts" in words -> "Shorts"
+            // Shorts only when the Shorts player is up, or the Shorts tab is the selected one.
+            // Generic "reel_recycler"/"shorts_" ids also appear as shelves on Home and Search,
+            // which is what was closing the front page, so those no longer count on their own.
+            has("reel_player") || "shorts" in words -> "Shorts"
             has("watch_while", "watch_player", "player_view") -> "Watching a video"
             "subscriptions" in words -> "Subscriptions"
             "home" in words -> "Home feed"
