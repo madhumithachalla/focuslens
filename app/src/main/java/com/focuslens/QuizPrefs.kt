@@ -105,6 +105,38 @@ class QuizPrefs(context: Context) {
         if (index in cur.indices) saveCustom(cur.filterIndexed { i, _ -> i != index })
     }
 
+    // ---- Per-category daily limits (0 = no limit) ----
+
+    fun categoryCap(id: String): Int = sp.getInt("cap_$id", 0)
+
+    fun setCategoryCap(id: String, n: Int) {
+        sp.edit().putInt("cap_$id", n.coerceIn(0, 200)).apply()
+    }
+
+    // ---- Daily log of questions asked: each one is never asked again that day ----
+
+    private fun askedKey() = "asked_${today()}"
+
+    fun askedToday(): Set<String> = sp.getStringSet(askedKey(), emptySet())?.toSet() ?: emptySet()
+
+    /** Logs one question as asked today, and drops logs from earlier days. */
+    fun recordAsked(category: String, prompt: String) {
+        val cur = askedToday().toMutableSet()
+        cur.add("$category|$prompt")
+        val editor = sp.edit().putStringSet(askedKey(), cur)
+        for (k in sp.all.keys) if (k.startsWith("asked_") && k != askedKey()) editor.remove(k)
+        editor.apply()
+    }
+
+    fun usedTodayByCategory(): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        for (entry in askedToday()) {
+            val cat = entry.substringBefore("|")
+            out[cat] = (out[cat] ?: 0) + 1
+        }
+        return out
+    }
+
     /** The config for one gate, or null if the user switched every category off. Read this before [addAttempt]. */
     fun gateConfig(): QuizGateConfig? {
         if (!isEnabled()) return null
@@ -114,7 +146,10 @@ class QuizPrefs(context: Context) {
             needed = questionsNeeded(),
             delaySeconds = delaySeconds(),
             attemptsToday = attemptsToday(),
-            custom = customQuestions()
+            custom = customQuestions(),
+            caps = cats.associateWith { categoryCap(it) },
+            usedToday = usedTodayByCategory(),
+            askedKeys = askedToday()
         )
     }
 }

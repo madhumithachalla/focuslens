@@ -329,7 +329,13 @@ class QuizSession(
     attemptsToday: Int = 0,
     val needed: Int = 3,
     seed: Long = System.currentTimeMillis(),
-    private val customQuestions: List<CustomQuestion> = emptyList()
+    private val customQuestions: List<CustomQuestion> = emptyList(),
+    /** "category|prompt" keys already asked today (from the daily log): never asked again. */
+    private val askedKeys: Set<String> = emptySet(),
+    /** Per-category daily maximum; 0 or missing means no limit. */
+    private val categoryCaps: Map<String, Int> = emptyMap(),
+    /** How many questions of each category were already asked today. */
+    private val usedToday: Map<String, Int> = emptyMap()
 ) {
     private val rng = Random(seed)
     val categories: List<String> =
@@ -343,19 +349,54 @@ class QuizSession(
         private set
     private var streak = 0
     private var last: QuizQuestion? = null
+    private val askedThisSession = HashSet<String>()
+    private val usedThisSession = HashMap<String, Int>()
+
+    /** True when no fresh question is left in the chosen categories today. */
+    var exhausted: Boolean = false
+        private set
 
     val done: Boolean get() = correct >= needed
 
-    fun next(): QuizQuestion {
-        val q = if (customQuestions.isNotEmpty() && rng.nextDouble() < 0.25) {
-            val c = pickOne(rng, customQuestions)
-            QuizQuestion("custom-$asked", "custom", level, c.prompt, c.choices, c.answerIndex, c.explain)
-        } else {
-            val cat = categories[asked % categories.size]
-            generateQuizQuestion(cat, level, rng)
+    private fun keyOf(category: String, prompt: String) = "$category|$prompt"
+
+    private fun openCategories(): List<String> = categories.filter { c ->
+        val cap = categoryCaps[c] ?: 0
+        cap <= 0 || (usedToday[c] ?: 0) + (usedThisSession[c] ?: 0) < cap
+    }
+
+    /** The next question, or null when nothing fresh is left today (see [exhausted]). */
+    fun next(): QuizQuestion? {
+        val freshCustom = customQuestions.filter {
+            val k = keyOf("custom", it.prompt)
+            k !in askedKeys && k !in askedThisSession
         }
-        last = q
-        return q
+        if (freshCustom.isNotEmpty() && rng.nextDouble() < 0.25) {
+            val c = pickOne(rng, freshCustom)
+            askedThisSession.add(keyOf("custom", c.prompt))
+            val q = QuizQuestion("custom-$asked", "custom", level, c.prompt, c.choices, c.answerIndex, c.explain)
+            last = q
+            return q
+        }
+        val open = openCategories()
+        if (open.isEmpty()) {
+            exhausted = true
+            last = null
+            return null
+        }
+        for (attempt in 0 until 40) {
+            val cat = open[(asked + attempt) % open.size]
+            val q = generateQuizQuestion(cat, level, rng)
+            val key = keyOf(cat, q.prompt)
+            if (key in askedKeys || key in askedThisSession) continue
+            askedThisSession.add(key)
+            usedThisSession[cat] = (usedThisSession[cat] ?: 0) + 1
+            last = q
+            return q
+        }
+        exhausted = true
+        last = null
+        return null
     }
 
     fun answer(index: Int): QuizAnswerResult {

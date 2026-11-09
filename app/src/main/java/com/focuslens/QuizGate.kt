@@ -33,7 +33,10 @@ data class QuizGateConfig(
     val needed: Int,
     val delaySeconds: Int,
     val attemptsToday: Int,
-    val custom: List<CustomQuestion>
+    val custom: List<CustomQuestion>,
+    val caps: Map<String, Int> = emptyMap(),
+    val usedToday: Map<String, Int> = emptyMap(),
+    val askedKeys: Set<String> = emptySet()
 )
 
 /**
@@ -48,13 +51,24 @@ fun QuizGate(
     onSuccess: () -> Unit,
     onHome: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val logPrefs = remember { QuizPrefs(context) }
     val session = remember {
         QuizSession(
             categories = config.categories,
             attemptsToday = config.attemptsToday,
             needed = config.needed,
-            customQuestions = config.custom
+            customQuestions = config.custom,
+            askedKeys = config.askedKeys,
+            categoryCaps = config.caps,
+            usedToday = config.usedToday
         )
+    }
+    // Asks the next question and logs it, so it is not asked again today.
+    fun nextQuestion(): QuizQuestion? {
+        val nq = session.next()
+        if (nq != null) logPrefs.recordAsked(nq.category, nq.prompt)
+        return nq
     }
     var remaining by remember { mutableIntStateOf(config.delaySeconds) }
     var question by remember { mutableStateOf<QuizQuestion?>(null) }
@@ -70,7 +84,7 @@ fun QuizGate(
             delay(1000)
             remaining -= 1
         }
-        question = session.next()
+        question = nextQuestion()
     }
 
     val muted = accent.copy(alpha = 0.7f)
@@ -80,7 +94,13 @@ fun QuizGate(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (q == null) {
+        if (q == null && session.exhausted) {
+            Text(
+                "You've used every question left for today in these categories. " +
+                    "Raise a category limit in Quiz settings, or turn a category on.",
+                fontSize = 15.sp, color = accent, textAlign = TextAlign.Center
+            )
+        } else if (q == null) {
             Text(
                 "Take a breath. Your first question comes in ${remaining}s.",
                 fontSize = 15.sp, color = accent, textAlign = TextAlign.Center
@@ -148,7 +168,7 @@ fun QuizGate(
                 } else {
                     Button(onClick = {
                         selected = -1
-                        question = session.next()
+                        question = nextQuestion()
                     }) { Text("Next question") }
                 }
             }

@@ -39,6 +39,7 @@ fun QuizSettingsScreen() {
     val prefs = remember { QuizPrefs(context) }
 
     var enabled by remember { mutableStateOf(prefs.enabledCategories()) }
+    var caps by remember { mutableStateOf(QUIZ_CATEGORIES.associate { it.id to prefs.categoryCap(it.id) }) }
     var needed by remember { mutableIntStateOf(prefs.questionsNeeded()) }
     var delaySec by remember { mutableIntStateOf(prefs.delaySeconds()) }
     var passes by remember { mutableIntStateOf(prefs.passesPerDay()) }
@@ -67,7 +68,7 @@ fun QuizSettingsScreen() {
             Text("Attempts today: ${prefs.attemptsToday()}", fontSize = 13.sp, color = Color.Gray)
         }
 
-        item { QuizLabel("CATEGORIES") }
+        item { QuizLabel("CATEGORIES (0 in Max per day = no limit)") }
         items(QUIZ_CATEGORIES) { c ->
             Row(
                 Modifier.fillMaxWidth(),
@@ -82,6 +83,17 @@ fun QuizSettingsScreen() {
                         enabled = prefs.enabledCategories()
                     }
                 )
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Max per day", fontSize = 13.sp, color = Color.Gray)
+                QuizStepper(caps[c.id] ?: 0, 0, 200) { v ->
+                    prefs.setCategoryCap(c.id, v)
+                    caps = caps + (c.id to v)
+                }
             }
         }
 
