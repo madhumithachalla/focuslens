@@ -28,66 +28,66 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** One suggested win. [why] says why it is suggested, so it is never a random tip. */
-data class RewardIdea(val text: String, val category: String, val why: String)
+data class WinIdea(val text: String, val category: String, val why: String)
 
 val REWARD_CATEGORIES: List<String> = listOf("Movement", "Calm", "Treats", "People", "Creative", "Learning", "Rest", "Fun", "Reflect")
 
 private val REWARD_IDEAS = listOf(
-    RewardIdea("Go for a 15-minute walk without your phone.", "Movement",
+    WinIdea("Go for a 15-minute walk without your phone.", "Movement",
         "Sitting for a long focus block drains attention. A short walk resets it."),
-    RewardIdea("Stretch for ten minutes, slowly.", "Movement",
+    WinIdea("Stretch for ten minutes, slowly.", "Movement",
         "Stiff muscles after sitting make the next task feel heavier. Stretching loosens them."),
-    RewardIdea("Dance to one song you love, all the way through.", "Movement",
+    WinIdea("Dance to one song you love, all the way through.", "Movement",
         "A quick burst of movement lifts mood and breaks a slump."),
 
-    RewardIdea("Make a cup of tea and sit by a window for five minutes.", "Calm",
+    WinIdea("Make a cup of tea and sit by a window for five minutes.", "Calm",
         "Going from a screen straight to the next task keeps your mind on the screen. A pause lets it settle."),
-    RewardIdea("Step outside and name five things you can see, hear and smell.", "Calm",
+    WinIdea("Step outside and name five things you can see, hear and smell.", "Calm",
         "Naming things around you pulls attention out of worry or scrolling and into the present."),
-    RewardIdea("Water a plant, or look at the sky for a minute.", "Calm",
+    WinIdea("Water a plant, or look at the sky for a minute.", "Calm",
         "Looking far away for a minute rests the eyes that have been close to a screen."),
 
-    RewardIdea("Have your favourite meal, and eat it slowly.", "Treats",
+    WinIdea("Have your favourite meal, and eat it slowly.", "Treats",
         "You got time back. Enjoying it on purpose turns that time into something you chose."),
-    RewardIdea("Cook one simple meal from scratch.", "Treats",
+    WinIdea("Cook one simple meal from scratch.", "Treats",
         "Making something with your hands is a clear, finished win you can see."),
-    RewardIdea("Buy yourself a small flower or a treat you've wanted.", "Treats",
+    WinIdea("Buy yourself a small flower or a treat you've wanted.", "Treats",
         "A small, planned reward after a good stretch makes the good stretch easier to repeat."),
-    RewardIdea("Take yourself on a solo date: a café, a walk, a bookshop, no phone.", "Treats",
+    WinIdea("Take yourself on a solo date: a café, a walk, a bookshop, no phone.", "Treats",
         "Spending time on yourself without a screen is a reward that doesn't depend on anyone else."),
 
-    RewardIdea("Call someone you love and tell them one good thing about your week.", "People",
+    WinIdea("Call someone you love and tell them one good thing about your week.", "People",
         "Sharing a win with someone turns it from private progress into something that is noticed."),
-    RewardIdea("Message a friend a photo of something that made you smile today.", "People",
+    WinIdea("Message a friend a photo of something that made you smile today.", "People",
         "A quick connection is cheap to do and often lifts the day for both of you."),
-    RewardIdea("Do one kind thing for someone without telling them.", "People",
+    WinIdea("Do one kind thing for someone without telling them.", "People",
         "Doing something kind for someone else gives a lift that lasts past the moment."),
 
-    RewardIdea("Sketch, doodle or write a short poem for five minutes.", "Creative",
+    WinIdea("Sketch, doodle or write a short poem for five minutes.", "Creative",
         "Making something with no goal gives your brain a break from measuring progress."),
-    RewardIdea("Make a playlist for your next focus block.", "Creative",
+    WinIdea("Make a playlist for your next focus block.", "Creative",
         "Setting up your next session now makes starting it easier later."),
 
-    RewardIdea("Read a chapter of a book you've been meaning to finish.", "Learning",
+    WinIdea("Read a chapter of a book you've been meaning to finish.", "Learning",
         "Reading something you chose, without a deadline, feels like progress you can enjoy."),
-    RewardIdea("Learn one new word in a language you're studying.", "Learning",
+    WinIdea("Learn one new word in a language you're studying.", "Learning",
         "A small daily step adds up, and it is easy to finish in a few minutes."),
 
-    RewardIdea("Take a short nap of 20 minutes, no longer.", "Rest",
+    WinIdea("Take a short nap of 20 minutes, no longer.", "Rest",
         "Twenty minutes is long enough to refresh and short enough not to leave you groggy."),
-    RewardIdea("Sit in the sun for ten minutes and do nothing at all.", "Rest",
+    WinIdea("Sit in the sun for ten minutes and do nothing at all.", "Rest",
         "Doing nothing on purpose lets your attention recover, which focused work needs."),
-    RewardIdea("Take a long shower or bath with your favourite music.", "Rest",
+    WinIdea("Take a long shower or bath with your favourite music.", "Rest",
         "A calm, sensory break helps the body come down after a stressful stretch."),
 
-    RewardIdea("Watch an episode of something you genuinely love, guilt-free.", "Fun",
+    WinIdea("Watch an episode of something you genuinely love, guilt-free.", "Fun",
         "Enjoying something without a reason to justify it counts as a reward, not a slip."),
-    RewardIdea("Play a game or a puzzle just for fun for fifteen minutes.", "Fun",
+    WinIdea("Play a game or a puzzle just for fun for fifteen minutes.", "Fun",
         "A game with a clear end gives a win you can finish, then stop."),
 
-    RewardIdea("Write down three things that went well today.", "Reflect",
+    WinIdea("Write down three things that went well today.", "Reflect",
         "Noticing what worked makes it easier to do again tomorrow."),
-    RewardIdea("Tidy one drawer or one corner of your desk.", "Reflect",
+    WinIdea("Tidy one drawer or one corner of your desk.", "Reflect",
         "A small, visible tidy-up is a finished job you can see straight away."),
 )
 
