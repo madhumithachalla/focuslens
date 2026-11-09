@@ -97,9 +97,10 @@ class FocusAccessibilityService : AccessibilityService() {
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
         prefs.setLastSeen(pkg, section, SectionDetector.lastScanCapped)
-        if (pkg == SectionDetector.INSTAGRAM) {
-            android.util.Log.d(TAG, "instagram section=$section capped=${SectionDetector.lastScanCapped} " +
-                "reelsBlocked=${prefs.isSectionBlocked(pkg, "Reels")} connected=$connected")
+        if (pkg == SectionDetector.INSTAGRAM || pkg == SectionDetector.YOUTUBE) {
+            android.util.Log.d(TAG, "$pkg section=$section capped=${SectionDetector.lastScanCapped} " +
+                "feature=${SectionDetector.feedFeature[pkg]} blocked=${prefs.isSectionBlocked(pkg, SectionDetector.feedFeature[pkg] ?: "")} " +
+                "connected=$connected")
         }
         // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
