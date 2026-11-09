@@ -279,7 +279,8 @@ fun BlockScreen(
             if (over) {
                 "You have used $label for $usedMin min today. Your limit is $limit min."
             } else {
-                "$label: $usedMin of $limit min used today. Is this what you want to do right now?"
+                "$label is on your block list, so it pauses before it opens. " +
+                    "$usedMin of $limit min used today. Is this what you want to do right now?"
             },
             fontSize = 16.sp,
             textAlign = TextAlign.Center

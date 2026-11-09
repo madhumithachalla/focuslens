@@ -154,10 +154,12 @@ private fun SchedulePauseScreen(
             color = Color.White,
             textAlign = TextAlign.Center
         )
-        if (scheduleName.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(scheduleName, fontSize = 14.sp, color = Color(0xFFBFD3C9), textAlign = TextAlign.Center)
-        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (scheduleName.isNotEmpty()) "Blocked by your schedule \"$scheduleName\"."
+            else "Blocked by a block schedule you set.",
+            fontSize = 14.sp, color = Color(0xFFBFD3C9), textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(28.dp))
         Button(onClick = onHome) {
             Text("TAKE ME OUT OF HERE")

@@ -126,7 +126,8 @@ private fun HyperFocusScreen(prefs: FocusPrefs, onEnded: () -> Unit, onGiveUp: (
         Text("Hyper Focus", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color.White)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Everything is paused except calls — no challenge to beat here, this one's just a timer.",
+            "Blocked because Hyper Focus is on. You turned it on, so everything except calls and " +
+                "your allowed apps is paused until the timer ends. No challenge here, it's just a timer.",
             fontSize = 14.sp,
             color = Color(0xFFBFD3C9),
             textAlign = TextAlign.Center
