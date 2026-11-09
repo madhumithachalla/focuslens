@@ -129,7 +129,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         val reelCap = prefs.reelLimit()
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
-            performGlobalAction(GLOBAL_ACTION_HOME)
+            kickHome("reels limit")
             launchFeatureBlock("Reels limit reached", "You've opened Reels $reelCap times today, your limit. Back tomorrow after 6am.")
             return
         }
@@ -142,7 +142,7 @@ class FocusAccessibilityService : AccessibilityService() {
         // On a break, or locked for the day: sent out even if the app is already open.
         if (now - lastLaunch > 1_500L && (now < prefs.dayLockUntil(pkg) || now < prefs.breakUntil(pkg))) {
             lastLaunch = now
-            performGlobalAction(GLOBAL_ACTION_HOME)
+            kickHome("break or day lock while open")
             val appName = SectionDetector.displayName[pkg] ?: pkg
             if (now < prefs.dayLockUntil(pkg)) {
                 launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
@@ -158,7 +158,7 @@ class FocusAccessibilityService : AccessibilityService() {
             usedMinToday(pkg) >= prefs.limitMin(pkg)
         ) {
             lastLaunch = now
-            performGlobalAction(GLOBAL_ACTION_HOME)
+            kickHome("daily limit while open")
             startActivity(
                 Intent(this, BlockActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
@@ -213,6 +213,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun launchFeatureBlock(title: String, message: String) {
         lastLaunch = System.currentTimeMillis()
+        android.util.Log.d(TAG, "block shown: $title")
         prefs.bump("all", "feature: $title")
         startActivity(
             Intent(this, FeatureBlockedActivity::class.java).apply {
@@ -317,7 +318,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 android.util.Log.d(TAG, "reel counted ${prefs.reelsToday()} of $cap")
                 if (cap > 0 && prefs.reelsToday() > cap && System.currentTimeMillis() - lastLaunch > 1_500L) {
                     lastLaunch = System.currentTimeMillis()
-                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    kickHome("reels limit (swipe)")
                     launchFeatureBlock("Reels limit reached", "You've watched $cap Reels today, your limit. Back tomorrow after 6am.")
                 }
             }
@@ -363,7 +364,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val limit = prefs.breaksPerDayLimit()
         prefs.addBreak(pkg)
         val taken = prefs.breaksToday(pkg)
-        performGlobalAction(GLOBAL_ACTION_HOME)
+        kickHome("scroll break")
         if (taken > limit) {
             prefs.setDayLockUntil(pkg, prefs.nextResetAt())
             launchFeatureBlock(
@@ -381,6 +382,12 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
+    /** Sends the person home, and logs why, so the cause is visible in logcat. */
+    private fun kickHome(why: String) {
+        android.util.Log.d(TAG, "kick home: $why")
+        performGlobalAction(GLOBAL_ACTION_HOME)
+    }
+
     private fun defaultDialerPackage(): String? =
         (getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)
             ?.defaultDialerPackage
@@ -395,7 +402,7 @@ class FocusAccessibilityService : AccessibilityService() {
             val breakUntil = prefs.breakUntil(pkg)
             if (now < lockedUntil || now < breakUntil) {
                 lastLaunch = now
-                performGlobalAction(GLOBAL_ACTION_HOME)
+                kickHome("break or day lock on open")
                 val appName = SectionDetector.displayName[pkg] ?: pkg
                 if (now < lockedUntil) {
                     launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
@@ -453,7 +460,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 "$appName daily limit reached: $usedToday of $limitToday min used today. It unlocks at 6am.",
                 Toast.LENGTH_LONG
             ).show()
-            performGlobalAction(GLOBAL_ACTION_HOME)
+            kickHome("daily limit (toast)")
         }
         val intent = Intent(this, BlockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
