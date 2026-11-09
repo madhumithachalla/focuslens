@@ -36,6 +36,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
         /** True only while Android has this service connected (diagnostic, read by the Focus tab). */
         @Volatile var connected = false
+
+        /** Filter with: adb logcat -s FocusLens */
+        const val TAG = "FocusLens"
     }
 
     // Windows that should never change which app we think is open.
@@ -94,6 +97,10 @@ class FocusAccessibilityService : AccessibilityService() {
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
         prefs.setLastSeen(pkg, section, SectionDetector.lastScanCapped)
+        if (pkg == SectionDetector.INSTAGRAM) {
+            android.util.Log.d(TAG, "instagram section=$section capped=${SectionDetector.lastScanCapped} " +
+                "reelsBlocked=${prefs.isSectionBlocked(pkg, "Reels")} connected=$connected")
+        }
         // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
             prefs.addReelToday()
@@ -166,6 +173,7 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         connected = true
+        android.util.Log.d(TAG, "service connected")
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(sampler)
         handler.post(ticker)
@@ -294,6 +302,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         connected = false
+        android.util.Log.d(TAG, "service unbound")
         return super.onUnbind(intent)
     }
 
