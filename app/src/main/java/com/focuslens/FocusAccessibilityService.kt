@@ -90,6 +90,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
         lastSampleT = now
         if (delta > 0) prefs.addSection(pkg, section, delta)
+        prefs.setLastSeen(pkg, section)
         // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
             prefs.addReelToday()

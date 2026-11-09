@@ -155,6 +155,19 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
+            val seen = remember(tick) { prefs.lastSeen() }
+            val ago = seen?.let { (System.currentTimeMillis() - it.third) / 1000 }
+            val reelsOn = remember(rev) { prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels") }
+            Text(
+                "Reels check: Accessibility ${if (a11y) "on" else "OFF"} · Reels switch ${if (reelsOn) "on" else "off"}" +
+                    (if (seen != null) " · last seen in ${SectionDetector.displayName[seen.first] ?: seen.first}: " +
+                        "${seen.second} (${ago}s ago)" else " · no app screen seen yet"),
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+        }
+
+        item {
             val hyperActive = remember(rev, tick) { prefs.isHyperFocusActive() }
             Card(
                 modifier = Modifier.fillMaxWidth(),
