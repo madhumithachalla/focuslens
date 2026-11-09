@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.widget.Toast
+import kotlinx.coroutines.runBlocking
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -47,9 +49,14 @@ class FocusAccessibilityService : AccessibilityService() {
     )
 
     // Re-checks every 10 seconds so a 10 minute pass cannot last forever.
+    private var ticks = 0
+
     private val ticker = object : Runnable {
         override fun run() {
             current?.let { check(it) }
+            // Every 30 minutes, save any finished days of usage history in the background, so no
+            // day is missed when the app isn't opened for a while.
+            if (++ticks % 180 == 0) saveHistoryInBackground()
             handler.postDelayed(this, 10_000L)
         }
     }
@@ -178,6 +185,7 @@ class FocusAccessibilityService : AccessibilityService() {
         handler.removeCallbacks(ticker)
         handler.removeCallbacks(sampler)
         handler.post(ticker)
+        saveHistoryInBackground()
         handler.post(sampler)
     }
 
@@ -272,8 +280,18 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (now - lastLaunch < 1_500L) return
         lastLaunch = now
-        // Screen time used up: send you to the home screen first, then show the lock.
-        if (usedMinToday(pkg) >= prefs.limitMin(pkg)) performGlobalAction(GLOBAL_ACTION_HOME)
+        // Screen time used up: say why, send you to the home screen, then show the lock.
+        val usedToday = usedMinToday(pkg)
+        val limitToday = prefs.limitMin(pkg)
+        if (usedToday >= limitToday) {
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            Toast.makeText(
+                this,
+                "$appName daily limit reached: $usedToday of $limitToday min used today. It unlocks at 6am.",
+                Toast.LENGTH_LONG
+            ).show()
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        }
         val intent = Intent(this, BlockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             putExtra("pkg", pkg)
@@ -285,6 +303,20 @@ class FocusAccessibilityService : AccessibilityService() {
     private val usageCache = HashMap<String, Pair<Long, Int>>()
 
     /** Minutes used today on [pkg] since the 6am limit day, cached for a minute. */
+    private fun saveHistoryInBackground() {
+        Thread {
+            try {
+                runBlocking {
+                    val history = UsageHistoryRepository(this@FocusAccessibilityService, UsageRepository(this@FocusAccessibilityService))
+                    history.catchUp()
+                    history.catchUpHourly()
+                }
+            } catch (e: Exception) {
+                // Saving history is best-effort; the next attempt tries again.
+            }
+        }.start()
+    }
+
     private fun usedMinToday(pkg: String): Int {
         val now = System.currentTimeMillis()
         usageCache[pkg]?.let { (t, m) -> if (now - t < 60_000L) return m }

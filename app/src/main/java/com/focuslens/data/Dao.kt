@@ -119,6 +119,9 @@ interface DailyUsageDao {
     @Query("SELECT * FROM daily_usage WHERE date = :date")
     suspend fun forDate(date: String): List<DailyUsageEntity>
 
+    @Query("SELECT * FROM daily_usage")
+    suspend fun allOnce(): List<DailyUsageEntity>
+
     /** Every date that has at least one snapshotted row, for checking full coverage of a range. */
     @Query("SELECT DISTINCT date FROM daily_usage WHERE date BETWEEN :from AND :to")
     suspend fun datesBetween(from: String, to: String): List<String>
@@ -139,6 +142,9 @@ interface HourlyUsageDao {
 
     @Query("SELECT DISTINCT date FROM hourly_usage WHERE date = :date LIMIT 1")
     suspend fun hasDate(date: String): String?
+
+    @Query("SELECT * FROM hourly_usage")
+    suspend fun allOnce(): List<HourlyUsageEntity>
 
     @Query("SELECT hour, SUM(millis) as millis FROM hourly_usage WHERE date BETWEEN :from AND :to GROUP BY hour")
     suspend fun hourTotals(from: String, to: String): List<HourTotal>

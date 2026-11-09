@@ -5,6 +5,7 @@ import com.focuslens.data.AppDatabase
 import com.focuslens.data.DailyUsageEntity
 import com.focuslens.data.HourTotal
 import com.focuslens.data.HourlyUsageEntity
+import com.focuslens.data.UsageDatabase
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -23,12 +24,23 @@ import java.util.Locale
  */
 class UsageHistoryRepository(context: Context, private val usage: UsageRepository) {
 
-    private val dao = AppDatabase.get(context).dailyUsageDao()
-    private val hourlyDao = AppDatabase.get(context).hourlyUsageDao()
+    private val dao = UsageDatabase.get(context).dailyUsageDao()
+    private val hourlyDao = UsageDatabase.get(context).hourlyUsageDao()
+    private val legacy = AppDatabase.get(context)
+    private val prefs = context.applicationContext.getSharedPreferences("focus", Context.MODE_PRIVATE)
+
+    /** One-time copy of history from the old AppDatabase tables into the protected database. */
+    private suspend fun migrateLegacyOnce() {
+        if (prefs.getBoolean("usage_db_migrated", false)) return
+        dao.upsertAll(legacy.dailyUsageDao().allOnce())
+        hourlyDao.upsertAll(legacy.hourlyUsageDao().allOnce())
+        prefs.edit().putBoolean("usage_db_migrated", true).apply()
+    }
     private val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
 
     /** Snapshots any finished day in the last [daysBack] days that isn't already stored. Call once per app open. */
     suspend fun catchUp(daysBack: Int = 10) {
+        migrateLegacyOnce()
         val todayStart = startOfDay(System.currentTimeMillis())
         for (back in 1..daysBack) {
             val dayStart = todayStart - back * DAY_MS

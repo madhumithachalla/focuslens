@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.focuslens.data.AppDatabase
+import com.focuslens.data.UsageDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -71,6 +72,7 @@ private suspend fun loadSmartSignals(context: android.content.Context, now: Long
     val usage = UsageRepository(context)
     val history = UsageHistoryRepository(context, usage)
     val db = AppDatabase.get(context)
+    val usageDb = UsageDatabase.get(context)
     val keyFmt = SimpleDateFormat("yyyyMMdd", Locale.US)
     val todayStart = startOfDayMs(now)
 
@@ -104,7 +106,7 @@ private suspend fun loadSmartSignals(context: android.content.Context, now: Long
         todayMs = usage.load(Range.TODAY).sumOf { it.millis }
         for (back in 1..14) {
             val dayStart = todayStart - back * DAY_MS
-            var total = db.dailyUsageDao().forDate(keyFmt.format(Date(dayStart))).sumOf { it.millis }
+            var total = usageDb.dailyUsageDao().forDate(keyFmt.format(Date(dayStart))).sumOf { it.millis }
             if (total <= 0L && back <= 6) {
                 total = usage.loadCustom(dayStart, dayStart + DAY_MS).sumOf { it.millis }
             }
@@ -121,7 +123,7 @@ private suspend fun loadSmartSignals(context: android.content.Context, now: Long
         if (blocked.isNotEmpty()) {
             val from = keyFmt.format(Date(todayStart - 7 * DAY_MS))
             val to = keyFmt.format(Date(todayStart - DAY_MS))
-            db.hourlyUsageDao().hourTotalsForPackages(from, to, blocked).forEach {
+            usageDb.hourlyUsageDao().hourTotalsForPackages(from, to, blocked).forEach {
                 blockedHours[it.hour] = (blockedHours[it.hour] ?: 0L) + it.millis
             }
             for ((hour, byPkg) in usage.hourlyBreakdown(todayStart, now)) {
