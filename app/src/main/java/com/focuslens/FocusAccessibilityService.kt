@@ -120,8 +120,9 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
+        // Shown only when the screen has reels on it (the reel symbol, banner or player), not everywhere.
         if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
-            android.provider.Settings.canDrawOverlays(this)
+            section == "Reels" && android.provider.Settings.canDrawOverlays(this)
         ) {
             SkipReelOverlay.show(this) { skipReel() }
         } else if (pkg == SectionDetector.INSTAGRAM) {
