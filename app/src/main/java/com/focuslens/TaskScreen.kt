@@ -3,6 +3,8 @@ package com.focuslens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -208,7 +210,8 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
         onDismissRequest = onDismiss,
         title = { Text("Add task") },
         text = {
-            Column {
+            // Scrolls, so the Add and Cancel buttons stay on screen however much is shown.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Suggestions (tap to use)", fontSize = 12.sp, color = Color.Gray)
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TASK_SUGGESTIONS.forEach { sug ->
