@@ -162,7 +162,7 @@ private fun TaskRow(task: TaskEntity, onToggle: () -> Unit, onDelete: () -> Unit
     }
 }
 
-private val TASK_SUGGESTIONS = listOf(
+internal val TASK_SUGGESTIONS = listOf(
     "Study 25 minutes", "Walk 10 minutes", "Drink a glass of water", "Tidy one small area",
     "Reply to one message", "Plan tomorrow", "Stretch for 5 minutes", "Read 10 pages"
 )
