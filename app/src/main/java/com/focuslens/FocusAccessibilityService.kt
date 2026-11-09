@@ -225,6 +225,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /** Moves Instagram to the next reel or post: scrolls the first scrollable area forward. */
     fun skipReel() {
+        // In Reels: leave Reels altogether and go to the home feed, instead of one reel at a time.
+        if (lastReelsSection == "Reels" && openHomeFeed()) return
         // A real swipe up through the middle of the screen, the same as the person would do.
         // It avoids the Skip button in the bottom-right corner.
         val dm = resources.displayMetrics
@@ -240,6 +242,19 @@ class FocusAccessibilityService : AccessibilityService() {
             // Fall back to asking the scrollable area to scroll forward.
             rootInActiveWindow?.let { findScrollable(it, 0)?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) }
         }
+    }
+
+    /** Taps Instagram's Home tab, if it is on screen. Returns true when it did. */
+    private fun openHomeFeed(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val candidates = root.findAccessibilityNodeInfosByText("Home") ?: emptyList()
+        val tab = candidates.firstOrNull { it.isClickable } ?: candidates.firstOrNull()
+        val clickable = tab?.let { n ->
+            var cur: AccessibilityNodeInfo? = n
+            while (cur != null && !cur.isClickable) cur = cur.parent
+            cur
+        }
+        return clickable?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
     }
 
     private fun findScrollable(node: AccessibilityNodeInfo, depth: Int): AccessibilityNodeInfo? {
