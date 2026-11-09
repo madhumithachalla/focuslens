@@ -458,9 +458,11 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     val total = appTotal + browserTotal
     val max = rows.maxOfOrNull { it.millis } ?: 1L
 
+    // The whole page scrolls, top to bottom, and uses the full screen height.
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
         Text(formatDuration(total), fontSize = 44.sp, fontWeight = FontWeight.Bold)
@@ -542,21 +544,18 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
         } else if (rows.isEmpty()) {
             Text("No usage yet.", color = Color.Gray)
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {
-                    item { HourlyUsageCard(hourlyToday) }
+                    HourlyUsageCard(hourlyToday)
                 }
                 if (buckets.isNotEmpty()) {
-                    item { OverTimeCard(buckets) }
+                    OverTimeCard(buckets)
                 }
-                item { WeeklyReportCard(repo, history) }
-                item { InsightsCard(rows, breakdown, range) }
+                WeeklyReportCard(repo, history)
+                InsightsCard(rows, breakdown, range)
 
-                item { SectionTitle("Apps", appTotal) }
-                items(appRows, key = { "app:" + it.packageName }) { app ->
+                SectionTitle("Apps", appTotal)
+                appRows.forEach { app ->
                     AppUsageItem(
                         app = app,
                         max = max,
@@ -572,8 +571,8 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
                 }
 
                 if (browserRows.isNotEmpty()) {
-                    item { SectionTitle("Browsers", browserTotal) }
-                    items(browserRows, key = { "browser:" + it.packageName }) { app ->
+                    SectionTitle("Browsers", browserTotal)
+                    browserRows.forEach { app ->
                         AppUsageItem(
                             app = app,
                             max = max,

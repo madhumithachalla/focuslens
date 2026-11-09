@@ -115,17 +115,14 @@ class QuizPrefs(context: Context) {
 
     // ---- Daily log of questions asked: each one is never asked again that day ----
 
-    private fun askedKey() = "asked_${today()}"
+    /** Every question ever asked on this phone, kept across days so none comes back. */
+    fun askedToday(): Set<String> = sp.getStringSet("asked_log", emptySet())?.toSet() ?: emptySet()
 
-    fun askedToday(): Set<String> = sp.getStringSet(askedKey(), emptySet())?.toSet() ?: emptySet()
-
-    /** Logs one question as asked today, and drops logs from earlier days. */
+    /** Logs one question as asked. The log is never cleared, so a question is not asked again. */
     fun recordAsked(category: String, prompt: String) {
         val cur = askedToday().toMutableSet()
         cur.add("$category|$prompt")
-        val editor = sp.edit().putStringSet(askedKey(), cur)
-        for (k in sp.all.keys) if (k.startsWith("asked_") && k != askedKey()) editor.remove(k)
-        editor.apply()
+        sp.edit().putStringSet("asked_log", cur).apply()
     }
 
     fun usedTodayByCategory(): Map<String, Int> {
