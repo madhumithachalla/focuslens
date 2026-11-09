@@ -77,7 +77,10 @@ class BlockActivity : ComponentActivity() {
         val prefs = FocusPrefs(this)
         val repo = UsageRepository(this)
         val label = repo.labelFor(pkg)
-        val usedMin = try {
+        // The service passes the minutes it already knows; querying here blocked the screen.
+        val usedMin = if (intent.hasExtra("usedMin")) {
+            intent.getLongExtra("usedMin", 0L)
+        } else try {
             (repo.loadCustom(FocusPrefs.limitDayStartMs(), System.currentTimeMillis()).firstOrNull { it.packageName == pkg }?.millis ?: 0L) / 60_000L
         } catch (e: Exception) {
             0L

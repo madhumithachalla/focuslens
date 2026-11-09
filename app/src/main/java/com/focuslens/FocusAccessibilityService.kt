@@ -137,6 +137,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 Intent(this, BlockActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                     putExtra("pkg", pkg)
+                    putExtra("usedMin", usedMinToday(pkg).toLong())
                 }
             )
             return
@@ -330,6 +331,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val intent = Intent(this, BlockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             putExtra("pkg", pkg)
+            putExtra("usedMin", usedMinToday(pkg).toLong())
         }
         startActivity(intent)
     }

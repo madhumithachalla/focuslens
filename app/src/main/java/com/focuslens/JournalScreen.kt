@@ -81,7 +81,9 @@ fun JournalScreen() {
     }
 
     LaunchedEffect(Unit) { refresh() }
-    LaunchedEffect(Unit) { suggestedPrompts = usageAwareJournalPrompts(context) }
+    LaunchedEffect(Unit) {
+        suggestedPrompts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { usageAwareJournalPrompts(context) }
+    }
 
     celebration?.let { milestone ->
         CelebrationDialog(
