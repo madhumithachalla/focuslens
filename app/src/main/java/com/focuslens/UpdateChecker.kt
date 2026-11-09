@@ -134,10 +134,10 @@ fun UpdateCard() {
             Text(
                 when (val s = state) {
                     null -> "Checking…"
-                    is UpdateCheck.UpdateAvailable -> "Build #${s.latestBuild} is ready (you have #${BuildConfig.BUILD_NUMBER})."
-                    UpdateCheck.UpToDate -> "You're on the latest build (#${BuildConfig.BUILD_NUMBER})."
+                    is UpdateCheck.UpdateAvailable -> "Version ${s.latestBuild} is ready. You have version ${BuildConfig.BUILD_NUMBER}."
+                    UpdateCheck.UpToDate -> "You have the latest version (${BuildConfig.BUILD_NUMBER})."
                     UpdateCheck.Unknown -> if (BuildConfig.BUILD_NUMBER <= 0)
-                        "This build can't check for updates (only CI-built APKs can)."
+                        "This app version can't check for updates (only the published versions can)."
                     else "Couldn't check just now. Connect to the internet and tap Check again."
                 },
                 fontSize = 12.sp,

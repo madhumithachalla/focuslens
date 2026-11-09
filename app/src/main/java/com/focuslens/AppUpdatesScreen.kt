@@ -24,14 +24,14 @@ fun AppUpdatesScreen() {
             .padding(20.dp)
     ) {
         Text("App updates", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-        Text("You have build #${BuildConfig.BUILD_NUMBER}.", fontSize = 13.sp)
+        Text("Your app version: ${BuildConfig.BUILD_NUMBER}", fontSize = 13.sp)
         Spacer(Modifier.height(12.dp))
         UpdateCard()
         Spacer(Modifier.height(20.dp))
         Text("What changed", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         APP_CHANGELOG.sortedByDescending { it.build }.forEach { note ->
             Spacer(Modifier.height(10.dp))
-            Text("Build #${note.build}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("App version ${note.build}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             note.points.forEach { Text("• $it", fontSize = 13.sp) }
         }
     }
