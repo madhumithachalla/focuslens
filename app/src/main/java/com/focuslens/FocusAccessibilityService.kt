@@ -163,7 +163,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 Intent(this, BlockActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                     putExtra("pkg", pkg)
-                    putExtra("usedMin", usedMinToday(pkg).toLong())
+                    putExtra("usedMin", usedMinForBlock(pkg).toLong())
                 }
             )
             return
@@ -465,7 +465,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val intent = Intent(this, BlockActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             putExtra("pkg", pkg)
-            putExtra("usedMin", usedMinToday(pkg).toLong())
+            putExtra("usedMin", usedMinForBlock(pkg).toLong())
         }
         startActivity(intent)
     }
@@ -497,9 +497,16 @@ class FocusAccessibilityService : AccessibilityService() {
         return cached?.second ?: 0
     }
 
-    private fun refreshUsage(pkg: String) {
+    /** Minutes used today for the block screen: waits briefly for a fresh figure, so it is not 0. */
+    private fun usedMinForBlock(pkg: String): Int {
+        val t = refreshUsage(pkg)
+        t.join(700L)
+        return usageCache[pkg]?.second ?: 0
+    }
+
+    private fun refreshUsage(pkg: String): Thread {
         val now = System.currentTimeMillis()
-        Thread {
+        return Thread {
             val ms = try {
                 UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
                     .firstOrNull { it.packageName == pkg }?.millis ?: 0L
@@ -507,7 +514,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 0L
             }
             usageCache[pkg] = System.currentTimeMillis() to (ms / 60_000L).toInt()
-        }.start()
+        }.also { it.start() }
     }
 
     override fun onInterrupt() {}
