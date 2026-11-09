@@ -160,7 +160,15 @@ private fun TaskRow(task: TaskEntity, onToggle: () -> Unit, onDelete: () -> Unit
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+private val TASK_SUGGESTIONS = listOf(
+    "Study 25 minutes", "Walk 10 minutes", "Drink a glass of water", "Tidy one small area",
+    "Reply to one message", "Plan tomorrow", "Stretch for 5 minutes", "Read 10 pages"
+)
+
+@OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
+)
 @Composable
 private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -198,6 +206,13 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
         title = { Text("Add task") },
         text = {
             Column {
+                Text("Suggestions (tap to use)", fontSize = 12.sp, color = Color.Gray)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TASK_SUGGESTIONS.forEach { sug ->
+                        FilterChip(selected = title == sug, onClick = { title = sug }, label = { Text(sug) })
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -206,6 +221,18 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
+                Text("When (optional)", fontSize = 12.sp, color = Color.Gray)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Morning" to 9, "Afternoon" to 14, "Evening" to 19).forEach { (label, hour) ->
+                        FilterChip(
+                            selected = timeState.hour == hour && timeState.minute == 0,
+                            onClick = { timeState.hour = hour; timeState.minute = 0 },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Category (optional)", fontSize = 12.sp, color = Color.Gray)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TaskType.values().forEach { t ->
                         FilterChip(
