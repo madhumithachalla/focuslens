@@ -196,6 +196,15 @@ fun AppDetails(app: AppUsage, screens: List<ScreenTime>, range: Range, prefs: Fo
                     color = Color.Gray
                 )
             } else {
+                // The percentages below are of the measured time only. Say how much of the app's
+                // total that is, so 13 minutes measured out of 4 hours is not read as the whole picture.
+                val coverage = if (app.millis > 0) (total * 100 / app.millis).coerceAtMost(100) else 0L
+                Text(
+                    "Measured ${formatDuration(total)} of ${formatDuration(app.millis)} ($coverage%). " +
+                        "Percentages below are of the measured part.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
                 secs.forEach {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(it.key, fontSize = 12.sp, modifier = Modifier.weight(1f))

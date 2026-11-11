@@ -61,6 +61,8 @@ fun AppUpdatesScreen() {
         Spacer(Modifier.height(12.dp))
         UpdateCard()
         Spacer(Modifier.height(20.dp))
+        ApkCleanupCard()
+        Spacer(Modifier.height(20.dp))
         Text("What changed", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         APP_CHANGELOG.sortedByDescending { it.build }.forEach { note ->
             Spacer(Modifier.height(10.dp))

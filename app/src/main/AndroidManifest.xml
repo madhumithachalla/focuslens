@@ -15,6 +15,8 @@
 
     <!-- Spotify's App Remote SDK talks to the installed Spotify app over this. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the app list .apk installer files in Downloads (Android 12 and older). -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
@@ -53,6 +55,11 @@
     <!-- Lets FocusLens see the Spotify app (Android 11+ hides other apps otherwise). -->
     <queries>
         <package android:name="com.spotify.music" />
+        <!-- Lists the apps the minimal home screen can open. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -81,6 +88,19 @@
         </activity>
 
         <!-- The pause screen shown over a blocked app. -->
+        <!-- Minimal home screen. Only becomes the home screen if the person chooses it in Android's settings. -->
+        <activity
+            android:name=".MinimalHomeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".BlockActivity"
             android:exported="false"

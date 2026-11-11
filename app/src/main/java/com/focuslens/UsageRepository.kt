@@ -18,6 +18,12 @@ data class AppUsage(
 data class ScreenTime(val screen: String, val millis: Long)
 
 /** Launcher, system UI and similar surfaces. They are not apps the user chose to open. */
+/**
+ * UsageEvents types that end every open session: 16 = screen off, 17 = lock screen shown,
+ * 26 = device shutdown.
+ */
+private val SCREEN_OFF_TYPES = setOf(16, 17, 26)
+
 fun isSystemSurface(pkg: String): Boolean =
     pkg.contains("launcher") || pkg.contains("systemui") || pkg == "android" ||
         pkg.contains("wellbeing") || pkg.contains("inputmethod")
@@ -151,9 +157,18 @@ class UsageRepository(private val context: Context) {
                         totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - from)
                     }
                 }
+                in SCREEN_OFF_TYPES -> {
+                    // Screen off, lock screen, or shutdown: nothing is in use any more, so every
+                    // open session ends here. Without this, an app left "open" with the screen off
+                    // (for example Photos) was counted until the end of the window.
+                    for ((p, from) in resumedAt) {
+                        totals[p] = (totals[p] ?: 0L) + (event.timeStamp - from).coerceAtLeast(0L)
+                    }
+                    resumedAt.clear()
+                }
             }
         }
-        // Apps still in the foreground at the end of the window.
+        // Apps still in the foreground at the end of the window (screen still on).
         for ((pkg, from) in resumedAt) {
             totals[pkg] = (totals[pkg] ?: 0L) + (end - from)
         }
@@ -200,7 +215,7 @@ class UsageRepository(private val context: Context) {
             when (e.eventType) {
                 1 -> openAt.putIfAbsent("$pkg|$cls", e.timeStamp)
                 2, 23 -> openAt.remove("$pkg|$cls")?.let { add(pkg, cls, it, e.timeStamp) }
-                16, 26 -> flush(e.timeStamp)
+                in SCREEN_OFF_TYPES -> flush(e.timeStamp)
             }
         }
         flush(end)
@@ -247,6 +262,10 @@ class UsageRepository(private val context: Context) {
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val from = resumedAt.remove(pkg)
                     if (from != null && event.timeStamp > from) addSplitByHour(pkg, from, event.timeStamp)
+                }
+                in SCREEN_OFF_TYPES -> {
+                    for ((p, from) in resumedAt) if (event.timeStamp > from) addSplitByHour(p, from, event.timeStamp)
+                    resumedAt.clear()
                 }
             }
         }

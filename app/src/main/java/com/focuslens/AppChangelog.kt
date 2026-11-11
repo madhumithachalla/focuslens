@@ -4,6 +4,13 @@ package com.focuslens
 data class BuildNote(val build: Int, val points: List<String>)
 
 val APP_CHANGELOG: List<BuildNote> = listOf(
+    BuildNote(140, listOf(
+        "Usage: time stops counting when the screen turns off. Apps left open no longer collect hours.",
+        "Inside-the-app section shows how much of the app's time it could measure.",
+        "Storage: find and delete old APK installer files, with Android's confirmation.",
+        "Minimal home screen (choose it in Android's home settings): time, date, extra time zones, app names as text, favourites, swipe up to search, swipe down for notifications.",
+        "Planner: time only when you set one. Student and adult categories. Task, event and reminder sections."
+    )),
     BuildNote(98, listOf(
         "Counts swipes, scroll reminders, blocked open attempts and feature blocks per app.",
         "Report shows a 'What FocusLens did' section."
