@@ -126,13 +126,15 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // The Reels switch is checked first, by its own rule, so no other rule can skip it.
-        if (pkg == SectionDetector.INSTAGRAM && checkReelsBlock(section)) return
+        // Any app whose feature section is on screen: Instagram Reels, Facebook Reels, YouTube Shorts,
+        // TikTok For You, Snapchat Spotlight. Each has its own switch under Focus → Feature blocking.
+        if (SectionDetector.feedFeature[pkg] == section && checkFeatureBlock(pkg, section)) return
         // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
         // Shown only when the screen has reels on it (the reel symbol, banner or player), not everywhere.
         if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
             section == "Reels" && android.provider.Settings.canDrawOverlays(this)
         ) {
-            SkipReelOverlay.show(this) { skipReel() }
+            SkipReelOverlay.show(this, onSkip = { skipReel() })
         } else if (pkg == SectionDetector.INSTAGRAM) {
             SkipReelOverlay.hide(this)
         }
@@ -406,19 +408,20 @@ class FocusAccessibilityService : AccessibilityService() {
      * send the person home with the reason. Every decision is logged as "reels check",
      * so a block that does not fire can be traced to the exact condition that failed.
      */
-    private fun checkReelsBlock(section: String): Boolean {
+    private fun checkFeatureBlock(pkg: String, section: String): Boolean {
         val now = System.currentTimeMillis()
-        val switchOn = prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels")
+        val switchOn = prefs.isSectionBlocked(pkg, section)
         val busy = BlockActivity.showing || FeatureBlockedActivity.showing ||
             HyperFocusBlockActivity.showing || SchedulePauseActivity.showing
-        val fire = switchOn && section == "Reels" && !busy && now - lastLaunch >= 1_500L
-        android.util.Log.d(TAG, "reels check: section=$section switchOn=$switchOn busy=$busy fire=$fire")
+        val fire = switchOn && !busy && now - lastLaunch >= 1_500L
+        android.util.Log.d(TAG, "feature check: pkg=$pkg section=$section switchOn=$switchOn busy=$busy fire=$fire")
         if (!fire) return false
         lastLaunch = now
-        kickHome("reels block")
+        kickHome("$section block")
+        val appName = SectionDetector.displayName[pkg] ?: pkg
         launchFeatureBlock(
-            "Reels is blocked",
-            "You turned Reels off for Instagram in FocusLens. The rest of Instagram still works. " +
+            "$section is blocked",
+            "You turned $section off for $appName in FocusLens. The rest of $appName still works. " +
                 "Turn it back on under Focus → Feature blocking."
         )
         return true
