@@ -40,12 +40,24 @@ object CalendarSync {
     /** Adds a one-hour event titled [title] starting at [whenMillis]. Returns the new event's
      *  row id (store it as TaskEntity.calendarEventId) or null if it couldn't be added — no
      *  permission, or no writable calendar on the device. Never throws. */
-    fun addEvent(context: Context, title: String, whenMillis: Long): Long? {
+    fun addEvent(
+        context: Context,
+        title: String,
+        whenMillis: Long,
+        durationMinutes: Int = 60,
+        repeatRule: String? = null
+    ): Long? {
         if (!hasPermission(context)) return null
         val calId = defaultCalendarId(context) ?: return null
         val values = ContentValues().apply {
             put(CalendarContract.Events.DTSTART, whenMillis)
-            put(CalendarContract.Events.DTEND, whenMillis + 60 * 60 * 1000)
+            // A repeating event needs a DURATION instead of an end time.
+            if (repeatRule == null) {
+                put(CalendarContract.Events.DTEND, whenMillis + durationMinutes * 60_000L)
+            } else {
+                put(CalendarContract.Events.DURATION, "PT${durationMinutes}M")
+                put(CalendarContract.Events.RRULE, repeatRule)
+            }
             put(CalendarContract.Events.TITLE, title)
             put(CalendarContract.Events.CALENDAR_ID, calId)
             put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
