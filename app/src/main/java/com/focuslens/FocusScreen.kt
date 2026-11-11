@@ -159,6 +159,27 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             val seen = remember(tick) { prefs.lastSeen() }
             val ago = seen?.let { (System.currentTimeMillis() - it.third) / 1000 }
             val reelsOn = remember(rev) { prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels") }
+            val beat = FocusAccessibilityService.lastHeartbeat
+            val beatAgo = if (beat == 0L) -1L else (System.currentTimeMillis() - beat) / 1000L
+            if (a11y && (beatAgo < 0L || beatAgo > 90L)) {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("FocusLens may be paused by your phone", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text(
+                            "Blocks stop working when Android pauses the app to save battery. Turn off battery " +
+                                "restrictions for FocusLens to keep blocks working.",
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                        OutlinedButton(onClick = {
+                            context.startActivity(
+                                android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }) { Text("Open battery settings") }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
             val capped = remember(tick) { prefs.lastSeenCapped() }
             Text(
                 "Reels check: Accessibility ${if (a11y) "on" else "OFF"} · " +

@@ -41,6 +41,9 @@ class FocusAccessibilityService : AccessibilityService() {
         /** True only while Android has this service connected (diagnostic, read by the Focus tab). */
         @Volatile var connected = false
 
+        /** Last time the service's timer ran (epoch millis). A stale value means Android paused it. */
+        @Volatile var lastHeartbeat = 0L
+
         /** The running service, so the Skip reel button can ask it to move on. */
         @Volatile var instance: FocusAccessibilityService? = null
 
@@ -58,6 +61,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private val ticker = object : Runnable {
         override fun run() {
+            // Heartbeat: lets the Focus tab tell when the service has stopped running.
+            lastHeartbeat = System.currentTimeMillis()
             current?.let { check(it) }
             // Every 30 minutes, save any finished days of usage history in the background, so no
             // day is missed when the app isn't opened for a while.
@@ -217,13 +222,18 @@ class FocusAccessibilityService : AccessibilityService() {
         lastLaunch = System.currentTimeMillis()
         android.util.Log.d(TAG, "block shown: $title")
         prefs.bump("all", "feature: $title")
-        startActivity(
-            Intent(this, FeatureBlockedActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                putExtra("title", title)
-                putExtra("message", message)
-            }
-        )
+        try {
+            startActivity(
+                Intent(this, FeatureBlockedActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("title", title)
+                    putExtra("message", message)
+                }
+            )
+        } catch (e: Exception) {
+            // Logged so a block that could not open is visible, not silently lost.
+            android.util.Log.d(TAG, "block screen failed to open: ${e.message}")
+        }
     }
 
     /** Moves Instagram to the next reel or post: scrolls the first scrollable area forward. */
