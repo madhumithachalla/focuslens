@@ -189,6 +189,15 @@ class FocusPrefs(context: Context) {
         return out
     }
 
+    /** Time per feature (section) for one app on one day, given as yyyyMMdd. */
+    fun sectionTotalsForDay(pkg: String, dayKey: String): Map<String, Long> {
+        val out = HashMap<String, Long>()
+        for (r in sectionRows()) {
+            if (r.pkg == pkg && r.date == dayKey) out[r.section] = (out[r.section] ?: 0L) + r.ms
+        }
+        return out
+    }
+
     fun addDebugId(pkg: String, id: String) {
         val key = "dbg_$pkg"
         val cur = sp.getStringSet(key, emptySet())?.toSet() ?: emptySet()

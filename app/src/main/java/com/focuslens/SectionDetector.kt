@@ -33,13 +33,14 @@ object SectionDetector {
     const val REDDIT = "com.reddit.frontpage"
     const val PINTEREST = "com.pinterest"
     const val THREADS = "com.instagram.barcelona"
+    const val LINKEDIN = "com.linkedin.android"
 
-    val tracked = setOf(INSTAGRAM, YOUTUBE, TIKTOK, SNAPCHAT, FACEBOOK, TWITTER, REDDIT, PINTEREST, THREADS)
+    val tracked = setOf(INSTAGRAM, YOUTUBE, TIKTOK, SNAPCHAT, FACEBOOK, TWITTER, REDDIT, PINTEREST, THREADS, LINKEDIN)
 
     val displayName: Map<String, String> = mapOf(
         INSTAGRAM to "Instagram", YOUTUBE to "YouTube", TIKTOK to "TikTok", SNAPCHAT to "Snapchat",
         FACEBOOK to "Facebook", TWITTER to "X (Twitter)", REDDIT to "Reddit", PINTEREST to "Pinterest",
-        THREADS to "Threads"
+        THREADS to "Threads", LINKEDIN to "LinkedIn"
     )
 
     /** The one endless-scroll feed worth a dedicated "block just this" toggle, per app —
@@ -66,6 +67,8 @@ object SectionDetector {
         val ids = HashSet<String>()
         val selectedIds = ArrayList<String>()
         val words = ArrayList<String>()
+        // LinkedIn: short visible labels, to spot the Jobs and Easy Apply screens.
+        val shortTexts = HashSet<String>()
 
         // Only for Instagram: a reel embedded in Feed/Explore/Stories shows a short, fixed
         // banner/button label — "View full reel" / "Show full reel" — that genuine Stories or
@@ -94,6 +97,12 @@ object SectionDetector {
             visited++
             val id = node.viewIdResourceName?.substringAfter(":id/")?.lowercase() ?: ""
             if (id.isNotEmpty()) ids.add(id)
+            if (pkg == LINKEDIN) {
+                listOf(node.text, node.contentDescription).forEach { t ->
+                    val v = t?.toString()?.trim()?.lowercase() ?: ""
+                    if (v.isNotEmpty() && v.length <= 40) shortTexts.add(v)
+                }
+            }
             if (node.isSelected) {
                 if (id.isNotEmpty()) selectedIds.add(id)
                 val d = node.contentDescription?.toString()?.trim()?.lowercase() ?: ""
@@ -142,6 +151,7 @@ object SectionDetector {
             REDDIT -> reddit(words)
             PINTEREST -> pinterest(words)
             THREADS -> threads(words)
+            LINKEDIN -> linkedin(words, shortTexts)
             else -> "Other"
         }
 
@@ -197,6 +207,22 @@ object SectionDetector {
 
     // The apps below are tab-word-only (no view-ID sampling behind them yet) — less precise
     // than Instagram/YouTube's detection, best-effort like the rest of this file.
+
+    /**
+     * LinkedIn: best effort from visible labels. "Jobs / applications" is set only by the Jobs tab
+     * or an exact Easy Apply / Applied label, so a post that merely mentions a job is not counted.
+     */
+    private fun linkedin(words: List<String>, texts: Set<String>): String = when {
+        "jobs" in words || texts.any { it == "jobs" || it == "easy apply" || it == "applied" || it == "job search" } ->
+            "Jobs / applications"
+        "messaging" in words || "messages" in words || texts.any { it == "messaging" } -> "Messages"
+        "my network" in words || "network" in words || texts.any { it == "my network" } -> "My network"
+        "notifications" in words -> "Notifications"
+        "me" in words || "profile" in words -> "Profile"
+        "search" in words -> "Search"
+        "home" in words -> "Feed (posts)"
+        else -> "Other"
+    }
 
     private fun tiktok(words: List<String>): String = when {
         "for you" in words -> "For You"
