@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,6 +89,14 @@ object HomePrefs {
     fun favorites(c: Context): List<String> = list(c, "favorites")
     fun setFavorites(c: Context, v: List<String>) = sp(c).edit().putString("favorites", v.joinToString(",")).apply()
 
+    /** Apps hidden from the list (still in Android, just not shown here). */
+    fun hidden(c: Context): List<String> = list(c, "hidden")
+    fun setHidden(c: Context, v: List<String>) = sp(c).edit().putString("hidden", v.joinToString(",")).apply()
+
+    /** Mindful launch delay: a 15-second pause before an app opens from here. */
+    fun launchDelay(c: Context): Boolean = sp(c).getBoolean("launch_delay", false)
+    fun setLaunchDelay(c: Context, v: Boolean) = sp(c).edit().putBoolean("launch_delay", v).apply()
+
     fun zones(c: Context): List<String> = list(c, "zones")
     fun setZones(c: Context, v: List<String>) = sp(c).edit().putString("zones", v.joinToString(",")).apply()
 
@@ -136,6 +145,9 @@ fun MinimalHomeScreen() {
     var warnFor by remember { mutableStateOf<LaunchableApp?>(null) }
     var addingZone by remember { mutableStateOf(false) }
     var dragTotal by remember { mutableFloatStateOf(0f) }
+    var hidden by remember { mutableStateOf(HomePrefs.hidden(context)) }
+    var launchDelay by remember { mutableStateOf(HomePrefs.launchDelay(context)) }
+    var pendingLaunch by remember { mutableStateOf<LaunchableApp?>(null) }
 
     LaunchedEffect(Unit) {
         todayMillis = withContext(Dispatchers.IO) { todayMillisByApp(context) }
@@ -146,6 +158,18 @@ fun MinimalHomeScreen() {
 
     fun open(pkg: String) {
         context.packageManager.getLaunchIntentForPackage(pkg)?.let { context.startActivity(it) }
+    }
+
+    /** Opens an app, after the 15-second pause if mindful launch delay is on. */
+    fun requestOpen(app: LaunchableApp) {
+        if (launchDelay) pendingLaunch = app else open(app.pkg)
+    }
+
+    fun hideApp(app: LaunchableApp) {
+        hidden = hidden + app.pkg
+        HomePrefs.setHidden(context, hidden)
+        favorites = favorites - app.pkg
+        HomePrefs.setFavorites(context, favorites)
     }
 
     fun toggleFavorite(app: LaunchableApp) {
@@ -173,8 +197,10 @@ fun MinimalHomeScreen() {
         }
     }
 
-    val shown = if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
-    val favoriteApps = favorites.mapNotNull { pkg -> apps.firstOrNull { it.pkg == pkg } }
+    val visible = apps.filter { it.pkg !in hidden }
+    val shown = if (query.isBlank()) visible else visible.filter { it.label.contains(query, ignoreCase = true) }
+    val favoriteApps = favorites.mapNotNull { pkg -> visible.firstOrNull { it.pkg == pkg } }
+    val hiddenApps = apps.filter { it.pkg in hidden }
 
     Box(
         Modifier
@@ -239,7 +265,7 @@ fun MinimalHomeScreen() {
                 Spacer(Modifier.height(24.dp))
                 Text("Favourites", fontSize = 12.sp, color = dim)
                 favoriteApps.forEach { app ->
-                    AppLine(app, isFavorite = true, fg = fg, onOpen = { open(app.pkg) }, onStar = { toggleFavorite(app) })
+                    AppLine(app, isFavorite = true, fg = fg, onOpen = { requestOpen(app) }, onStar = { toggleFavorite(app) }, onHide = { hideApp(app) })
                 }
             }
 
@@ -250,14 +276,40 @@ fun MinimalHomeScreen() {
                     app,
                     isFavorite = app.pkg in favorites,
                     fg = fg,
-                    onOpen = { open(app.pkg) },
-                    onStar = { toggleFavorite(app) }
+                    onOpen = { requestOpen(app) },
+                    onStar = { toggleFavorite(app) },
+                    onHide = { hideApp(app) }
                 )
+            }
+
+            if (hiddenApps.isNotEmpty()) {
+                Spacer(Modifier.height(20.dp))
+                Text("Hidden (tap Show to bring back)", fontSize = 12.sp, color = dim)
+                hiddenApps.forEach { app ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(app.label, fontSize = 16.sp, color = dim, modifier = Modifier.weight(1f))
+                        TextButton(onClick = {
+                            hidden = hidden - app.pkg
+                            HomePrefs.setHidden(context, hidden)
+                        }) { Text("Show", color = fg) }
+                    }
+                }
             }
 
             note?.let { Spacer(Modifier.height(12.dp)); Text(it, fontSize = 12.sp, color = dim) }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(24.dp))
+            TextButton(onClick = {
+                launchDelay = !launchDelay
+                HomePrefs.setLaunchDelay(context, launchDelay)
+            }) {
+                Text(
+                    "Mindful launch delay: " + if (launchDelay) "on (15-second pause before an app opens)" else "off",
+                    color = fg
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
             Text("Swipe up to search · swipe down for notifications", fontSize = 11.sp, color = dim)
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = {
@@ -286,6 +338,33 @@ fun MinimalHomeScreen() {
         )
     }
 
+    pendingLaunch?.let { app ->
+        var secondsLeft by remember(app.pkg) { mutableIntStateOf(15) }
+        LaunchedEffect(app.pkg) {
+            while (secondsLeft > 0) {
+                delay(1000)
+                secondsLeft--
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { pendingLaunch = null },
+            title = { Text("Take a 15-second pause") },
+            text = {
+                Text(
+                    if (secondsLeft > 0) "Opening ${app.label} in $secondsLeft seconds. Breathe, and check it is what you want right now."
+                    else "Still want to open ${app.label}?"
+                )
+            },
+            confirmButton = {
+                TextButton(enabled = secondsLeft == 0, onClick = {
+                    open(app.pkg)
+                    pendingLaunch = null
+                }) { Text("Open ${app.label}") }
+            },
+            dismissButton = { TextButton(onClick = { pendingLaunch = null }) { Text("Not now") } }
+        )
+    }
+
     warnFor?.let { app ->
         val mins = (todayMillis[app.pkg] ?: 0L) / 60_000L
         AlertDialog(
@@ -310,7 +389,14 @@ fun MinimalHomeScreen() {
 }
 
 @Composable
-private fun AppLine(app: LaunchableApp, isFavorite: Boolean, fg: Color, onOpen: () -> Unit, onStar: () -> Unit) {
+private fun AppLine(
+    app: LaunchableApp,
+    isFavorite: Boolean,
+    fg: Color,
+    onOpen: () -> Unit,
+    onStar: () -> Unit,
+    onHide: () -> Unit
+) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -322,6 +408,7 @@ private fun AppLine(app: LaunchableApp, isFavorite: Boolean, fg: Color, onOpen: 
             color = fg,
             modifier = Modifier.weight(1f).clickable(onClick = onOpen)
         )
+        TextButton(onClick = onHide) { Text("Hide", color = fg) }
         TextButton(onClick = onStar) { Text(if (isFavorite) "★" else "☆", color = fg) }
     }
 }
