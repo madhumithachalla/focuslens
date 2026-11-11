@@ -7,7 +7,7 @@ import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,27 +49,58 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /** A starting layout for an entry. The person can change any text; the prompts are only a guide. */
 data class DiaryTemplate(val id: String, val name: String, val prompts: List<String>)
 
 val DIARY_TEMPLATES: List<DiaryTemplate> = listOf(
     DiaryTemplate("daily", "Daily reflection", listOf("How did today go?", "What got in the way?", "What will I do tomorrow?")),
-    DiaryTemplate("gratitude", "Gratitude", listOf("Three things I'm grateful for", "A small good moment")),
+    DiaryTemplate("gratitude", "Gratitude", listOf("Three things I'm grateful for", "Someone who made my day better", "A small good moment")),
+    DiaryTemplate("wellness", "Wellness", listOf("How did my body feel today?", "How did my mind feel today?", "What I did for my health", "One kind thing I did for myself")),
+    DiaryTemplate("travel", "Travel diary", listOf("Where I was", "Highlights", "Food I tried", "People I met", "Something I'd do again")),
+    DiaryTemplate("memories", "Memories", listOf("What happened?", "Who was there?", "How I felt then", "Why it matters to me")),
+    DiaryTemplate("monthly", "Monthly review", listOf("Biggest win this month", "What I learned", "What drained me", "What I want next month", "One habit to keep, one to drop")),
+    DiaryTemplate("vision", "Vision board", listOf("My vision for the next year", "Goals I'm working toward", "What my ideal day looks like", "Words that describe who I'm becoming")),
+    DiaryTemplate("brain", "Brain dump", listOf("Everything on my mind", "Worries to park", "Ideas", "My next small step")),
+    DiaryTemplate("dream", "Dream record", listOf("What I dreamed about", "How it felt when I woke up", "People, places or symbols in it", "What it might be telling me")),
     DiaryTemplate("weekly", "Weekly review", listOf("What went well this week?", "What didn't go well?", "One thing to change next week")),
     DiaryTemplate("free", "Free page", listOf("Write anything"))
 )
 
+/**
+ * One diary entry. [entryDate] is the day the entry is about (UTC midnight of that local date, as the
+ * date picker returns it). [createdAt] is when it was first saved.
+ */
 data class DiaryEntry(
     val id: Long,
     val createdAt: Long,
+    val entryDate: Long,
     val templateId: String,
     val title: String,
     val sections: List<Pair<String, String>>,
     val attachments: List<String>
 )
+
+/** Newest day first, then newest save first. */
+internal fun sortDiary(list: List<DiaryEntry>): List<DiaryEntry> =
+    list.sortedWith(compareByDescending<DiaryEntry> { it.entryDate }.thenByDescending { it.createdAt })
+
+/** The local calendar day of [millis], as UTC midnight. Matches the date picker's output. */
+internal fun localDayUtc(millis: Long): Long {
+    val local = Calendar.getInstance().apply { timeInMillis = millis }
+    return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH))
+    }.timeInMillis
+}
+
+private fun diaryDayLabel(millis: Long): String =
+    SimpleDateFormat("EEE d MMM yyyy", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+        .format(Date(millis))
 
 /**
  * Diary entries are kept as files in the app's private folder, not in the main database,
@@ -84,13 +115,16 @@ object DiaryStore {
         val f = entriesFile(c)
         if (!f.exists()) emptyList() else {
             val arr = JSONArray(f.readText())
-            (0 until arr.length()).map { i ->
+            sortDiary((0 until arr.length()).map { i ->
                 val o = arr.getJSONObject(i)
                 val secs = o.getJSONArray("sections")
                 val atts = o.getJSONArray("attachments")
+                val created = o.getLong("createdAt")
                 DiaryEntry(
                     id = o.getLong("id"),
-                    createdAt = o.getLong("createdAt"),
+                    createdAt = created,
+                    // Entries saved before the date field existed use the day they were written.
+                    entryDate = o.optLong("entryDate", 0L).takeIf { it > 0L } ?: localDayUtc(created),
                     templateId = o.getString("templateId"),
                     title = o.getString("title"),
                     sections = (0 until secs.length()).map { j ->
@@ -99,7 +133,7 @@ object DiaryStore {
                     },
                     attachments = (0 until atts.length()).map { atts.getString(it) }
                 )
-            }.sortedByDescending { it.createdAt }
+            })
         }
     } catch (e: Exception) {
         emptyList()
@@ -112,6 +146,7 @@ object DiaryStore {
                 JSONObject().apply {
                     put("id", e.id)
                     put("createdAt", e.createdAt)
+                    put("entryDate", e.entryDate)
                     put("templateId", e.templateId)
                     put("title", e.title)
                     put("sections", JSONArray().apply {
@@ -152,7 +187,7 @@ object DiaryStore {
         list.forEach { e ->
             val template = DIARY_TEMPLATES.firstOrNull { it.id == e.templateId }?.name ?: "Entry"
             sb.append("<div class=\"entry\"><h2>${esc(e.title.ifBlank { template })}</h2>")
-            sb.append("<div class=\"meta\">${esc(fmt.format(Date(e.createdAt)))} · ${esc(template)}</div>")
+            sb.append("<div class=\"meta\">${esc(diaryDayLabel(e.entryDate))} · written ${esc(fmt.format(Date(e.createdAt)))} · ${esc(template)}</div>")
             e.sections.forEach { (prompt, text) ->
                 if (text.isNotBlank()) {
                     sb.append("<div class=\"prompt\">${esc(prompt)}</div><div>${esc(text).replace("\n", "<br>")}</div>")
@@ -172,7 +207,7 @@ object DiaryStore {
     }
 }
 
-/** The diary: a list of entries, a new or edited entry with templates and photos, and a download. */
+/** The diary: a list of entries (with a find-by-date field), a new or edited entry with templates, a date and photos, and a download. */
 @Composable
 fun DiaryScreen() {
     val context = LocalContext.current
@@ -182,6 +217,8 @@ fun DiaryScreen() {
     var editing by remember { mutableStateOf<DiaryEntry?>(null) }
     var creating by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
+    var filterDay by remember { mutableStateOf<Long?>(null) }
+    var showFind by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         entries = withContext(Dispatchers.IO) { DiaryStore.load(context) }
@@ -212,7 +249,7 @@ fun DiaryScreen() {
             initial = open,
             onSave = { saved ->
                 val updated = entries.filter { it.id != saved.id } + saved
-                entries = updated.sortedByDescending { it.createdAt }
+                entries = sortDiary(updated)
                 scope.launch(Dispatchers.IO) { DiaryStore.saveAll(context, entries) }
                 editing = null
                 creating = false
@@ -229,6 +266,9 @@ fun DiaryScreen() {
         return
     }
 
+    val day = filterDay
+    val shown = if (day == null) entries else entries.filter { it.entryDate == day }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
         Text("My diary", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text("Write when you want. Add photos. Download it any time.", fontSize = 13.sp, color = Color.Gray)
@@ -244,20 +284,42 @@ fun DiaryScreen() {
             ) { Text("Download diary") }
         }
         status?.let { Spacer(Modifier.height(6.dp)); Text(it, fontSize = 12.sp, color = Color.Gray) }
+
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { showFind = true }) {
+                Text(day?.let { "Date: ${diaryDayLabel(it)}" } ?: "Find by date")
+            }
+            if (day != null) TextButton(onClick = { filterDay = null }) { Text("Show all") }
+        }
+        if (showFind) {
+            DatePickerDialogPicker(
+                initial = day ?: localDayUtc(System.currentTimeMillis()),
+                onPicked = { filterDay = it; showFind = false },
+                onDismiss = { showFind = false }
+            )
+        }
+
         Spacer(Modifier.height(16.dp))
         if (!loaded) {
             Text("Loading…", color = Color.Gray)
         } else if (entries.isEmpty()) {
             Text("No entries yet. Tap New entry to start.", color = Color.Gray)
+        } else if (shown.isEmpty()) {
+            Text("No entries for this day. Tap Show all to see everything.", color = Color.Gray)
         } else {
-            val fmt = SimpleDateFormat("EEE d MMM yyyy", Locale.US)
-            entries.forEach { e ->
+            Text("Tap an entry to open and edit it.", fontSize = 12.sp, color = Color.Gray)
+            Spacer(Modifier.height(4.dp))
+            shown.forEach { e ->
                 val template = DIARY_TEMPLATES.firstOrNull { it.id == e.templateId }?.name ?: "Entry"
-                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { editing = e }) {
+                Card(
+                    onClick = { editing = e },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                ) {
                     Column(Modifier.padding(14.dp)) {
                         Text(e.title.ifBlank { template }, fontWeight = FontWeight.Medium, fontSize = 16.sp)
                         Text(
-                            "${fmt.format(Date(e.createdAt))} · $template" +
+                            "${diaryDayLabel(e.entryDate)} · $template" +
                                 if (e.attachments.isNotEmpty()) " · ${e.attachments.size} photo(s)" else "",
                             fontSize = 12.sp, color = Color.Gray
                         )
@@ -280,14 +342,21 @@ private fun DiaryEditor(
     var templateId by remember { mutableStateOf(initial?.templateId ?: "daily") }
     val template = DIARY_TEMPLATES.firstOrNull { it.id == templateId } ?: DIARY_TEMPLATES.first()
     var title by remember { mutableStateOf(initial?.title ?: "") }
-    val texts = remember(templateId) {
+    // A saved entry keeps its own prompts and answers, so it reopens exactly as it was written.
+    val prompts = remember(templateId) {
         mutableStateListOf<String>().apply {
-            if (initial != null && initial.templateId == templateId) {
-                initial.sections.forEach { add(it.second) }
-            }
-            while (size < template.prompts.size) add("")
+            if (initial != null && initial.sections.isNotEmpty()) addAll(initial.sections.map { it.first })
+            else addAll(template.prompts)
         }
     }
+    val texts = remember(templateId) {
+        mutableStateListOf<String>().apply {
+            if (initial != null && initial.sections.isNotEmpty()) addAll(initial.sections.map { it.second })
+            else repeat(template.prompts.size) { add("") }
+        }
+    }
+    var entryDate by remember { mutableStateOf(initial?.entryDate ?: localDayUtc(System.currentTimeMillis())) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val attachments = remember { mutableStateListOf<String>().apply { addAll(initial?.attachments ?: emptyList()) } }
     var confirmDelete by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf<String?>(null) }
@@ -309,7 +378,10 @@ private fun DiaryEditor(
 
         if (initial == null) {
             Text("Template (optional, you can write anything)", fontSize = 12.sp, color = Color.Gray)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 DIARY_TEMPLATES.forEach { t ->
                     FilterChip(selected = templateId == t.id, onClick = { templateId = t.id }, label = { Text(t.name) })
                 }
@@ -317,15 +389,26 @@ private fun DiaryEditor(
             Spacer(Modifier.height(8.dp))
         }
 
+        Text("Entry date", fontSize = 12.sp, color = Color.Gray)
+        OutlinedButton(onClick = { showDatePicker = true }) { Text(diaryDayLabel(entryDate)) }
+        if (showDatePicker) {
+            DatePickerDialogPicker(
+                initial = entryDate,
+                onPicked = { entryDate = it; showDatePicker = false },
+                onDismiss = { showDatePicker = false }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+
         OutlinedTextField(
             value = title, onValueChange = { title = it },
             label = { Text("Title") }, singleLine = true, modifier = Modifier.fillMaxWidth()
         )
-        template.prompts.forEachIndexed { i, prompt ->
+        prompts.indices.forEach { i ->
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = texts[i], onValueChange = { texts[i] = it },
-                label = { Text(prompt) }, modifier = Modifier.fillMaxWidth(), minLines = 3
+                label = { Text(prompts[i]) }, modifier = Modifier.fillMaxWidth(), minLines = 3
             )
         }
 
@@ -351,9 +434,10 @@ private fun DiaryEditor(
                     DiaryEntry(
                         id = initial?.id ?: now,
                         createdAt = initial?.createdAt ?: now,
+                        entryDate = entryDate,
                         templateId = templateId,
                         title = title.trim(),
-                        sections = template.prompts.mapIndexed { i, p -> p to texts[i].trim() },
+                        sections = prompts.indices.map { i -> prompts[i] to texts[i].trim() },
                         attachments = attachments.toList()
                     )
                 )
