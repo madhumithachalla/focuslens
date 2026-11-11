@@ -5,11 +5,14 @@ import androidx.room.PrimaryKey
 
 /** Task categories. Stored by name, so adding one needs no database migration. */
 enum class TaskType(val label: String) {
-    STUDY("Study"),
+    STUDY("Study & classes"),
+    ASSIGNMENTS("Assignments"),
     ADMIN("Email & admin"),
     WELLNESS("Health & self-care"),
     WORK("Work & jobs"),
     HOME("Home & chores"),
+    FAMILY("Family & caring"),
+    MONEY("Money & bills"),
     SOCIAL("People")
 }
 

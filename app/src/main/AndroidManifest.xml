@@ -140,6 +140,9 @@
         <!-- Medication reminder notifications and their Mark taken / Snooze buttons. -->
         <receiver android:name=".MedReminderReceiver" android:exported="false" />
 
+        <!-- Fires planner reminders at their time. -->
+        <receiver android:name=".TaskReminderReceiver" android:exported="false" />
+
         <!-- Re-arms every enabled alarm after the phone reboots. -->
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>

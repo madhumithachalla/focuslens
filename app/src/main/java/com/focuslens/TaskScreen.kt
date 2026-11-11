@@ -121,6 +121,8 @@ fun TaskScreen() {
                     onDelete = {
                         scope.launch {
                             task.calendarEventId?.let { CalendarSync.removeEvent(context, it) }
+                            TaskReminders.cancel(context, task.id)
+                            PlanPrefs.clearKind(context, task.id)
                             repo.deleteTask(task.id)
                         }
                     }
@@ -169,7 +171,26 @@ internal val PLAN_SUGGESTIONS: Map<TaskType, List<String>> = mapOf(
     TaskType.WELLNESS to listOf("Walk 10 minutes", "Drink a glass of water", "Stretch for 5 minutes", "Take my medication", "Get some sunlight", "Be in bed by 11pm"),
     TaskType.WORK to listOf("Apply for jobs", "Update my CV", "Reply to a recruiter", "Prepare for an interview", "Follow up on an application"),
     TaskType.HOME to listOf("Do laundry", "Tidy one small area", "Wash the dishes", "Grocery shopping", "Cook a meal", "Change the bed sheets"),
-    TaskType.SOCIAL to listOf("Call someone I love", "Message a friend", "Plan a catch-up", "Thank someone")
+    TaskType.SOCIAL to listOf("Call someone I love", "Message a friend", "Plan a catch-up", "Thank someone"),
+    TaskType.ASSIGNMENTS to listOf("Start the essay outline", "Submit the assignment", "Book a library session", "Check the marking criteria"),
+    TaskType.FAMILY to listOf("Call my parents", "Plan a family dinner", "Check on a relative", "Pick up the kids", "Help with homework"),
+    TaskType.MONEY to listOf("Pay rent", "Check my bank balance", "Pay a bill", "Review subscriptions", "Set aside savings")
+)
+
+/** Midnight today. A task saved at midnight has no time set. */
+internal fun startOfTodayMillis(): Long = java.util.Calendar.getInstance().apply {
+    set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+    set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+}.timeInMillis
+
+/** Categories shown for each planner audience. */
+internal val STUDENT_CATEGORIES = listOf(
+    TaskType.STUDY, TaskType.ASSIGNMENTS, TaskType.WORK, TaskType.HOME,
+    TaskType.WELLNESS, TaskType.SOCIAL, TaskType.ADMIN, TaskType.MONEY
+)
+internal val ADULT_CATEGORIES = listOf(
+    TaskType.WORK, TaskType.HOME, TaskType.FAMILY, TaskType.MONEY,
+    TaskType.ADMIN, TaskType.WELLNESS, TaskType.SOCIAL
 )
 
 @OptIn(
@@ -183,6 +204,8 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
     var type by remember { mutableStateOf(TaskType.ADMIN) }
     var addToCalendar by remember { mutableStateOf(false) }
     var hasCalendarPermission by remember { mutableStateOf(CalendarSync.hasPermission(context)) }
+    // Categories follow the planner's audience setting (student or adult).
+    val cats = if (PlanPrefs.audience(context) == PlanAudience.STUDENT) STUDENT_CATEGORIES else ADULT_CATEGORIES
 
     val cal = remember { java.util.Calendar.getInstance().apply { add(java.util.Calendar.HOUR_OF_DAY, 1) } }
     var dateMillis by remember { mutableStateOf(cal.timeInMillis) }
@@ -219,7 +242,7 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Category", fontSize = 12.sp, color = Color.Gray)
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TaskType.values().forEach { t ->
+                    cats.forEach { t ->
                         FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t.label) })
                     }
                 }
@@ -278,7 +301,7 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
         confirmButton = {
             Button(
                 enabled = title.isNotBlank(),
-                onClick = { onAdd(title.trim(), type, if (addToCalendar) scheduledAtMillis() else System.currentTimeMillis(), addToCalendar) }
+                onClick = { onAdd(title.trim(), type, if (addToCalendar) scheduledAtMillis() else startOfTodayMillis(), addToCalendar) }
             ) { Text("Add") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }

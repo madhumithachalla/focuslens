@@ -1,7 +1,6 @@
 package com.focuslens
 
 import android.Manifest
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -24,6 +23,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -57,7 +58,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/** The parts of the day the planner groups by. The hour is the default when no exact time is set. */
+/** The parts of the day the planner groups by. The hour is the default when an exact time is set. */
 private data class DaySlot(val label: String, val hour: Int)
 
 private val DAY_SLOTS = listOf(
@@ -67,7 +68,10 @@ private val DAY_SLOTS = listOf(
     DaySlot("Night", 21)
 )
 
+private const val ANY_TIME = "Any time"
+
 private fun slotFor(millis: Long): String {
+    if (isAnyTime(millis)) return ANY_TIME
     val h = Calendar.getInstance().apply { timeInMillis = millis }.get(Calendar.HOUR_OF_DAY)
     return when {
         h < 12 -> "Morning"
@@ -75,6 +79,15 @@ private fun slotFor(millis: Long): String {
         h < 21 -> "Evening"
         else -> "Night"
     }
+}
+
+/**
+ * Midnight means no time was set: the item is for "any time that day". Only items with a
+ * time chosen by the person get a clock time, so nothing is given a time they did not ask for.
+ */
+internal fun isAnyTime(millis: Long): Boolean {
+    val c = Calendar.getInstance().apply { timeInMillis = millis }
+    return c.get(Calendar.HOUR_OF_DAY) == 0 && c.get(Calendar.MINUTE) == 0
 }
 
 /** Midnight that starts the day [offset] days from today, and midnight that ends it. */
@@ -89,10 +102,9 @@ private fun dayBounds(offset: Int): Pair<Long, Long> {
 }
 
 /**
- * The daily planner. Plan today in the morning and tomorrow later in the day (the switch can
- * be changed either way). Each part of the day has a schedule with date and time, a category
- * and suggestions, an optional calendar entry, and Done. The day also has an intention and
- * a morning and evening journal, saved in the diary.
+ * The daily planner. Items are tasks, events or reminders. A time is only set when the person
+ * chooses one (a reminder needs one). Plan today, or tomorrow from the afternoon. Each day has
+ * an intention and a morning and evening journal, saved in the diary.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -101,7 +113,10 @@ fun DailyPlannerScreen() {
     val db = remember { AppDatabase.get(context) }
     val repo = remember { TaskRepository(db.taskDao(), db.checkInDao()) }
     val scope = rememberCoroutineScope()
-    val prefs = remember { context.getSharedPreferences("planner", Context.MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("planner", android.content.Context.MODE_PRIVATE) }
+
+    var audience by remember { mutableStateOf(PlanPrefs.audience(context)) }
+    val categories = if (audience == PlanAudience.STUDENT) STUDENT_CATEGORIES else ADULT_CATEGORIES
 
     // Before noon the day to plan is today; from noon on it is usually tomorrow.
     var dayOffset by remember { mutableIntStateOf(if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) >= 12) 1 else 0) }
@@ -131,11 +146,16 @@ fun DailyPlannerScreen() {
     var intention by remember(dayKey) { mutableStateOf(prefs.getString(intentionKey, "") ?: "") }
     var intentionSaved by remember(dayKey) { mutableStateOf(false) }
 
-    // Add form.
-    var category by remember { mutableStateOf(TaskType.WELLNESS) }
+    // Add form. The three sections set what the item is.
+    val kinds = PlanKind.values()
+    var kindIndex by remember { mutableIntStateOf(0) }
+    val kind = kinds[kindIndex]
+    var category by remember(audience) { mutableStateOf(categories.first()) }
     var title by remember { mutableStateOf("") }
+    // A time is only used when the person sets one. Reminders always need one.
+    var setTime by remember(kindIndex) { mutableStateOf(false) }
+    val timeOn = kind == PlanKind.REMINDER || setTime
     var slotIndex by remember { mutableIntStateOf(0) }
-    var exactTime by remember { mutableStateOf(false) }
     val timeState = key(slotIndex) {
         rememberTimePickerState(initialHour = DAY_SLOTS[slotIndex].hour, initialMinute = 0, is24Hour = false)
     }
@@ -146,17 +166,32 @@ fun DailyPlannerScreen() {
         addToCalendar = granted
     }
 
-    val pickedHour = if (exactTime) timeState.hour else DAY_SLOTS[slotIndex].hour
-    val pickedMinute = if (exactTime) timeState.minute else 0
-    val scheduledAt = Calendar.getInstance().apply {
-        timeInMillis = dayStart
-        set(Calendar.HOUR_OF_DAY, pickedHour)
-        set(Calendar.MINUTE, pickedMinute)
-    }.timeInMillis
+    val scheduledAt = if (!timeOn) {
+        dayStart
+    } else {
+        Calendar.getInstance().apply {
+            timeInMillis = dayStart
+            set(Calendar.HOUR_OF_DAY, timeState.hour)
+            set(Calendar.MINUTE, timeState.minute)
+        }.timeInMillis
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
         Text("Daily planner", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text(fullDateFmt.format(Date()), fontSize = 13.sp, color = Color.Gray)
+        Spacer(Modifier.height(12.dp))
+
+        Text("I am a", fontSize = 12.sp, color = Color.Gray)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PlanAudience.values().forEach { a ->
+                FilterChip(
+                    selected = audience == a,
+                    onClick = { audience = a; PlanPrefs.setAudience(context, a) },
+                    label = { Text(a.label) }
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         Text("Plan for", fontSize = 12.sp, color = Color.Gray)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,15 +224,22 @@ fun DailyPlannerScreen() {
         } else if (tasks.isEmpty()) {
             Text("Nothing planned yet. Add something below.", fontSize = 12.sp, color = Color.Gray)
         } else {
-            DAY_SLOTS.forEach { slot ->
-                val inSlot = tasks.filter { slotFor(it.scheduledAt) == slot.label }
-                if (inSlot.isNotEmpty()) {
-                    Text(slot.label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Gray,
+            val groups = listOf(ANY_TIME) + DAY_SLOTS.map { it.label }
+            groups.forEach { group ->
+                val inGroup = tasks.filter { slotFor(it.scheduledAt) == group }
+                if (inGroup.isNotEmpty()) {
+                    Text(group, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Gray,
                         modifier = Modifier.padding(top = 6.dp))
-                    inSlot.forEach { t ->
+                    inGroup.forEach { t ->
+                        val itemKind = PlanPrefs.kindOf(context, t.id)
                         PlanRow(
                             task = t,
-                            whenText = "${dayFmt.format(Date(t.scheduledAt))} · ${timeFmt.format(Date(t.scheduledAt))}",
+                            kindLabel = itemKind.label,
+                            whenText = if (isAnyTime(t.scheduledAt)) {
+                                "${dayFmt.format(Date(t.scheduledAt))} · any time"
+                            } else {
+                                "${dayFmt.format(Date(t.scheduledAt))} · ${timeFmt.format(Date(t.scheduledAt))}"
+                            },
                             onDone = {
                                 scope.launch {
                                     withContext(Dispatchers.IO) { repo.markComplete(t) }
@@ -214,6 +256,8 @@ fun DailyPlannerScreen() {
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
                                         t.calendarEventId?.let { CalendarSync.removeEvent(context, it) }
+                                        TaskReminders.cancel(context, t.id)
+                                        PlanPrefs.clearKind(context, t.id)
                                         repo.deleteTask(t.id)
                                     }
                                     reload()
@@ -227,14 +271,31 @@ fun DailyPlannerScreen() {
 
         Spacer(Modifier.height(18.dp))
         Text("Add to $dayWord", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Text("1. Pick a category", fontSize = 12.sp, color = Color.Gray)
+        Spacer(Modifier.height(6.dp))
+        TabRow(selectedTabIndex = kindIndex) {
+            kinds.forEachIndexed { i, k ->
+                Tab(selected = kindIndex == i, onClick = { kindIndex = i }, text = { Text(k.label) })
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            when (kind) {
+                PlanKind.TASK -> "A to-do for the day. No time unless you add one."
+                PlanKind.EVENT -> "Something happening on the day. Add a time if it has one."
+                PlanKind.REMINDER -> "FocusLens notifies you at the time you pick."
+            },
+            fontSize = 12.sp, color = Color.Gray
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Text("Category", fontSize = 12.sp, color = Color.Gray)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TaskType.values().forEach { t ->
+            categories.forEach { t ->
                 FilterChip(selected = category == t, onClick = { category = t }, label = { Text(t.label) })
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("2. Pick something, or type your own", fontSize = 12.sp, color = Color.Gray)
+        Text("Suggestions (tap to use)", fontSize = 12.sp, color = Color.Gray)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PLAN_SUGGESTIONS[category].orEmpty().forEach { s ->
                 FilterChip(selected = title == s, onClick = { title = s }, label = { Text(s) })
@@ -244,66 +305,96 @@ fun DailyPlannerScreen() {
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("What do you want to do?") },
+            label = { Text("What is it?") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(8.dp))
-        Text("3. Part of the day", fontSize = 12.sp, color = Color.Gray)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            DAY_SLOTS.forEachIndexed { i, s ->
-                FilterChip(selected = slotIndex == i, onClick = { slotIndex = i }, label = { Text(s.label) })
-            }
-        }
-        TextButton(onClick = { exactTime = !exactTime }) {
-            Text(if (exactTime) "Use the part-of-day time" else "Set an exact time")
-        }
-        if (exactTime) TimePicker(state = timeState)
-        Text(
-            "Scheduled: ${dayFmt.format(Date(scheduledAt))} at ${timeFmt.format(Date(scheduledAt))}",
-            fontSize = 12.sp, color = Color.Gray
-        )
-        Spacer(Modifier.height(6.dp))
-        if (hasCalendar) {
+
+        Spacer(Modifier.height(10.dp))
+        if (kind != PlanKind.REMINDER) {
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { addToCalendar = !addToCalendar },
+                modifier = Modifier.fillMaxWidth().clickable { setTime = !setTime },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(checked = addToCalendar, onCheckedChange = null)
+                Checkbox(checked = setTime, onCheckedChange = null)
                 Spacer(Modifier.width(4.dp))
-                Text("Add to my calendar", fontSize = 14.sp)
+                Text("Set a time", fontSize = 14.sp)
             }
         } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { permissionLauncher.launch(Manifest.permission.WRITE_CALENDAR) },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(checked = false, onCheckedChange = null)
-                Spacer(Modifier.width(4.dp))
-                Text("Add to my calendar (tap to allow)", fontSize = 14.sp)
+            Text("Reminder time", fontSize = 12.sp, color = Color.Gray)
+        }
+        if (timeOn) {
+            Spacer(Modifier.height(4.dp))
+            Text("Part of the day", fontSize = 12.sp, color = Color.Gray)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DAY_SLOTS.forEachIndexed { i, s ->
+                    FilterChip(selected = slotIndex == i, onClick = { slotIndex = i }, label = { Text(s.label) })
+                }
+            }
+            TimePicker(state = timeState)
+            Text(
+                "At ${timeFmt.format(Date(scheduledAt))} on ${dayFmt.format(Date(scheduledAt))}",
+                fontSize = 12.sp, color = Color.Gray
+            )
+        } else {
+            Text("No time. It will show under Any time for ${dayWord}.", fontSize = 12.sp, color = Color.Gray)
+        }
+
+        if (kind == PlanKind.EVENT) {
+            Spacer(Modifier.height(6.dp))
+            when {
+                !timeOn -> Text("Set a time to add this to your calendar.", fontSize = 12.sp, color = Color.Gray)
+                hasCalendar -> Row(
+                    modifier = Modifier.fillMaxWidth().clickable { addToCalendar = !addToCalendar },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = addToCalendar, onCheckedChange = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add to my calendar", fontSize = 14.sp)
+                }
+                else -> Row(
+                    modifier = Modifier.fillMaxWidth().clickable { permissionLauncher.launch(Manifest.permission.WRITE_CALENDAR) },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = false, onCheckedChange = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add to my calendar (tap to allow)", fontSize = 14.sp)
+                }
             }
         }
+
         Spacer(Modifier.height(8.dp))
         Button(
             enabled = title.isNotBlank(),
             onClick = {
-                val wantsCalendar = addToCalendar && hasCalendar
+                val wantsCalendar = kind == PlanKind.EVENT && timeOn && addToCalendar && hasCalendar
                 val addedTitle = title.trim()
+                val chosenKind = kind
+                val at = scheduledAt
+                val addedWithTime = timeOn
                 scope.launch {
                     val eventId = if (wantsCalendar) {
-                        withContext(Dispatchers.IO) { CalendarSync.addEvent(context, addedTitle, scheduledAt) }
+                        withContext(Dispatchers.IO) { CalendarSync.addEvent(context, addedTitle, at) }
                     } else null
-                    withContext(Dispatchers.IO) { repo.addTask(addedTitle, category, scheduledAt, null, eventId) }
+                    val newId = withContext(Dispatchers.IO) {
+                        repo.addTask(addedTitle, category, at, null, eventId)
+                    }
+                    withContext(Dispatchers.IO) {
+                        PlanPrefs.setKind(context, newId, chosenKind)
+                        if (chosenKind == PlanKind.REMINDER) TaskReminders.schedule(context, newId, addedTitle, at)
+                    }
                     reload()
                     title = ""
                     message = buildString {
-                        append("Added to $dayWord at ${timeFmt.format(Date(scheduledAt))}.")
+                        append("${chosenKind.label} added for $dayWord")
+                        if (addedWithTime) append(" at ${timeFmt.format(Date(at))}") else append(", no time set")
+                        append(".")
                         if (wantsCalendar && eventId != null) append(" It is also on your calendar.")
                         else if (wantsCalendar) append(" Could not add it to your calendar.")
                     }
                 }
             }
-        ) { Text("Add to $dayWord") }
+        ) { Text("Add ${kind.label.lowercase()} to $dayWord") }
         message?.let { Spacer(Modifier.height(6.dp)); Text(it, fontSize = 12.sp, color = Color.Gray) }
 
         Spacer(Modifier.height(18.dp))
@@ -319,6 +410,7 @@ fun DailyPlannerScreen() {
 @Composable
 private fun PlanRow(
     task: TaskEntity,
+    kindLabel: String,
     whenText: String,
     onDone: () -> Unit,
     onUndo: () -> Unit,
@@ -335,7 +427,7 @@ private fun PlanRow(
                     textDecoration = if (done) TextDecoration.LineThrough else null
                 )
                 Text(
-                    whenText + " · " + task.type.label +
+                    "$kindLabel · ${task.type.label} · $whenText" +
                         if (task.calendarEventId != null) " · On your calendar" else "",
                     fontSize = 12.sp, color = Color.Gray
                 )
