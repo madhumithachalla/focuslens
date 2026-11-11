@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -55,7 +54,7 @@ class HyperFocusBlockActivity : ComponentActivity() {
         val prefs = FocusPrefs(this)
         val pkg = intent.getStringExtra("pkg") ?: ""
 
-        setContent {
+        setBrandedContent {
             MaterialTheme(
                 typography = AppTypography,
                 colorScheme = lightColorScheme(

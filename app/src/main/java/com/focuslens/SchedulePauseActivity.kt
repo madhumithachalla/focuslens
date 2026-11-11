@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -63,7 +62,7 @@ class SchedulePauseActivity : ComponentActivity() {
         val quizPrefs = QuizPrefs(this)
         val quizGate = if (strict) null else quizPrefs.gateConfig()
 
-        setContent {
+        setBrandedContent {
             MaterialTheme(
                 typography = AppTypography,
                 colorScheme = lightColorScheme(

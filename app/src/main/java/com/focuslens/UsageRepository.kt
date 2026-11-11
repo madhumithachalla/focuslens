@@ -107,10 +107,10 @@ class UsageRepository(private val context: Context) {
      * path as TODAY/WEEK); anything longer falls back to the pre-summed monthly buckets,
      * same accuracy trade-off as MONTH/YEAR above.
      */
-    fun loadCustom(startMillis: Long, endMillis: Long): List<AppUsage> {
+    fun loadCustom(startMillis: Long, endMillis: Long, withLaunches: Boolean = true): List<AppUsage> {
         val end = endMillis.coerceAtMost(System.currentTimeMillis())
         val spanDays = (end - startMillis) / DAY_MS
-        return if (spanDays <= 7) systemTotals(startMillis, end)
+        return if (spanDays <= 7) systemTotals(startMillis, end, withLaunches)
         else aggregate(UsageStatsManager.INTERVAL_MONTHLY, startMillis, end)
     }
 
@@ -133,8 +133,9 @@ class UsageRepository(private val context: Context) {
      * the event log, since the totals call does not return them.
      */
     @Suppress("DEPRECATION")
-    private fun systemTotals(start: Long, end: Long): List<AppUsage> {
-        val launches = usageBetween(start, end).associate { it.packageName to it.launches }
+    private fun systemTotals(start: Long, end: Long, withLaunches: Boolean = true): List<AppUsage> {
+        // The event log is the expensive part; skip it when launch counts are not needed.
+        val launches = if (withLaunches) usageBetween(start, end).associate { it.packageName to it.launches } else emptyMap()
         return usm.queryAndAggregateUsageStats(start, end).orEmpty()
             .filter { (pkg, s) ->
                 s.totalTimeInForeground > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg)

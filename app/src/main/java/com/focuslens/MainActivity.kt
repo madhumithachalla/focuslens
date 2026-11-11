@@ -248,7 +248,10 @@ fun FocusLensMain(repo: UsageRepository) {
                     10 -> FocusPlaylistsScreen()
                     11 -> AccountScreen()
                     12 -> BirthdaysScreen()
-                    13 -> SettingsScreen()
+                    13 -> Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+                        SetupChecklistCard()
+                        Box(Modifier.weight(1f)) { SettingsScreen() }
+                    }
                     14 -> GuideScreen()
                     15 -> AlarmScreen()
                     16 -> BlockSchedulesScreen()

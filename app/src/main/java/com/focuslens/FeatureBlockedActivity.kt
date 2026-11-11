@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -48,7 +47,7 @@ class FeatureBlockedActivity : ComponentActivity() {
             ?: "Blocked by a rule you set in FocusLens."
         showing = true
 
-        setContent {
+        setBrandedContent {
             MaterialTheme(
                 typography = AppTypography,
                 colorScheme = lightColorScheme(

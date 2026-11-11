@@ -557,14 +557,15 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun usedMinToday(pkg: String): Int {
         val now = System.currentTimeMillis()
         val cached = usageCache[pkg]
-        if (cached == null || now - cached.first > 30_000L) refreshUsage(pkg)
+        if (cached == null || now - cached.first > 60_000L) refreshUsage(pkg)
         return cached?.second ?: 0
     }
 
     /** Minutes used today for the block screen: waits briefly for a fresh figure, so it is not 0. */
     private fun usedMinForBlock(pkg: String): Int {
-        val t = refreshUsage(pkg)
-        t.join(700L)
+        // Never wait here: this runs on the accessibility thread, and waiting froze the phone.
+        // The block screen refreshes its own figure in the background.
+        refreshUsage(pkg)
         return usageCache[pkg]?.second ?: 0
     }
 
@@ -572,7 +573,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val now = System.currentTimeMillis()
         return Thread {
             val ms = try {
-                UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now)
+                UsageRepository(this).loadCustom(FocusPrefs.limitDayStartMs(now), now, withLaunches = false)
                     .firstOrNull { it.packageName == pkg }?.millis ?: 0L
             } catch (e: Exception) {
                 0L

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -35,9 +34,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -78,12 +82,16 @@ class BlockActivity : ComponentActivity() {
         val repo = UsageRepository(this)
         val label = repo.labelFor(pkg)
         // The service passes the minutes it already knows; querying here blocked the screen.
-        val usedMin = if (intent.hasExtra("usedMin")) {
-            intent.getLongExtra("usedMin", 0L)
-        } else try {
-            (repo.loadCustom(FocusPrefs.limitDayStartMs(), System.currentTimeMillis()).firstOrNull { it.packageName == pkg }?.millis ?: 0L) / 60_000L
-        } catch (e: Exception) {
-            0L
+        // Show the figure the service already has right away, then refresh it off the main thread.
+        var usedMin by mutableLongStateOf(if (intent.hasExtra("usedMin")) intent.getLongExtra("usedMin", 0L) else 0L)
+        CoroutineScope(Dispatchers.IO).launch {
+            val fresh = try {
+                (repo.loadCustom(FocusPrefs.limitDayStartMs(), System.currentTimeMillis(), withLaunches = false)
+                    .firstOrNull { it.packageName == pkg }?.millis ?: 0L) / 60_000L
+            } catch (e: Exception) {
+                null
+            }
+            if (fresh != null) withContext(Dispatchers.Main) { usedMin = fresh }
         }
         val limit = prefs.limitMin(pkg)
         val over = usedMin >= limit
@@ -98,7 +106,7 @@ class BlockActivity : ComponentActivity() {
         val locked = skipLimitReached || over
 
         if (locked) {
-            setContent {
+            setBrandedContent {
                 MaterialTheme(
                     typography = AppTypography,
                     colorScheme = lightColorScheme(
@@ -148,7 +156,7 @@ class BlockActivity : ComponentActivity() {
         // limit (see skipLimitReached below), which exists to cap how many times the actual
         // over-budget challenge gets beaten, not to penalize ordinary under-budget opens.
         if (!over) {
-            setContent {
+            setBrandedContent {
                 MaterialTheme(
                     typography = AppTypography,
                     colorScheme = lightColorScheme(
@@ -184,7 +192,7 @@ class BlockActivity : ComponentActivity() {
         val quizGate = quizPrefs.gateConfig()
         if (quizGate != null && savedInstanceState == null) quizPrefs.addAttempt()
 
-        setContent {
+        setBrandedContent {
             MaterialTheme(
                 typography = AppTypography,
                 colorScheme = lightColorScheme(

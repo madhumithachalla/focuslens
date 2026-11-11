@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -47,7 +46,7 @@ class ScrollReminderActivity : ComponentActivity() {
         val scrollMinutes = intent.getIntExtra("scrollMinutes", 0)
         showing = true
 
-        setContent {
+        setBrandedContent {
             MaterialTheme(
                 typography = AppTypography,
                 colorScheme = lightColorScheme(
