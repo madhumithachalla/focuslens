@@ -455,34 +455,63 @@ fun LockedScreen(
     }
 }
 
+/** The guided breath: each step has a name, a length and a colour. */
+private enum class BreathPhase(val label: String, val seconds: Int, val color: Color, val size: Float) {
+    IN("Breathe in", 4, Color(0xFF2E7D32), 1f),
+    HOLD("Hold", 4, Color(0xFFB26A00), 1f),
+    OUT("Breathe out", 6, Color(0xFF1565C0), 0.55f)
+}
+
 @Composable
 fun BreatheStep(seconds: Int, onDone: () -> Unit) {
+    val phases = BreathPhase.values()
     var left by remember { mutableIntStateOf(seconds) }
+    var phaseIndex by remember { mutableIntStateOf(0) }
+    var phaseLeft by remember { mutableIntStateOf(phases[0].seconds) }
     LaunchedEffect(Unit) {
         while (left > 0) {
-            delay(1000)
+            delay(1000L)
             left--
+            phaseLeft--
+            if (phaseLeft <= 0) {
+                phaseIndex = (phaseIndex + 1) % phases.size
+                phaseLeft = phases[phaseIndex].seconds
+            }
         }
     }
-    val transition = rememberInfiniteTransition(label = "breathe")
-    val scale by transition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
+    val phase = phases[phaseIndex]
+    val size by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = phase.size,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = phase.seconds * 1000),
+        label = "breathSize"
+    )
+    val color by androidx.compose.animation.animateColorAsState(
+        targetValue = phase.color,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 500),
+        label = "breathColor"
     )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(phase.label, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+        Text("$phaseLeft s", fontSize = 16.sp, color = color)
+        Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
-                .size(170.dp)
-                .scale(scale)
-                .background(Color(0xFF7FB7A4), CircleShape)
+                .size(180.dp)
+                .scale(size)
+                .background(color, CircleShape)
         )
         Spacer(Modifier.height(20.dp))
-        Text("Breathe in as it grows, out as it shrinks.", fontSize = 15.sp, textAlign = TextAlign.Center)
+        Text(
+            "How to do it: 1. Breathe in slowly through your nose for 4 seconds. " +
+                "2. Hold your breath for 4 seconds. 3. Breathe out slowly through your mouth for 6 seconds. " +
+                "Then start again.",
+            fontSize = 14.sp, textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            if (left > 0) "Keep going for ${left}s" else "Well done. You can continue now.",
+            fontSize = 13.sp, color = Color.Gray, textAlign = TextAlign.Center
+        )
         Spacer(Modifier.height(16.dp))
         Button(onClick = onDone, enabled = left == 0) {
             Text(if (left > 0) "Wait ${left}s" else "Continue")
