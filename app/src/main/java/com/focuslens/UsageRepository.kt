@@ -90,8 +90,8 @@ class UsageRepository(private val context: Context) {
     fun load(range: Range): List<AppUsage> {
         val end = System.currentTimeMillis()
         return when (range) {
-            Range.TODAY -> usageBetween(startOfToday(), end)
-            Range.WEEK -> usageBetween(startOfToday() - 6L * DAY_MS, end)
+            Range.TODAY -> systemTotals(startOfToday(), end)
+            Range.WEEK -> systemTotals(startOfToday() - 6L * DAY_MS, end)
             // Android only keeps precise minute-level events for about a week. Older
             // data exists only as monthly (about 6 months back) and yearly (about 2
             // years back) pre-summed buckets, so these views are built from those.
@@ -110,7 +110,7 @@ class UsageRepository(private val context: Context) {
     fun loadCustom(startMillis: Long, endMillis: Long): List<AppUsage> {
         val end = endMillis.coerceAtMost(System.currentTimeMillis())
         val spanDays = (end - startMillis) / DAY_MS
-        return if (spanDays <= 7) usageBetween(startMillis, end)
+        return if (spanDays <= 7) systemTotals(startMillis, end)
         else aggregate(UsageStatsManager.INTERVAL_MONTHLY, startMillis, end)
     }
 
@@ -124,6 +124,22 @@ class UsageRepository(private val context: Context) {
                 ms > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg)
             }
             .map { (pkg, ms) -> AppUsage(pkg, labelFor(pkg), ms, 0) }
+            .sortedByDescending { it.millis }
+    }
+
+    /**
+     * Android's own per-app totals for [start, end). These are the figures Digital Wellbeing
+     * shows, so FocusLens and Digital Wellbeing agree for the last week. Launch counts come from
+     * the event log, since the totals call does not return them.
+     */
+    @Suppress("DEPRECATION")
+    private fun systemTotals(start: Long, end: Long): List<AppUsage> {
+        val launches = usageBetween(start, end).associate { it.packageName to it.launches }
+        return usm.queryAndAggregateUsageStats(start, end).orEmpty()
+            .filter { (pkg, s) ->
+                s.totalTimeInForeground > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg)
+            }
+            .map { (pkg, s) -> AppUsage(pkg, labelFor(pkg), s.totalTimeInForeground, launches[pkg] ?: 0) }
             .sortedByDescending { it.millis }
     }
 

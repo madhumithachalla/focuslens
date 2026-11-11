@@ -122,6 +122,9 @@ interface DailyUsageDao {
     @Query("SELECT * FROM daily_usage")
     suspend fun allOnce(): List<DailyUsageEntity>
 
+    @Query("DELETE FROM daily_usage WHERE date = :date")
+    suspend fun deleteForDate(date: String)
+
     /** Every date that has at least one snapshotted row, for checking full coverage of a range. */
     @Query("SELECT DISTINCT date FROM daily_usage WHERE date BETWEEN :from AND :to")
     suspend fun datesBetween(from: String, to: String): List<String>

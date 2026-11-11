@@ -41,6 +41,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
     /** Snapshots any finished day in the last [daysBack] days that isn't already stored. Call once per app open. */
     suspend fun catchUp(daysBack: Int = 10) {
         migrateLegacyOnce()
+        rebuildRecentOnce()
         val todayStart = startOfDay(System.currentTimeMillis())
         for (back in 1..daysBack) {
             val dayStart = todayStart - back * DAY_MS
@@ -52,6 +53,26 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
                 dao.upsertAll(rows.map { DailyUsageEntity(date, it.packageName, it.millis, it.launches) })
             }
         }
+    }
+
+    /**
+     * Earlier snapshots of the last week were made with an older calculation that counted time
+     * after the screen turned off. Recalculate those days once from Android's totals, so the
+     * history matches Digital Wellbeing. Older days cannot be recalculated, so they are kept.
+     */
+    private suspend fun rebuildRecentOnce() {
+        if (prefs.getBoolean("history_recent_rebuilt_v2", false)) return
+        val todayStart = startOfDay(System.currentTimeMillis())
+        for (back in 1..7) {
+            val dayStart = todayStart - back * DAY_MS
+            val date = fmt.format(Date(dayStart))
+            dao.deleteForDate(date)
+            val rows = usage.loadCustom(dayStart, dayStart + DAY_MS)
+            if (rows.isNotEmpty()) {
+                dao.upsertAll(rows.map { DailyUsageEntity(date, it.packageName, it.millis, it.launches) })
+            }
+        }
+        prefs.edit().putBoolean("history_recent_rebuilt_v2", true).apply()
     }
 
     /** Same idea as [catchUp] but hour-of-day granularity — Android itself never keeps this
