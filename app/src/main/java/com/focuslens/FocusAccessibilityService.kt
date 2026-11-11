@@ -108,6 +108,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /** Logs time-in-section as before, plus the two feature-level block rules (Reels/Shorts, academic-only YouTube). */
     private fun sampleSocialApp(pkg: String, root: AccessibilityNodeInfo) {
+        blockPkg = pkg
         val now = System.currentTimeMillis()
         val section = SectionDetector.detect(pkg, root, prefs)
         val delta = if (lastSampleT == 0L) 0L else minOf(now - lastSampleT, 8_000L)
@@ -165,6 +166,7 @@ class FocusAccessibilityService : AccessibilityService() {
             usedMinToday(pkg) >= prefs.limitMin(pkg)
         ) {
             lastLaunch = now
+            prefs.bump(pkg, "blocked_attempts")
             kickHome("daily limit while open")
             startActivity(
                 Intent(this, BlockActivity::class.java).apply {
@@ -221,6 +223,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun launchFeatureBlock(title: String, message: String) {
         lastLaunch = System.currentTimeMillis()
         android.util.Log.d(TAG, "block shown: $title")
+        prefs.bump(blockPkg, "blocked_attempts")
         prefs.bump("all", "feature: $title")
         try {
             startActivity(
@@ -228,6 +231,7 @@ class FocusAccessibilityService : AccessibilityService() {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
                     putExtra("title", title)
                     putExtra("message", message)
+                    putExtra("pkg", blockPkg)
                 }
             )
         } catch (e: Exception) {
@@ -317,6 +321,7 @@ class FocusAccessibilityService : AccessibilityService() {
      *  doesn't trip this. */
     private fun trackScroll(pkg: String?) {
         if (pkg == null || pkg !in SectionDetector.tracked) return
+        blockPkg = pkg
         // One "swipe" per burst of scrolling, not one per scroll event.
         val tNow = System.currentTimeMillis()
         // Quick swipes count too: a swipe is one burst of scroll events, about a second or less.
@@ -419,15 +424,20 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /** Sends the person home, and logs why, so the cause is visible in logcat. */
     private fun kickHome(why: String) {
-        android.util.Log.d(TAG, "kick home: $why")
-        performGlobalAction(GLOBAL_ACTION_HOME)
+        // No home-screen action any more: sending home first raced the block screen, and it
+        // sometimes failed to appear. The block screen now covers the app on its own.
+        android.util.Log.d(TAG, "block over $blockPkg: $why")
     }
+
+    /** The app whose rule is being checked right now, so each block is counted against it. */
+    private var blockPkg: String = "all"
 
     private fun defaultDialerPackage(): String? =
         (getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)
             ?.defaultDialerPackage
 
     private fun check(pkg: String) {
+        blockPkg = pkg
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
         val now = System.currentTimeMillis()
 

@@ -80,7 +80,7 @@ class FeatureBlockedActivity : ComponentActivity() {
     }
 
     private fun goHome() {
-        FocusPrefs(this).bump("all", "chose_leave")
+        FocusPrefs(this).bump(intent.getStringExtra("pkg") ?: "all", "chose_leave")
         startActivity(
             Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)

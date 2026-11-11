@@ -98,6 +98,7 @@ fun SocialScreen() {
     var data by remember { mutableStateOf<SocialData?>(null) }
     var loaded by remember { mutableStateOf(false) }
     var openApp by remember { mutableStateOf<String?>(null) }
+    val todayCounts = remember { FocusPrefs(context).eventTotals(1) }
 
     LaunchedEffect(Unit) {
         data = withContext(Dispatchers.IO) { loadSocial(context) }
@@ -168,6 +169,11 @@ fun SocialScreen() {
                         Text("Opened ${d.today.opens[pkg] ?: 0}× today", fontSize = 12.sp, color = Color.Gray)
                     }
                     Text("Today ${formatDuration(t)}  ·  Yesterday ${formatDuration(y)}", fontSize = 13.sp)
+                    val c = todayCounts[pkg].orEmpty()
+                    Text(
+                        "Blocked ${c["blocked_attempts"] ?: 0}×  ·  Chose not to open ${c["chose_leave"] ?: 0}×  ·  Opened anyway ${c["chose_open"] ?: 0}×",
+                        fontSize = 12.sp, color = Color.Gray
+                    )
                     Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { (t.toFloat() / maxMs.toFloat()).coerceIn(0f, 1f) },
