@@ -67,6 +67,8 @@ val DIARY_TEMPLATES: List<DiaryTemplate> = listOf(
     DiaryTemplate("vision", "Vision board", listOf("My vision for the next year", "Goals I'm working toward", "What my ideal day looks like", "Words that describe who I'm becoming")),
     DiaryTemplate("brain", "Brain dump", listOf("Everything on my mind", "Worries to park", "Ideas", "My next small step")),
     DiaryTemplate("dream", "Dream record", listOf("What I dreamed about", "How it felt when I woke up", "People, places or symbols in it", "What it might be telling me")),
+    DiaryTemplate("morning_journal", "Morning journal", listOf("How do I want to feel today?", "What would make today a good day?", "What am I grateful for this morning?")),
+    DiaryTemplate("evening_journal", "Evening journal", listOf("What went well today?", "What did I notice or learn?", "What do I want to let go of?", "One thing for tomorrow")),
     DiaryTemplate("weekly", "Weekly review", listOf("What went well this week?", "What didn't go well?", "One thing to change next week")),
     DiaryTemplate("free", "Free page", listOf("Write anything"))
 )

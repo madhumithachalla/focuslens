@@ -155,16 +155,21 @@ private fun TaskRow(task: TaskEntity, onToggle: () -> Unit, onDelete: () -> Unit
                     fontWeight = FontWeight.Medium,
                     textDecoration = if (task.completedAt != null) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                 )
-                Text(task.type.name.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 11.sp, color = Color.Gray)
+                Text(task.type.label, fontSize = 11.sp, color = Color.Gray)
             }
             TextButton(onClick = onDelete) { Text("Delete") }
         }
     }
 }
 
-internal val TASK_SUGGESTIONS = listOf(
-    "Study 25 minutes", "Walk 10 minutes", "Drink a glass of water", "Tidy one small area",
-    "Reply to one message", "Plan tomorrow", "Stretch for 5 minutes", "Read 10 pages"
+/** Common things people do, grouped by category. Shared by the To-do sheet and the daily planner. */
+internal val PLAN_SUGGESTIONS: Map<TaskType, List<String>> = mapOf(
+    TaskType.STUDY to listOf("Study 25 minutes", "Read 10 pages", "Review today's notes", "Practise one problem"),
+    TaskType.ADMIN to listOf("Check emails", "Reply to important emails", "Pay a bill", "Sort my downloads", "Call the bank or provider"),
+    TaskType.WELLNESS to listOf("Walk 10 minutes", "Drink a glass of water", "Stretch for 5 minutes", "Take my medication", "Get some sunlight", "Be in bed by 11pm"),
+    TaskType.WORK to listOf("Apply for jobs", "Update my CV", "Reply to a recruiter", "Prepare for an interview", "Follow up on an application"),
+    TaskType.HOME to listOf("Do laundry", "Tidy one small area", "Wash the dishes", "Grocery shopping", "Cook a meal", "Change the bed sheets"),
+    TaskType.SOCIAL to listOf("Call someone I love", "Message a friend", "Plan a catch-up", "Thank someone")
 )
 
 @OptIn(
@@ -212,9 +217,16 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
         text = {
             // Scrolls, so the Add and Cancel buttons stay on screen however much is shown.
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Category", fontSize = 12.sp, color = Color.Gray)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TaskType.values().forEach { t ->
+                        FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t.label) })
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 Text("Suggestions (tap to use)", fontSize = 12.sp, color = Color.Gray)
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TASK_SUGGESTIONS.forEach { sug ->
+                    PLAN_SUGGESTIONS[type].orEmpty().forEach { sug ->
                         FilterChip(selected = title == sug, onClick = { title = sug }, label = { Text(sug) })
                     }
                 }
@@ -238,16 +250,6 @@ private fun AddTaskSheet(onAdd: (String, TaskType, Long, Boolean) -> Unit, onDis
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Category (optional)", fontSize = 12.sp, color = Color.Gray)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TaskType.values().forEach { t ->
-                        FilterChip(
-                            selected = type == t,
-                            onClick = { type = t },
-                            label = { Text(t.name.lowercase().replaceFirstChar { it.uppercase() }) }
-                        )
-                    }
-                }
                 Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable {

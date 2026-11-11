@@ -27,9 +27,41 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 private val MED_DAY_LABELS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+/** Short text for the card: the monthly dates or date range, when set. */
+private fun scheduleExtras(plan: MedPlan): String {
+    val parts = mutableListOf<String>()
+    if (plan.monthDays.isNotEmpty()) parts += "dates " + plan.monthDays.sorted().joinToString(", ")
+    if (plan.rangeStart.isNotBlank() || plan.rangeEnd.isNotBlank()) {
+        parts += "from ${dayKeyLabel(plan.rangeStart).ifBlank { "start" }} to ${dayKeyLabel(plan.rangeEnd).ifBlank { "open" }}"
+    }
+    return if (parts.isEmpty()) "" else "  |  " + parts.joinToString("  |  ")
+}
+
+/** Converts a stored yyyyMMdd day to a UTC-midnight millis value (what the date picker uses). */
+private fun millisOfDayKey(key: String): Long? {
+    if (key.isBlank()) return null
+    return try {
+        SimpleDateFormat("yyyyMMdd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.parse(key)?.time
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/** Stored yyyyMMdd day, from the date picker's UTC-midnight millis. */
+private fun dayKeyOfMillis(millis: Long): String =
+    SimpleDateFormat("yyyyMMdd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(millis))
+
+private fun dayKeyLabel(key: String): String =
+    millisOfDayKey(key)?.let {
+        SimpleDateFormat("d MMM yyyy", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(it))
+    } ?: ""
 
 private fun notificationsAllowed(context: Context): Boolean =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -149,7 +181,8 @@ fun MedsScreen() {
                     }
                     val days = if (plan.days.isEmpty()) "Every day"
                     else plan.days.sorted().joinToString(" ") { MED_DAY_LABELS[it - 1] }
-                    Text(plan.times.sorted().joinToString(", ") + "  |  " + days, fontSize = 12.sp, color = Color.Gray)
+                    Text(plan.times.sorted().joinToString(", ") + "  |  " + days + scheduleExtras(plan), fontSize = 12.sp, color = Color.Gray)
+                    MedHabitGrid(plan = plan, tick = tick, onChanged = { tick++ })
                     Row {
                         TextButton(onClick = { editing = plan; showForm = true }) { Text("Edit") }
                         TextButton(onClick = {
@@ -227,6 +260,22 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
     var notes by remember { mutableStateOf(initial?.notes ?: "") }
     val times = remember { mutableStateListOf<String>().apply { addAll(initial?.times ?: emptyList()) } }
     val days = remember { mutableStateListOf<Int>().apply { addAll(initial?.days ?: emptySet()) } }
+    val monthDays = remember { mutableStateListOf<Int>().apply { addAll(initial?.monthDays ?: emptySet()) } }
+    // 0 = every day, 1 = certain weekdays, 2 = certain dates of the month.
+    var mode by remember {
+        mutableIntStateOf(
+            when {
+                !initial?.monthDays.isNullOrEmpty() -> 2
+                !initial?.days.isNullOrEmpty() -> 1
+                else -> 0
+            }
+        )
+    }
+    var rangeStart by remember { mutableStateOf(initial?.rangeStart ?: "") }
+    var rangeEnd by remember { mutableStateOf(initial?.rangeEnd ?: "") }
+    var pickingStart by remember { mutableStateOf(false) }
+    var pickingEnd by remember { mutableStateOf(false) }
+    val rangeBackwards = rangeStart.isNotBlank() && rangeEnd.isNotBlank() && rangeEnd < rangeStart
     var timeInput by remember { mutableStateOf("") }
     var timeError by remember { mutableStateOf(false) }
     var scanStatus by remember { mutableStateOf<String?>(null) }
@@ -314,16 +363,51 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
                         }
                     }) { Text("Add") }
                 }
-                Text("Days (none selected = every day)", fontSize = 13.sp)
+                Text("How often", fontSize = 13.sp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MED_DAY_LABELS.forEachIndexed { idx, label ->
-                        val iso = idx + 1
-                        FilterChip(
-                            selected = days.contains(iso),
-                            onClick = { if (days.contains(iso)) days.remove(iso) else days.add(iso) },
-                            label = { Text(label) }
-                        )
+                    listOf(0 to "Every day", 1 to "Certain weekdays", 2 to "Certain dates").forEach { (m, label) ->
+                        FilterChip(selected = mode == m, onClick = { mode = m }, label = { Text(label) })
                     }
+                }
+                if (mode == 1) {
+                    Text("Weekdays (pick one or more)", fontSize = 12.sp, color = Color.Gray)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MED_DAY_LABELS.forEachIndexed { idx, label ->
+                            val iso = idx + 1
+                            FilterChip(
+                                selected = days.contains(iso),
+                                onClick = { if (days.contains(iso)) days.remove(iso) else days.add(iso) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+                if (mode == 2) {
+                    Text("Dates of the month (pick one or more)", fontSize = 12.sp, color = Color.Gray)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (1..31).forEach { d ->
+                            FilterChip(
+                                selected = monthDays.contains(d),
+                                onClick = { if (monthDays.contains(d)) monthDays.remove(d) else monthDays.add(d) },
+                                label = { Text("$d") }
+                            )
+                        }
+                    }
+                }
+                Text("Date range (optional)", fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { pickingStart = true }) {
+                        Text(if (rangeStart.isBlank()) "Start date" else "From ${dayKeyLabel(rangeStart)}")
+                    }
+                    OutlinedButton(onClick = { pickingEnd = true }) {
+                        Text(if (rangeEnd.isBlank()) "End date" else "To ${dayKeyLabel(rangeEnd)}")
+                    }
+                    if (rangeStart.isNotBlank() || rangeEnd.isNotBlank()) {
+                        TextButton(onClick = { rangeStart = ""; rangeEnd = "" }) { Text("Clear") }
+                    }
+                }
+                if (rangeBackwards) {
+                    Text("The end date is before the start date.", fontSize = 12.sp, color = Color(0xFFB00020))
                 }
                 OutlinedTextField(
                     value = notes, onValueChange = { notes = it },
@@ -334,7 +418,7 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && !rangeBackwards,
                 onClick = {
                     onSave(
                         MedPlan(
@@ -343,8 +427,11 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
                             strengthText = strength.trim(),
                             instructions = instructions.trim(),
                             times = times.sorted(),
-                            days = days.toSet(),
-                            notes = notes.trim()
+                            days = if (mode == 1) days.toSet() else emptySet(),
+                            notes = notes.trim(),
+                            monthDays = if (mode == 2) monthDays.toSet() else emptySet(),
+                            rangeStart = rangeStart,
+                            rangeEnd = rangeEnd
                         )
                     )
                 }
@@ -352,4 +439,19 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
+
+    if (pickingStart) {
+        DatePickerDialogPicker(
+            initial = millisOfDayKey(rangeStart),
+            onPicked = { rangeStart = dayKeyOfMillis(it); pickingStart = false },
+            onDismiss = { pickingStart = false }
+        )
+    }
+    if (pickingEnd) {
+        DatePickerDialogPicker(
+            initial = millisOfDayKey(rangeEnd),
+            onPicked = { rangeEnd = dayKeyOfMillis(it); pickingEnd = false },
+            onDismiss = { pickingEnd = false }
+        )
+    }
 }

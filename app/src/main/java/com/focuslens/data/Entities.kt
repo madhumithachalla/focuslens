@@ -3,7 +3,15 @@ package com.focuslens.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-enum class TaskType { STUDY, ADMIN, WELLNESS }
+/** Task categories. Stored by name, so adding one needs no database migration. */
+enum class TaskType(val label: String) {
+    STUDY("Study"),
+    ADMIN("Email & admin"),
+    WELLNESS("Health & self-care"),
+    WORK("Work & jobs"),
+    HOME("Home & chores"),
+    SOCIAL("People")
+}
 
 @Entity(tableName = "tasks")
 data class TaskEntity(

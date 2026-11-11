@@ -148,7 +148,9 @@ fun MentalHealthScreen() {
         Text("Mental health", fontSize = 23.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Your own logged mood over the last 14 days — from Journal entries, Cycle check-ins, and your own weekly check-ins. Not a diagnosis, just your own pattern.",
+            "Each bar is one day in the last two weeks. Its height and colour show the mood or energy you logged that day, " +
+                "from Journal entries, Cycle energy logs and your weekly check-ins. A grey bar means nothing was logged. " +
+                "This is your own pattern, not a diagnosis, and it stays on this phone.",
             fontSize = 13.sp,
             color = Color.Gray
         )
@@ -185,18 +187,42 @@ fun MentalHealthScreen() {
         } else if (days.all { it.score == null }) {
             Text("Nothing logged yet — a Journal entry or Cycle energy log will start filling this in.", fontSize = 13.sp, color = Color.Gray)
         } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().height(140.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                days.forEach { d ->
-                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            val logged = days.mapNotNull { it.score }
+            Text(
+                "Average ${"%.1f".format(logged.average())} out of 5, on ${logged.size} of 14 days",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            val firstWeek = days.take(7).mapNotNull { it.score }
+            val secondWeek = days.drop(7).mapNotNull { it.score }
+            if (firstWeek.isNotEmpty() && secondWeek.isNotEmpty()) {
+                val change = secondWeek.average() - firstWeek.average()
+                val comparison = when {
+                    change >= 0.5 -> "higher this week than the week before"
+                    change <= -0.5 -> "lower this week than the week before"
+                    else -> "about the same as the week before"
+                }
+                Text("Your mood looks $comparison.", fontSize = 12.sp, color = Color.Gray)
+            }
+            Spacer(Modifier.height(10.dp))
+            // Scale on the left: 5 at the top, 1 at the bottom.
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.width(44.dp).height(140.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Text("Great", fontSize = 10.sp, color = Color.Gray)
+                    Text("Okay", fontSize = 10.sp, color = Color.Gray)
+                    Text("Low", fontSize = 10.sp, color = Color.Gray)
+                }
+                Row(
+                    modifier = Modifier.weight(1f).height(140.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    days.forEach { d ->
                         val score = d.score
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(if (score != null) (score * 22).dp else 4.dp)
+                                .weight(1f)
+                                .height(if (score != null) (score * 26).dp else 4.dp)
                                 .background(
                                     score?.let { MOOD_COLOR[it] } ?: Color.LightGray,
                                     RoundedCornerShape(3.dp)
@@ -205,8 +231,27 @@ fun MentalHealthScreen() {
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text("14 days ago → today", fontSize = 11.sp, color = Color.Gray)
+            // Day of month under each bar, so it is clear which bar is which day.
+            Row(Modifier.fillMaxWidth()) {
+                Spacer(Modifier.width(44.dp))
+                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    days.forEach { d ->
+                        Text(
+                            d.date.takeLast(2).trimStart('0'),
+                            fontSize = 9.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.weight(1f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Red is low, green is good, grey is nothing logged. Dates are day of the month, oldest first.",
+                fontSize = 11.sp,
+                color = Color.Gray
+            )
         }
 
         Spacer(Modifier.height(24.dp))
