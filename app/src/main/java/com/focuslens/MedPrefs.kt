@@ -23,7 +23,12 @@ data class MedPlan(
     val times: List<String> = emptyList(),
     /** ISO weekdays, 1 = Monday ... 7 = Sunday. Empty = every day. */
     val days: Set<Int> = emptySet(),
-    val notes: String = ""
+    val notes: String = "",
+    /** Day-of-month numbers (1..31). When set, the plan applies on those dates instead of weekdays. */
+    val monthDays: Set<Int> = emptySet(),
+    /** Optional range, as yyyyMMdd. Blank = no limit on that side. */
+    val rangeStart: String = "",
+    val rangeEnd: String = ""
 )
 
 enum class DoseState { UPCOMING, DUE, TAKEN, MISSED }
@@ -68,6 +73,15 @@ object MedLogic {
     fun isoDayOfWeek(cal: Calendar): Int = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7 + 1
 
     fun appliesOn(plan: MedPlan, isoDay: Int) = plan.days.isEmpty() || plan.days.contains(isoDay)
+
+    /** Does this plan apply on the calendar day [cal]? Honours a date range and monthly dates. */
+    fun appliesOnDate(plan: MedPlan, cal: Calendar): Boolean {
+        val dk = dateKey(cal)
+        if (plan.rangeStart.isNotBlank() && dk < plan.rangeStart) return false
+        if (plan.rangeEnd.isNotBlank() && dk > plan.rangeEnd) return false
+        if (plan.monthDays.isNotEmpty()) return plan.monthDays.contains(cal.get(Calendar.DAY_OF_MONTH))
+        return appliesOn(plan, isoDayOfWeek(cal))
+    }
 
     fun doseState(nowMinute: Int, doseMinute: Int, takenAt: Long?): DoseState = when {
         takenAt != null -> DoseState.TAKEN
@@ -190,7 +204,10 @@ class MedPrefs(context: Context) {
                     instructions = o.optString("instructions", ""),
                     times = (0 until t.length()).map { t.getString(it) },
                     days = (0 until d.length()).map { d.getInt(it) }.toSet(),
-                    notes = o.optString("notes", "")
+                    notes = o.optString("notes", ""),
+                    monthDays = o.optJSONArray("month_days")?.let { a -> (0 until a.length()).map { a.getInt(it) }.toSet() } ?: emptySet(),
+                    rangeStart = o.optString("range_start", ""),
+                    rangeEnd = o.optString("range_end", "")
                 )
             }
         } catch (e: Exception) {
@@ -210,6 +227,9 @@ class MedPrefs(context: Context) {
                     put("times", JSONArray(p.times))
                     put("days", JSONArray(p.days.toList()))
                     put("notes", p.notes)
+                    put("month_days", JSONArray(p.monthDays.toList()))
+                    put("range_start", p.rangeStart)
+                    put("range_end", p.rangeEnd)
                 }
             )
         }
@@ -261,6 +281,28 @@ class MedPrefs(context: Context) {
         sp.edit().putString("log", log.toString()).apply()
     }
 
+    /** The doses that apply on [cal]'s day, with the time each was taken (null if not). */
+    fun dosesOn(cal: Calendar): List<Triple<MedPlan, String, Long?>> {
+        val dk = MedLogic.dateKey(cal)
+        val log = readLog()
+        return plans().flatMap { p ->
+            if (!MedLogic.appliesOnDate(p, cal)) emptyList()
+            else p.times.mapNotNull { t ->
+                MedLogic.normalizeTime(t)?.let { time -> Triple(p, time, takenAt(log, dk, MedLogic.doseKey(p.id, time))) }
+            }
+        }.sortedWith(compareBy({ it.second }, { it.first.name }))
+    }
+
+    /** Records when a dose was taken on a given day (or clears it with null). Works for past days. */
+    fun setTakenOn(cal: Calendar, doseKey: String, takenAtMs: Long?) {
+        val log = readLog()
+        val dk = MedLogic.dateKey(cal)
+        val day = log.optJSONObject(dk) ?: JSONObject()
+        if (takenAtMs == null) day.remove(doseKey) else day.put(doseKey, takenAtMs)
+        log.put(dk, day)
+        sp.edit().putString("log", log.toString()).apply()
+    }
+
     /** Every dose scheduled today with its state, ordered by time. */
     fun dueToday(nowMs: Long = System.currentTimeMillis()): List<Dose> {
         val cal = Calendar.getInstance().apply { timeInMillis = nowMs }
@@ -270,7 +312,7 @@ class MedPrefs(context: Context) {
         val log = readLog()
         val out = mutableListOf<Dose>()
         for (p in plans()) {
-            if (!MedLogic.appliesOn(p, iso)) continue
+            if (!MedLogic.appliesOnDate(p, cal)) continue
             for (t in p.times) {
                 val time = MedLogic.normalizeTime(t) ?: continue
                 val taken = takenAt(log, dk, MedLogic.doseKey(p.id, time))
