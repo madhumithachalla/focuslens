@@ -333,24 +333,28 @@ class FocusPrefs(context: Context) {
     // ---- Scrolling limits (time based): a reminder every N minutes, and a break after a long run ----
 
     /** Minutes between scrolling reminders while you keep scrolling. Default 4. */
-    fun scrollReminderMinutes(): Int = sp.getInt("scroll_reminder_min", 4).coerceIn(1, 60)
+    /** 0 turns the reminders off. */
+    fun scrollReminderMinutes(): Int = sp.getInt("scroll_reminder_min", 4).coerceIn(0, 60)
 
-    fun setScrollReminderMinutes(n: Int) = sp.edit().putInt("scroll_reminder_min", n.coerceIn(1, 60)).apply()
+    fun setScrollReminderMinutes(n: Int) = sp.edit().putInt("scroll_reminder_min", n.coerceIn(0, 60)).apply()
 
     /** Continuous scrolling, in minutes, before a break starts. Default 30. */
-    fun scrollBreakAfterMinutes(): Int = sp.getInt("scroll_break_after_min", 30).coerceIn(5, 180)
+    /** 0 turns scroll breaks off. */
+    fun scrollBreakAfterMinutes(): Int = sp.getInt("scroll_break_after_min", 30).coerceIn(0, 180)
 
-    fun setScrollBreakAfterMinutes(n: Int) = sp.edit().putInt("scroll_break_after_min", n.coerceIn(5, 180)).apply()
+    fun setScrollBreakAfterMinutes(n: Int) = sp.edit().putInt("scroll_break_after_min", n.coerceIn(0, 180)).apply()
 
     /** How long a break lasts. Default 15 minutes. */
-    fun breakMinutes(): Int = sp.getInt("break_min", 15).coerceIn(1, 120)
+    /** 0 means no break length, so breaks do nothing. */
+    fun breakMinutes(): Int = sp.getInt("break_min", 15).coerceIn(0, 120)
 
-    fun setBreakMinutes(n: Int) = sp.edit().putInt("break_min", n.coerceIn(1, 120)).apply()
+    fun setBreakMinutes(n: Int) = sp.edit().putInt("break_min", n.coerceIn(0, 120)).apply()
 
     /** Breaks allowed per app per day. Past this, the app is locked until 6am. Default 3. */
-    fun breaksPerDayLimit(): Int = sp.getInt("breaks_per_day_limit", 3).coerceIn(1, 10)
+    /** 0 means breaks never lock the app for the rest of the day. */
+    fun breaksPerDayLimit(): Int = sp.getInt("breaks_per_day_limit", 3).coerceIn(0, 10)
 
-    fun setBreaksPerDayLimit(n: Int) = sp.edit().putInt("breaks_per_day_limit", n.coerceIn(1, 10)).apply()
+    fun setBreaksPerDayLimit(n: Int) = sp.edit().putInt("breaks_per_day_limit", n.coerceIn(0, 10)).apply()
 
     fun breaksToday(pkg: String): Int = sp.getInt("breaks_${pkg}_${today()}", 0)
 

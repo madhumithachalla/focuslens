@@ -353,14 +353,16 @@ class FocusAccessibilityService : AccessibilityService() {
         lastScrollAt = now
 
         val runMinutes = (now - streakStart) / 60_000L
-        if (runMinutes >= prefs.scrollBreakAfterMinutes()) {
+        val breakAfter = prefs.scrollBreakAfterMinutes()
+        if (breakAfter > 0 && prefs.breakMinutes() > 0 && runMinutes >= breakAfter) {
             startBreakFor(pkg, now)
             streakStart = now
             lastReminderAt = now
             return
         }
+        val remindEvery = prefs.scrollReminderMinutes()
         val sinceReminderMinutes = (now - lastReminderAt) / 60_000L
-        if (sinceReminderMinutes >= prefs.scrollReminderMinutes() && now - lastLaunch > 3_000L) {
+        if (remindEvery > 0 && sinceReminderMinutes >= remindEvery && now - lastLaunch > 3_000L) {
             lastReminderAt = now
             lastLaunch = now
             prefs.bump(pkg, "scroll_reminders")
@@ -382,7 +384,7 @@ class FocusAccessibilityService : AccessibilityService() {
         prefs.addBreak(pkg)
         val taken = prefs.breaksToday(pkg)
         kickHome("scroll break")
-        if (taken > limit) {
+        if (limit > 0 && taken > limit) {
             prefs.setDayLockUntil(pkg, prefs.nextResetAt())
             launchFeatureBlock(
                 "$appName locked for today",

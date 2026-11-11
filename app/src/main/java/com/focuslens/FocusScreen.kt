@@ -381,16 +381,16 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     }
                     if (doomScrollOn) {
                         Spacer(Modifier.height(10.dp))
-                        MinuteRow("Remind every (minutes)", prefs.scrollReminderMinutes(), 1, 60) {
+                        MinuteRow("Remind every (minutes, 0 = off)", prefs.scrollReminderMinutes(), 0, 60) {
                             prefs.setScrollReminderMinutes(it); rev++
                         }
-                        MinuteRow("Break after (minutes of scrolling)", prefs.scrollBreakAfterMinutes(), 5, 180) {
+                        MinuteRow("Break after (minutes of scrolling, 0 = off)", prefs.scrollBreakAfterMinutes(), 0, 180) {
                             prefs.setScrollBreakAfterMinutes(it); rev++
                         }
-                        MinuteRow("Break length (minutes)", prefs.breakMinutes(), 1, 120) {
+                        MinuteRow("Break length (minutes, 0 = none)", prefs.breakMinutes(), 0, 120) {
                             prefs.setBreakMinutes(it); rev++
                         }
-                        MinuteRow("Breaks per day before locked until 6am", prefs.breaksPerDayLimit(), 1, 10) {
+                        MinuteRow("Breaks per day before locked until 6am (0 = never)", prefs.breaksPerDayLimit(), 0, 10) {
                             prefs.setBreaksPerDayLimit(it); rev++
                         }
                     }
