@@ -150,8 +150,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (now < prefs.dayLockUntil(pkg)) {
                 launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
             } else {
-                val mins = ((prefs.breakUntil(pkg) - now) / 60_000L).coerceAtLeast(1L)
-                launchFeatureBlock("On a break from $appName", "Back in about $mins minutes.")
+                launchFeatureBlock("On a break from $appName", "Back in ${Clock.untilHms(prefs.breakUntil(pkg), now)}.")
             }
             return
         }
@@ -433,8 +432,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 if (now < lockedUntil) {
                     launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
                 } else {
-                    val mins = ((breakUntil - now) / 60_000L).coerceAtLeast(1L)
-                    launchFeatureBlock("On a break from $appName", "Back in about $mins minutes.")
+                    launchFeatureBlock("On a break from $appName", "Back in ${Clock.untilHms(prefs.breakUntil(pkg), now)}.")
                 }
                 return
             }

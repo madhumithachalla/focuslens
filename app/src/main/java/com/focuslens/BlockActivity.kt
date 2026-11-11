@@ -280,7 +280,8 @@ fun BlockScreen(
                 "You have used $label for $usedMin min today. Your limit is $limit min."
             } else {
                 "$label is on your block list, so it pauses before it opens. " +
-                    "$usedMin of $limit min used today. Is this what you want to do right now?"
+                    "$usedMin of $limit min used today. Time left today: ${Clock.limitLeftHms(limit, usedMin)}. " +
+                    "Is this what you want to do right now?"
             },
             fontSize = 16.sp,
             textAlign = TextAlign.Center
@@ -399,11 +400,14 @@ fun LockedScreen(
         return
     }
 
-    val minutesToReset = remember {
-        ((resetAt - System.currentTimeMillis()) / 60_000L).coerceAtLeast(0L)
+    // A live countdown in hours, minutes and seconds, ticking every second.
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000L)
+            now = System.currentTimeMillis()
+        }
     }
-    val hours = minutesToReset / 60
-    val mins = minutesToReset % 60
 
     Column(
         modifier = Modifier.fillMaxSize().padding(28.dp),
@@ -425,7 +429,7 @@ fun LockedScreen(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Resets at 6am — in ${hours}h ${mins}m",
+            "Unlocks at 6am. Time left: ${Clock.untilHms(resetAt, now)}",
             fontSize = 13.sp,
             color = Color.Gray
         )

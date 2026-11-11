@@ -262,6 +262,7 @@ fun FocusLensMain(repo: UsageRepository) {
                     24 -> DiaryScreen()
                     25 -> DailyPlannerScreen()
                     26 -> AccountabilityScreen()
+                    27 -> TrackersScreen()
                     else -> QuizSettingsScreen()
                 }
                 }
@@ -645,14 +646,14 @@ fun formatPickedDate(millis: Long): String =
 private val TAB_LABELS = listOf(
     "Usage", "Focus", "Study", "To-do", "Tracking", "Journal", "Mental health", "Learn", "Explore",
     "Focus Score", "Playlists", "Account", "Birthdays", "Settings", "Guide", "Alarms", "Schedules",
-    "Watch & vitals", "Coach", "Meds", "Quiz", "Rewards", "Achievements", "App updates", "Diary", "Daily planner", "Accountability"
+    "Watch & vitals", "Coach", "Meds", "Quiz", "Rewards", "Achievements", "App updates", "Diary", "Daily planner", "Accountability", "Water & reading"
 )
 
 /** Every page, grouped for the menu. The numbers are the tab indexes used by the screen switch. */
 private val DRAWER_GROUPS: List<Pair<String, List<Pair<Int, String>>>> = listOf(
     "Overview" to listOf(0 to "Usage", 9 to "Focus Score", 18 to "Coach", 17 to "Watch & vitals", 22 to "Achievements"),
     "Focus" to listOf(1 to "Focus", 2 to "Study", 15 to "Alarms", 16 to "Schedules", 20 to "Quiz"),
-    "Body & mind" to listOf(4 to "Tracking", 5 to "Journal", 6 to "Mental health", 19 to "Meds", 10 to "Playlists", 24 to "Diary", 25 to "Daily planner", 26 to "Accountability"),
+    "Body & mind" to listOf(4 to "Tracking", 5 to "Journal", 6 to "Mental health", 19 to "Meds", 10 to "Playlists", 24 to "Diary", 25 to "Daily planner", 26 to "Accountability", 27 to "Water & reading"),
     "Learn" to listOf(7 to "Learn", 8 to "Explore", 14 to "Guide", 21 to "Rewards"),
     "Me" to listOf(3 to "To-do", 11 to "Account", 12 to "Birthdays", 13 to "Settings", 23 to "App updates")
 )
