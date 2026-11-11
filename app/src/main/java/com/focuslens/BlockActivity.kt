@@ -127,6 +127,7 @@ class BlockActivity : ComponentActivity() {
                                 qp.recordUnlock(pkg)
                                 prefs.bump(pkg, "chose_open")
                                 prefs.grant(pkg, qp.unlockMinutes())
+                                prefs.setUnlockUntil(pkg, System.currentTimeMillis() + qp.unlockMinutes() * 60_000L)
                                 finish()
                             }
                         )

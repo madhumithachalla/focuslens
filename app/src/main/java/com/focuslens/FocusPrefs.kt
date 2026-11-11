@@ -319,6 +319,11 @@ class FocusPrefs(context: Context) {
 
     fun setSpotifyOn(on: Boolean) = sp.edit().putBoolean("spotify_on", on).apply()
 
+    /** Until when a quiz unlock lets [pkg] past its daily limit (epoch millis), 0 if not. */
+    fun unlockUntil(pkg: String): Long = sp.getLong("unlock_until_$pkg", 0L)
+
+    fun setUnlockUntil(pkg: String, until: Long) = sp.edit().putLong("unlock_until_$pkg", until).apply()
+
     fun skipReelEnabled(): Boolean = sp.getBoolean("skip_reel_enabled", false)
 
     fun setSkipReelEnabled(on: Boolean) = sp.edit().putBoolean("skip_reel_enabled", on).apply()

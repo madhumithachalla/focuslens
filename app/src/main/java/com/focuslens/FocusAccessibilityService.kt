@@ -162,7 +162,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         // Daily screen-time limit reached while using the app: locked until 6am, no challenge.
-        if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.allowedUntil(pkg) &&
+        if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.unlockUntil(pkg) &&
             usedMinToday(pkg) >= prefs.limitMin(pkg)
         ) {
             lastLaunch = now
@@ -476,6 +476,24 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         if (!prefs.enabled || !prefs.isBlocked(pkg)) return
+
+        // Daily limit used up: no way in, except a quiz unlock. Checked on a fresh figure, and before
+        // any short "allowed for a while" window from earlier, so an old window cannot carry you past it.
+        val limitNow = prefs.limitMin(pkg)
+        if (now >= prefs.unlockUntil(pkg) && usedMinForBlock(pkg) >= limitNow) {
+            if (now - lastLaunch < 1_500L) return
+            lastLaunch = now
+            prefs.bump(pkg, "blocked_attempts")
+            startActivity(
+                Intent(this, BlockActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                    putExtra("pkg", pkg)
+                    putExtra("usedMin", usedMinForBlock(pkg).toLong())
+                }
+            )
+            return
+        }
+
         if (now < prefs.allowedUntil(pkg)) return
         // Block schedules: a blocked app opened inside an active schedule window gets the pause screen.
         val schedule = BlockSchedulePrefs(this).activeSchedule(now)
