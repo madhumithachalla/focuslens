@@ -76,8 +76,9 @@ jobs:
         run: |
           cp focuslens-debug.apk docs/focuslens-debug.apk
           echo "${{ github.run_number }}" > docs/version.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Publish commits are made as the owner, not as the Actions bot (see CLAUDE.md).
+          git config user.name "madhumithachalla"
+          git config user.email "mcha0218@student.monash.edu"
           git add docs/focuslens-debug.apk docs/version.txt
           if git diff --cached --quiet; then
             echo "APK unchanged, nothing to commit"
