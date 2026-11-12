@@ -33,7 +33,7 @@ object SleepEstimator {
     private const val KEYGUARD_HIDDEN = 18
 
     private const val MIN_WAKE_MS = 10 * 60_000L
-    private const val MIN_QUIET_MS = 2 * 3_600_000L
+    private const val MIN_QUIET_MS = 90 * 60_000L
     private const val MIN_SLEEP_MS = 3 * 3_600_000L
     private const val MAX_SLEEP_MS = 14 * 3_600_000L
     private val NIGHT_START_HOURS = setOf(21, 22, 23, 0, 1, 2, 3, 4)
