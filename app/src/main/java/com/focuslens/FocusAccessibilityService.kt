@@ -63,6 +63,19 @@ class FocusAccessibilityService : AccessibilityService() {
         override fun run() {
             // Heartbeat: lets the Focus tab tell when the service has stopped running.
             lastHeartbeat = System.currentTimeMillis()
+            // Lockdown: re-check the daily and peak-hour limits at most once a minute, off this thread.
+            val svc = this@FocusAccessibilityService
+            val nowTick = System.currentTimeMillis()
+            if (!LockdownPrefs.enabled(svc)) {
+                LockdownState.locked = false
+            } else if (nowTick - LockdownState.checkedAt > 60_000L) {
+                LockdownState.checkedAt = nowTick
+                Thread {
+                    val (on, why) = LockdownChecker.evaluate(svc, nowTick)
+                    LockdownState.reason = why
+                    LockdownState.locked = on
+                }.start()
+            }
             current?.let { check(it) }
             // Every 30 minutes, save any finished days of usage history in the background, so no
             // day is missed when the app isn't opened for a while.
@@ -444,6 +457,17 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun check(pkg: String) {
         blockPkg = pkg
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        // Lockdown beats every other rule: only the allowed apps and always-open system screens get through.
+        if (LockdownState.locked && !LockdownActivity.showing &&
+            !LockdownPrefs.isAlwaysOpen(pkg, packageName) && pkg !in LockdownPrefs.allowed(this)
+        ) {
+            kickHome("lockdown")
+            startActivity(Intent(this, LockdownActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                putExtra("reason", LockdownState.reason)
+            })
+            return
+        }
         val now = System.currentTimeMillis()
 
         // On a break, or locked for the day after too many breaks.

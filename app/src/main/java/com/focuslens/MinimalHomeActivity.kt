@@ -105,7 +105,7 @@ object HomePrefs {
 }
 
 /** Apps that can be opened from the home screen. */
-private fun loadLaunchableApps(context: Context): List<LaunchableApp> {
+internal fun loadLaunchableApps(context: Context): List<LaunchableApp> {
     val pm = context.packageManager
     val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
     return pm.queryIntentActivities(intent, 0)
