@@ -9,7 +9,14 @@ import java.util.Calendar
 import java.util.TimeZone
 
 /** One night of sleep. [manual] = typed in by the person; [ongoing] = still asleep at the time of the check. */
-data class SleepNight(val startMs: Long, val endMs: Long, val manual: Boolean = false, val ongoing: Boolean = false) {
+data class SleepNight(
+    val startMs: Long,
+    val endMs: Long,
+    val manual: Boolean = false,
+    val ongoing: Boolean = false,
+    /** estimate, confirmed (you said yes), corrected (you typed it), or break (you were awake, not asleep). */
+    val kind: String = if (manual) "corrected" else "estimate"
+) {
     val hours: Double get() = (endMs - startMs) / 3_600_000.0
 }
 
@@ -104,7 +111,11 @@ object SleepStore {
         val arr = JSONArray(sp(c).getString("nights", "[]"))
         (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
-            SleepNight(o.getLong("start"), o.getLong("end"), o.optBoolean("manual"), o.optBoolean("ongoing"))
+            val manual = o.optBoolean("manual")
+            SleepNight(
+                o.getLong("start"), o.getLong("end"), manual, o.optBoolean("ongoing"),
+                o.optString("kind", if (manual) "corrected" else "estimate")
+            )
         }.sortedBy { it.startMs }
     } catch (e: Exception) {
         emptyList()
@@ -113,7 +124,8 @@ object SleepStore {
     private fun save(c: Context, list: List<SleepNight>) {
         val arr = JSONArray()
         list.forEach { n ->
-            arr.put(JSONObject().put("start", n.startMs).put("end", n.endMs).put("manual", n.manual).put("ongoing", n.ongoing))
+            arr.put(JSONObject().put("start", n.startMs).put("end", n.endMs).put("manual", n.manual)
+                .put("ongoing", n.ongoing).put("kind", n.kind))
         }
         sp(c).edit().putString("nights", arr.toString()).apply()
     }
@@ -141,4 +153,28 @@ object SleepStore {
     }
 
     private fun overlaps(a: SleepNight, b: SleepNight): Boolean = a.startMs < b.endMs && b.startMs < a.endMs
+
+    private fun answeredSet(c: Context): Set<String> = sp(c).getStringSet("answered", emptySet())?.toSet() ?: emptySet()
+
+    /** The estimated night to ask about: finished in the last day, and not answered yet. */
+    fun pendingCheck(c: Context, now: Long): SleepNight? {
+        val answered = answeredSet(c)
+        return nights(c)
+            .filter { !it.manual && !it.ongoing && it.kind == "estimate" && it.startMs.toString() !in answered }
+            .filter { now - it.endMs in 0..(24 * 3_600_000L) }
+            .maxByOrNull { it.endMs }
+    }
+
+    /**
+     * Your answer to the check-in. "confirmed" = it was sleep (times may be adjusted), "break" = you were
+     * awake, not asleep. Either way the estimate is replaced and not asked about again.
+     */
+    fun answer(c: Context, night: SleepNight, kind: String, startMs: Long = night.startMs, endMs: Long = night.endMs) {
+        val rest = nights(c).filterNot { it.startMs == night.startMs && !it.ongoing && !it.manual }
+        val updated = if (kind == "confirmed" || kind == "break") {
+            rest + SleepNight(startMs, endMs, manual = true, kind = kind)
+        } else rest
+        save(c, updated.sortedBy { it.startMs })
+        sp(c).edit().putStringSet("answered", answeredSet(c) + night.startMs.toString()).apply()
+    }
 }

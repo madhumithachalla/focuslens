@@ -63,7 +63,7 @@ private fun parseHm(s: String): Pair<Int, Int>? {
  * Builds a night from a wake-up date and two clock times. A bedtime in the afternoon or evening
  * is taken to be the day before the wake-up date.
  */
-private fun nightFromInputs(wakeDayMs: Long, bed: Pair<Int, Int>, wake: Pair<Int, Int>): SleepNight {
+internal fun nightFromInputs(wakeDayMs: Long, bed: Pair<Int, Int>, wake: Pair<Int, Int>): SleepNight {
     val wakeCal = Calendar.getInstance().apply {
         timeInMillis = wakeDayMs
         set(Calendar.HOUR_OF_DAY, wake.first); set(Calendar.MINUTE, wake.second)
@@ -102,7 +102,7 @@ fun SleepScreen() {
 
     val now = System.currentTimeMillis()
     val ongoing = nights.firstOrNull { it.ongoing }
-    val week = nights.filter { !it.ongoing && now - it.endMs < 7 * 86_400_000L }
+    val week = nights.filter { !it.ongoing && it.kind != "break" && now - it.endMs < 7 * 86_400_000L }
     val recent = nights.filter { !it.ongoing }.sortedByDescending { it.endMs }.take(14)
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
@@ -176,7 +176,12 @@ fun SleepScreen() {
                 Column(Modifier.padding(12.dp)) {
                     Text("${fmtDayTime(n.startMs)} → ${fmtTime(n.endMs)}", fontSize = 14.sp)
                     Text(
-                        fmtHours(n.hours) + if (n.manual) " · you corrected this" else " · estimated",
+                        fmtHours(n.hours) + when (n.kind) {
+                            "break" -> " · a break, not sleep"
+                            "confirmed" -> " · you confirmed this"
+                            "corrected" -> " · you corrected this"
+                            else -> " · estimated"
+                        },
                         fontSize = 12.sp, color = Color.Gray
                     )
                 }
@@ -263,7 +268,7 @@ fun SleepScreen() {
 }
 
 @Composable
-private fun NightDialog(
+internal fun NightDialog(
     title: String,
     initialBed: String,
     initialWake: String,

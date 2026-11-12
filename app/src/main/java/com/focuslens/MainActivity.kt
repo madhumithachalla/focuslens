@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     surface = Color(0xFFF7F5F0)
                 )
             ) {
+                SleepCheckIn()
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     // targetSdk 36 means the system draws edge-to-edge by default and no longer
                     // reserves space for the status/navigation bars on its own — without this,
