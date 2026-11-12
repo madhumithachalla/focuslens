@@ -1,9 +1,18 @@
 package com.focuslens
 
 /** What changed in each published build. Add an entry for every build that ships a change. */
-data class BuildNote(val build: Int, val points: List<String>)
+/** One release note. [build] is the CI build it shipped in; [version] is the app version (for example 1.0.0), if it has one. */
+data class BuildNote(val build: Int, val points: List<String>, val version: String = "")
 
 val APP_CHANGELOG: List<BuildNote> = listOf(
+    BuildNote(157, listOf(
+        "Usage report: daily values only where Android has exact data; older days are marked unavailable.",
+        "Dashboard shows a readable message when usage cannot load.",
+        "Blocking: an app you just left is no longer blocked over FocusLens.",
+        "Delete all local data also clears the usage history.",
+        "Lockdown: daily and peak-hour limits, only your allowed apps stay open.",
+        "Sleep: estimated from screen use, with a check-in and corrections."
+    ), version = "1.0.0"),
     BuildNote(140, listOf(
         "Usage: time stops counting when the screen turns off. Apps left open no longer collect hours.",
         "Inside-the-app section shows how much of the app's time it could measure.",

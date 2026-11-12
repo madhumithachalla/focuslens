@@ -31,7 +31,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        // Shown to people as the app version. Bump by hand for each release (1.0.0, 1.1.0, 1.1.1 ...).
+        versionName = "1.0.0"
 
         // From the Spotify Developer Dashboard (developer.spotify.com/dashboard) — create an
         // app there, add redirect URI focuslens://auth, and paste the Client ID into
