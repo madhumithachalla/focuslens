@@ -2,6 +2,7 @@ package com.focuslens
 
 import android.content.Context
 import com.focuslens.data.AppDatabase
+import com.focuslens.data.UsageDatabase
 import java.io.File
 
 /**
@@ -32,6 +33,7 @@ object PrivacyPrefs {
      */
     fun deleteAllLocalData(c: Context) {
         AppDatabase.get(c).clearAllTables()
+        UsageDatabase.get(c).clearAllTables()
         File(c.applicationInfo.dataDir, "shared_prefs").listFiles()?.forEach { f ->
             c.deleteSharedPreferences(f.name.removeSuffix(".xml"))
         }

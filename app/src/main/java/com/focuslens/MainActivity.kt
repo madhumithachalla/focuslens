@@ -350,6 +350,7 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     var source by remember { mutableStateOf(0) } // 0 = Digital Wellbeing, 1 = FocusLens history
     var loading by remember { mutableStateOf(true) }
     var status by remember { mutableStateOf<String?>(null) }
+    var loadError by remember { mutableStateOf<String?>(null) }
     var breakdown by remember { mutableStateOf<Map<String, List<ScreenTime>>>(emptyMap()) }
     var expanded by remember { mutableStateOf<String?>(null) }
     val prefs = remember { FocusPrefs(context) }
@@ -359,11 +360,18 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     var hourlyToday by remember { mutableStateOf<List<com.focuslens.data.HourTotal>>(emptyList()) }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            history.catchUp()
-            history.catchUpHourly()
+        try {
+            withContext(Dispatchers.IO) {
+                history.catchUp()
+                history.catchUpHourly()
+            }
+            hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("FocusLens", "Usage history catch-up failed", e)
+            loadError = "Usage history could not be refreshed. Current Android usage is still available."
         }
-        hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
     }
 
     var customStart by remember { mutableStateOf<Long?>(null) }
@@ -416,53 +424,64 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
     LaunchedEffect(range, refreshTick, customStart, customEnd, source) {
         if (range == Range.CUSTOM && (customStart == null || customEnd == null)) return@LaunchedEffect
         loading = true
-        var bk: List<Pair<String, Long>> = emptyList()
-        val result = withContext(Dispatchers.IO) {
-            val (from, to) = when (range) {
-                Range.CUSTOM -> customStart!! to customEnd!!
-                Range.MONTH -> (System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
-                Range.YEAR -> (System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
-                else -> null to null
-            }
-            val wellbeing = if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
-            val exact = if (from != null && to != null) history.tryExact(from, to) else null
-            val cover = if (from != null && to != null) history.coverage(from, to) else null
-
-            // Over-time bars use the same source as the totals, one bar per day (or per month for long ranges).
-            val now = System.currentTimeMillis()
-            val window: Pair<Long, Long>? = when (range) {
-                Range.WEEK -> (now - 7L * 24 * 60 * 60 * 1000) to now
-                Range.MONTH -> (now - 30L * 24 * 60 * 60 * 1000) to now
-                Range.YEAR -> (now - 365L * 24 * 60 * 60 * 1000) to now
-                Range.CUSTOM -> customStart!! to customEnd!!
-                else -> null
-            }
-            bk = window?.let { (a, b) ->
-                bucketTotals(a, b) { x, y ->
-                    if (source == 1) history.tryExact(x, y) ?: emptyList() else repo.loadCustom(x, y)
+        loadError = null
+        try {
+            var bk: List<Pair<String, Long>> = emptyList()
+            val result = withContext(Dispatchers.IO) {
+                val (from, to) = when (range) {
+                    Range.CUSTOM -> customStart!! to customEnd!!
+                    Range.MONTH -> (System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
+                    Range.YEAR -> (System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000) to System.currentTimeMillis()
+                    else -> null to null
                 }
-            } ?: emptyList()
+                val wellbeing = if (range == Range.CUSTOM) repo.loadCustom(customStart!!, customEnd!!) else repo.load(range)
+                val exact = if (from != null && to != null) history.tryExact(from, to) else null
+                val cover = if (from != null && to != null) history.coverage(from, to) else null
 
-            Triple(wellbeing, exact, cover)
-        }
-        wbRows = result.first
-        flRows = result.second
-        flCover = result.third
-        buckets = bk
-        breakdown = withContext(Dispatchers.IO) {
-            try {
-                if (range == Range.CUSTOM) emptyMap() else repo.screenBreakdown(range)
-            } catch (e: Exception) {
-                emptyMap()
+                // Over-time bars use the same source as the totals, one bar per day (or per month for long ranges).
+                val now = System.currentTimeMillis()
+                val window: Pair<Long, Long>? = when (range) {
+                    Range.WEEK -> (now - 7L * 24 * 60 * 60 * 1000) to now
+                    Range.MONTH -> (now - 30L * 24 * 60 * 60 * 1000) to now
+                    Range.YEAR -> (now - 365L * 24 * 60 * 60 * 1000) to now
+                    Range.CUSTOM -> customStart!! to customEnd!!
+                    else -> null
+                }
+                bk = window?.let { (a, b) ->
+                    bucketTotals(a, b) { x, y ->
+                        if (source == 1) history.tryExact(x, y) ?: emptyList() else repo.loadCustom(x, y)
+                    }
+                } ?: emptyList()
+
+                Triple(wellbeing, exact, cover)
             }
+            wbRows = result.first
+            flRows = result.second
+            flCover = result.third
+            buckets = bk
+            breakdown = withContext(Dispatchers.IO) {
+                try {
+                    if (range == Range.CUSTOM) emptyMap() else repo.screenBreakdown(range)
+                } catch (e: Exception) {
+                    android.util.Log.e("FocusLens", "Screen breakdown unavailable", e)
+                    emptyMap()
+                }
+            }
+            if (range == Range.TODAY) {
+                hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("FocusLens", "Dashboard usage load failed", e)
+            loadError = "Couldn't load usage. Check Usage access and try again."
+        } finally {
+            loading = false
         }
-        if (range == Range.TODAY) {
-            hourlyToday = withContext(Dispatchers.IO) { history.hourlyTotalsForToday() }
-        }
-        loading = false
     }
 
-    val rows = if (source == 1 && flRows != null) flRows!! else wbRows
+    // Never show Android rows while the FocusLens source chip is selected.
+    val rows = if (source == 1) flRows.orEmpty() else wbRows
     val appRows = rows.filter { !BrowserApps.isBrowser(it.packageName) }
     val browserRows = rows.filter { BrowserApps.isBrowser(it.packageName) }
     val appTotal = appRows.sumOf { it.millis }
@@ -553,8 +572,14 @@ fun Dashboard(repo: UsageRepository, refreshTick: Int) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("Loading…", color = Color.Gray)
             }
+        } else if (loadError != null) {
+            Text(loadError!!, color = Color.Gray)
         } else if (rows.isEmpty()) {
-            Text("No usage yet.", color = Color.Gray)
+            Text(
+                if (source == 1) "FocusLens history is not available for this range yet."
+                else "No usage yet.",
+                color = Color.Gray
+            )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (range == Range.TODAY && hourlyToday.any { it.millis > 0 }) {

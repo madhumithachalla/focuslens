@@ -13,8 +13,6 @@ import java.util.Locale
  * printed to PDF from there. Nothing leaves the phone when it is made.
  */
 object SimpleReport {
-    private const val DAY_MS = 24L * 60 * 60 * 1000
-
     private fun startOfDay(ms: Long): Long {
         val cal = java.util.Calendar.getInstance()
         cal.timeInMillis = ms
@@ -22,6 +20,13 @@ object SimpleReport {
         cal.set(java.util.Calendar.MINUTE, 0)
         cal.set(java.util.Calendar.SECOND, 0)
         cal.set(java.util.Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    private fun dayStartBefore(todayStart: Long, daysBack: Int): Long {
+        val cal = java.util.Calendar.getInstance()
+        cal.timeInMillis = todayStart
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -daysBack)
         return cal.timeInMillis
     }
 
@@ -40,33 +45,44 @@ object SimpleReport {
         val now = System.currentTimeMillis()
         val todayStart = startOfDay(now)
 
-        data class Row(val label: String, val android: Long, val focus: Long?)
+        // Android keeps exact daily history for roughly a week. Older queries can return
+        // a monthly bucket, so never treat those coarse totals as an individual day.
+        val exactCutoff = dayStartBefore(todayStart, 6)
+        data class Row(val label: String, val android: Long?, val focus: Long?)
         val rows = (days - 1 downTo 0).map { back ->
-            val start = todayStart - back * DAY_MS
-            val end = if (back == 0) now else start + DAY_MS
-            val android = usage.loadCustom(start, end).sumOf { it.millis }
+            val start = dayStartBefore(todayStart, back)
+            val end = if (back == 0) now else dayStartBefore(todayStart, back - 1)
+            val android = if (start >= exactCutoff) {
+                usage.loadCustom(start, end).sumOf { it.millis }
+            } else null
             val focus = dao.forDate(keyFmt.format(Date(start))).takeIf { it.isNotEmpty() }?.sumOf { it.millis }
             Row(dayFmt.format(Date(start)), android, focus)
         }
 
-        val withData = rows.filter { it.android > 0 }
-        val heaviest = withData.maxByOrNull { it.android }
-        val lightest = withData.minByOrNull { it.android }
-        val average = if (withData.isEmpty()) 0L else withData.sumOf { it.android } / withData.size
+        val withData = rows.filter { (it.android ?: 0L) > 0L }
+        val heaviest = withData.maxByOrNull { it.android ?: 0L }
+        val lightest = withData.minByOrNull { it.android ?: 0L }
+        val average = if (withData.isEmpty()) 0L else withData.sumOf { it.android ?: 0L } / withData.size
 
-        val compared = rows.filter { it.focus != null && it.android > 0 }
-        val matching = compared.count { kotlin.math.abs(it.focus!! - it.android) * 100 / it.android <= 5 }
+        val compared = rows.filter { it.focus != null && (it.android ?: 0L) > 0L }
+        val matching = compared.count {
+            val android = it.android!!
+            kotlin.math.abs(it.focus!! - android) * 100 / android <= 5
+        }
         val close = compared.count {
-            val p = kotlin.math.abs(it.focus!! - it.android) * 100 / it.android
+            val android = it.android!!
+            val p = kotlin.math.abs(it.focus!! - android) * 100 / android
             p > 5 && p <= 10
         }
         val differs = compared.size - matching - close
 
-        val topApps = usage.loadCustom(todayStart - (days - 1) * DAY_MS, now)
+        // Keep the app ranking within the same exact Android window as the daily comparison.
+        val topStart = maxOf(dayStartBefore(todayStart, days - 1), exactCutoff)
+        val topApps = usage.loadCustom(topStart, now)
             .sortedByDescending { it.millis }
             .take(8)
         val topMax = topApps.maxOfOrNull { it.millis }?.coerceAtLeast(1L) ?: 1L
-        val maxDay = rows.maxOfOrNull { it.android }?.coerceAtLeast(1L) ?: 1L
+        val maxDay = rows.mapNotNull { it.android }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
 
         val sb = StringBuilder()
         sb.append("""<!doctype html><html><head><meta charset="utf-8">
@@ -83,9 +99,10 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
 </style></head><body>""")
         sb.append("<h1>Your screen time report</h1>")
         sb.append("<div class=\"muted\">Last $days days, made ${esc(dayFmt.format(Date(now)))}. Read this with your phone's Digital Wellbeing screen open.</div>")
+        sb.append("<div class=\"muted\">Android daily values are shown only where exact daily data is available. Older days are marked unavailable instead of repeating a monthly total.</div>")
 
         sb.append("<h2>The short version</h2><div class=\"card\">")
-        sb.append("<div>Average per day: <b>${hm(average)}</b></div>")
+        sb.append("<div>Average per available day (${withData.size} days): <b>${hm(average)}</b></div>")
         if (heaviest != null) sb.append("<div>Heaviest day: <b>${esc(heaviest.label)}</b> (${hm(heaviest.android)})</div>")
         if (lightest != null) sb.append("<div>Lightest day: <b>${esc(lightest.label)}</b> (${hm(lightest.android)})</div>")
         if (compared.isEmpty()) {
@@ -101,9 +118,10 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
         rows.forEach { r ->
             val match = when {
                 r.focus == null -> "<span class=\"muted\">not saved</span>"
+                r.android == null -> "<span class=\"muted\">Android daily data unavailable</span>"
                 r.android == 0L -> "<span class=\"muted\">no data</span>"
                 else -> {
-                    val p = kotlin.math.abs(r.focus - r.android) * 100 / r.android
+                    val p = kotlin.math.abs(r.focus!! - r.android!!) * 100 / r.android!!
                     when {
                         p <= 5 -> "<span class=\"ok\">matches</span>"
                         p <= 10 -> "<span class=\"warn\">close (${p}% apart)</span>"
@@ -111,13 +129,14 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
                     }
                 }
             }
-            val width = (r.android * 100 / maxDay).coerceIn(0L, 100L)
-            sb.append("<tr><td>${esc(r.label)}</td><td>${hm(r.android)}</td><td>${r.focus?.let { hm(it) } ?: "-"}</td>" +
+            val width = ((r.android ?: 0L) * 100 / maxDay).coerceIn(0L, 100L)
+            val androidText = r.android?.let { hm(it) } ?: "Unavailable"
+            sb.append("<tr><td>${esc(r.label)}</td><td>${androidText}</td><td>${r.focus?.let { hm(it) } ?: "-"}</td>" +
                 "<td>$match</td><td style=\"width:35%\"><div class=\"track\"><div class=\"bar\" style=\"width:$width%\"></div></div></td></tr>")
         }
         sb.append("</table></div>")
 
-        sb.append("<h2>Most used apps in this period</h2><div class=\"card\"><table><tr><th>App</th><th>Time</th><th>Opened</th><th>Bar</th></tr>")
+        sb.append("<h2>Most used apps (exact Android data, recent days)</h2><div class=\"card\"><table><tr><th>App</th><th>Time</th><th>Opened</th><th>Bar</th></tr>")
         topApps.forEach { a ->
             val width = (a.millis * 100 / topMax).coerceIn(0L, 100L)
             sb.append("<tr><td>${esc(a.label)}</td><td>${hm(a.millis)}</td><td>${a.launches} times</td>" +
@@ -144,9 +163,9 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
         sb.append("</div>")
 
         sb.append("""<h2>How to read this</h2><div class="card">
-<div>"Android" is the total Android reports for each day, the same source Digital Wellbeing uses.</div>
-<div>"FocusLens saved" is the copy FocusLens keeps each day. If the two match, the app is reading the phone correctly.</div>
-<div>Small differences of a few minutes are normal. Digital Wellbeing counts some things differently.</div>
+<div>"Android" is the same source Digital Wellbeing uses. Android daily history is limited, so older days are shown as unavailable rather than guessed from monthly buckets.</div>
+<div>"FocusLens saved" is the copy FocusLens keeps each day. A match can be checked only when both sources have data for that day.</div>
+<div>Opened counts depend on Android's retained event history.</div>
 <div>Days marked "not saved" were before FocusLens started keeping its own copy.</div>
 </div>""")
         sb.append("</body></html>")

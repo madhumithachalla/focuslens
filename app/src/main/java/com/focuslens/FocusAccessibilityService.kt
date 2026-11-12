@@ -76,7 +76,13 @@ class FocusAccessibilityService : AccessibilityService() {
                     LockdownState.locked = on
                 }.start()
             }
-            current?.let { check(it) }
+            current?.let { pkg ->
+                try {
+                    check(pkg)
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Timed rule check failed for $pkg", e)
+                }
+            }
             // Every 30 minutes, save any finished days of usage history in the background, so no
             // day is missed when the app isn't opened for a while.
             if (++ticks % 180 == 0) saveHistoryInBackground()
@@ -321,23 +327,36 @@ class FocusAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         // FocusLens itself (or a system screen) is now in front. The previous app is no longer in use,
         // so forget it: otherwise the timer keeps checking that app and can put a block over this screen.
-        if (pkg == packageName) {
+        // The timer checks the last tracked package every 10 seconds. Clear it when
+        // FocusLens, system UI, an input method, or the launcher comes forward so an old
+        // blocked app cannot put its block screen over the screen the person just opened.
+        // The keyboard floats over the app, which is still in use: leave the current app alone.
+        if (pkg.contains("inputmethod")) return
+        if (pkg == packageName || pkg in ignored || pkg.contains("launcher")) {
             current = null
-            return
-        }
-        if (pkg.contains("inputmethod")) return   // the keyboard floats over the app; the app is still in use
-        if (pkg in ignored) {
-            current = null
-            return
-        }
-        if (pkg.contains("launcher")) {
-            current = null
+            lastSampleT = 0L
+            streakStart = 0L
+            lastReminderAt = 0L
+            scrollStreakPkg = null
+            lastScrollAt = 0L
+            if (pkg == packageName) SkipReelOverlay.hide(this)
             return
         }
         // The Skip reel button only belongs to Instagram.
         if (pkg != SectionDetector.INSTAGRAM) SkipReelOverlay.hide(this)
+        if (current != pkg) {
+            lastSampleT = 0L
+            streakStart = 0L
+            lastReminderAt = 0L
+            scrollStreakPkg = null
+            lastScrollAt = 0L
+        }
         current = pkg
-        check(pkg)
+        try {
+            check(pkg)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Rule check failed for $pkg", e)
+        }
     }
 
     /** A nudge, not a block — see ScrollReminderActivity. Only tracked social apps (the ones
