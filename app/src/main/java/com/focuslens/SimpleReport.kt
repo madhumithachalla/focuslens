@@ -103,8 +103,8 @@ th{color:#6b736f;font-weight:600} .bar{height:10px;background:#3A5245;border-rad
 
         sb.append("<h2>The short version</h2><div class=\"card\">")
         sb.append("<div>Average per available day (${withData.size} days): <b>${hm(average)}</b></div>")
-        if (heaviest != null) sb.append("<div>Heaviest day: <b>${esc(heaviest.label)}</b> (${hm(heaviest.android)})</div>")
-        if (lightest != null) sb.append("<div>Lightest day: <b>${esc(lightest.label)}</b> (${hm(lightest.android)})</div>")
+        if (heaviest != null) sb.append("<div>Heaviest day: <b>${esc(heaviest.label)}</b> (${hm(heaviest.android ?: 0L)})</div>")
+        if (lightest != null) sb.append("<div>Lightest day: <b>${esc(lightest.label)}</b> (${hm(lightest.android ?: 0L)})</div>")
         if (compared.isEmpty()) {
             sb.append("<div class=\"muted\">No days yet where FocusLens saved its own copy, so there is nothing to compare.</div>")
         } else {
