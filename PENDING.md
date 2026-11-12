@@ -18,6 +18,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | General short-video block (Facebook, Snapchat) | Not built | |
 | Blocking screens show a FocusLens mark | Built | Not device-tested |
 | Blocking screens do not freeze the phone | Built | Needs a real-phone check |
+| Stale app no longer blocked over FocusLens (accidental kick-outs) | Built | Fixed in `1406599`. Needs a real-phone check |
 
 ## Usage
 
