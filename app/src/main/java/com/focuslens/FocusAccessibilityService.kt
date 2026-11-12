@@ -319,8 +319,17 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
-        if (pkg == packageName) return
-        if (pkg in ignored || pkg.contains("inputmethod")) return
+        // FocusLens itself (or a system screen) is now in front. The previous app is no longer in use,
+        // so forget it: otherwise the timer keeps checking that app and can put a block over this screen.
+        if (pkg == packageName) {
+            current = null
+            return
+        }
+        if (pkg.contains("inputmethod")) return   // the keyboard floats over the app; the app is still in use
+        if (pkg in ignored) {
+            current = null
+            return
+        }
         if (pkg.contains("launcher")) {
             current = null
             return
