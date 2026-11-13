@@ -202,9 +202,9 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Skip reel button on Instagram", fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                        Text("Cover reels in the Instagram feed", fontWeight = FontWeight.Medium, fontSize = 16.sp)
                         Text(
-                            "A Skip reel button while you scroll the feed, stories or Reels. Needs \"Display over other apps\".",
+                            "A small \"Reel hidden\" cover over each reel in your feed. The rest of the feed still works. Needs \"Display over other apps\".",
                             fontSize = 12.sp, color = Color.Gray
                         )
                     }

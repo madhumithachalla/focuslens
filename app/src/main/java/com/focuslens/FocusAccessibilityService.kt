@@ -145,17 +145,20 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // The Reels switch is checked first, by its own rule, so no other rule can skip it.
-        // Any app whose feature section is on screen: Instagram Reels, Facebook Reels, YouTube Shorts,
-        // TikTok For You, Snapchat Spotlight. Each has its own switch under Focus → Feature blocking.
-        if (SectionDetector.feedFeature[pkg] == section && checkFeatureBlock(pkg, section)) return
-        // Skip reel: shown while you are in the feed, stories or Reels, when turned on.
-        // Shown only when the screen has reels on it (the reel symbol, banner or player), not everywhere.
-        if (pkg == SectionDetector.INSTAGRAM && prefs.skipReelEnabled() &&
-            section == "Reels" && android.provider.Settings.canDrawOverlays(this)
-        ) {
-            SkipReelOverlay.show(this, onSkip = { skipReel() })
-        } else if (pkg == SectionDetector.INSTAGRAM) {
-            SkipReelOverlay.hide(this)
+        // Reels, per app and per switch under Focus → Feature blocking. A full Reels screen (tab or
+        // player) gets a restricted card with Back; reels inside the feed get a cover over just that
+        // reel. Nothing is kicked out to the home screen.
+        val feature = SectionDetector.feedFeature[pkg]
+        val switchOn = feature != null && prefs.isSectionBlocked(pkg, feature)
+        if (switchOn && section == feature && !BlockActivity.showing && !LockdownActivity.showing) {
+            ReelPlaceholder.showFull(this) { performGlobalAction(GLOBAL_ACTION_BACK) }
+        } else {
+            ReelPlaceholder.clearFull(this)
+        }
+        if (switchOn && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
+            ReelPlaceholder.showOver(this, SectionDetector.lastEmbeddedReelRects)
+        } else {
+            ReelPlaceholder.clearRects(this)
         }
         val reelCap = prefs.reelLimit()
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
@@ -343,7 +346,7 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
         // The Skip reel button only belongs to Instagram.
-        if (pkg != SectionDetector.INSTAGRAM) SkipReelOverlay.hide(this)
+        if (current != pkg) ReelPlaceholder.hideAll(this)
         if (current != pkg) {
             lastSampleT = 0L
             streakStart = 0L
@@ -449,24 +452,6 @@ class FocusAccessibilityService : AccessibilityService() {
      * send the person home with the reason. Every decision is logged as "reels check",
      * so a block that does not fire can be traced to the exact condition that failed.
      */
-    private fun checkFeatureBlock(pkg: String, section: String): Boolean {
-        val now = System.currentTimeMillis()
-        val switchOn = prefs.isSectionBlocked(pkg, section)
-        val busy = BlockActivity.showing || FeatureBlockedActivity.showing ||
-            HyperFocusBlockActivity.showing || SchedulePauseActivity.showing
-        val fire = switchOn && !busy && now - lastLaunch >= 1_500L
-        android.util.Log.d(TAG, "feature check: pkg=$pkg section=$section switchOn=$switchOn busy=$busy fire=$fire")
-        if (!fire) return false
-        lastLaunch = now
-        kickHome("$section block")
-        val appName = SectionDetector.displayName[pkg] ?: pkg
-        launchFeatureBlock(
-            "$section is blocked",
-            "You turned $section off for $appName in FocusLens. The rest of $appName still works. " +
-                "Turn it back on under Focus → Feature blocking."
-        )
-        return true
-    }
 
     /** Sends the person home, and logs why, so the cause is visible in logcat. */
     private fun kickHome(why: String) {

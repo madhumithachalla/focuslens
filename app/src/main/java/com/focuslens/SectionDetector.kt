@@ -62,6 +62,8 @@ object SectionDetector {
 
     /** Diagnostic: true when the last scan stopped at its node cap before finishing. */
     @Volatile var lastScanCapped = false
+    /** Screen rectangles of reels embedded in the feed (Instagram). Covered, not blocked. */
+    @Volatile var lastEmbeddedReelRects: List<Rect> = emptyList()
 
     fun detect(pkg: String, root: AccessibilityNodeInfo, prefs: FocusPrefs): String {
         val ids = HashSet<String>()
@@ -82,6 +84,7 @@ object SectionDetector {
         val fullReelPhrases = listOf("view full reel", "show full reel", "watch full reel")
         var hasReelIcon = false
         val reelIconLabels = setOf("reel", "reels")
+        val embedded = ArrayList<Rect>()
 
         // Instagram's bottom navigation bar always has a Reels button labelled "Reels", on every
         // screen. Only icon badges above that bar count, so the home feed is not read as Reels.
@@ -114,13 +117,12 @@ object SectionDetector {
                 }
             }
             if (pkg == INSTAGRAM) {
-                if (!hasFullReelBanner) {
-                    val text = node.text?.toString()?.trim()?.lowercase() ?: ""
-                    if (text.isNotEmpty() && text.length <= 40 && fullReelPhrases.any { text == it || text.contains(it) }) {
-                        hasFullReelBanner = true
-                    }
+                val bannerText = node.text?.toString()?.trim()?.lowercase() ?: ""
+                if (bannerText.isNotEmpty() && bannerText.length <= 40 && fullReelPhrases.any { bannerText == it || bannerText.contains(it) }) {
+                    hasFullReelBanner = true
+                    embedded += ancestorRect(node, 3)
                 }
-                if (!hasReelIcon && !node.isSelected) {
+                if (!node.isSelected) {
                     // Deliberately NOT the same check as the tab-word match above: an icon
                     // badge's accessible name is just "Reel"/"Reels" on its own, not a tab's
                     // longer "Reels, tab 2 of 5" — checked as its own exact match so a random
@@ -129,7 +131,10 @@ object SectionDetector {
                     if (iconLabel in reelIconLabels) {
                         val r = Rect()
                         node.getBoundsInScreen(r)
-                        if (r.top < navCutTop) hasReelIcon = true
+                        if (r.top < navCutTop) {
+                            hasReelIcon = true
+                            embedded += ancestorRect(node, 3)
+                        }
                     }
                 }
             }
@@ -141,8 +146,10 @@ object SectionDetector {
         }
 
         lastScanCapped = queue.isNotEmpty()
+        // Only very large rectangles are ignored: a reel is a single post-sized block, never the whole feed.
+        lastEmbeddedReelRects = if (pkg == INSTAGRAM) embedded.filter { it.height() < rootRect.height() * 0.7 } else emptyList()
         val result = when (pkg) {
-            INSTAGRAM -> instagram(ids, selectedIds, words, hasFullReelBanner || hasReelIcon)
+            INSTAGRAM -> instagram(ids, selectedIds, words)
             YOUTUBE -> youtube(ids, words)
             TIKTOK -> tiktok(words)
             SNAPCHAT -> snapchat(words)
@@ -161,7 +168,16 @@ object SectionDetector {
         return result
     }
 
-    private fun instagram(ids: Set<String>, selIds: List<String>, words: List<String>, hasReelSignal: Boolean): String {
+    /** The bounds of [node] and up to [levels] of its parents: the post-sized block a reel sits in. */
+    private fun ancestorRect(node: AccessibilityNodeInfo, levels: Int): Rect {
+        var n: AccessibilityNodeInfo = node
+        repeat(levels) { n.parent?.let { n = it } }
+        val r = Rect()
+        n.getBoundsInScreen(r)
+        return r
+    }
+
+    private fun instagram(ids: Set<String>, selIds: List<String>, words: List<String>): String {
         fun has(vararg k: String) = ids.any { id -> k.any { id.contains(it) } }
         fun sel(vararg k: String) = selIds.any { id -> k.any { id.contains(it) } }
         return when {
@@ -175,7 +191,7 @@ object SectionDetector {
             // explicit instruction, even though that means an Explore or Stories screen that
             // happens to have a Reels unit mixed into it gets blocked too.
             sel("clips_tab") || has("clips_viewer", "clips_video", "clips_swipe") ||
-                "reels" in words || hasReelSignal -> "Reels"
+                "reels" in words -> "Reels"
             // Falls through here only when there is Stories-viewer evidence and no Reels-player
             // evidence at all — genuine Stories viewing, not mixed with a Reels unit.
             has("reel_viewer", "story_viewer", "stories_viewer") -> "Stories"
