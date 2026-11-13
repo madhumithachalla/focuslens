@@ -5,6 +5,12 @@ package com.focuslens
 data class BuildNote(val build: Int, val points: List<String>, val version: String = "")
 
 val APP_CHANGELOG: List<BuildNote> = listOf(
+    BuildNote(0, listOf(
+        "Limits (doom-scroll, reels per day, quiz unlocks, emergency passes) use a drag-and-scroll picker.",
+        "Reels switch on: Reels is blocked, whatever the daily limit.",
+        "Blocked short videos show a full screen with Back. Back leaves it straight away.",
+        "Screen-break challenges: NoBlue for 20 hours and Semi-Blue for a day (rules only; screens coming next)."
+    ), version = "1.8.1"),
     BuildNote(157, listOf(
         "Usage report: daily values only where Android has exact data; older days are marked unavailable.",
         "Dashboard shows a readable message when usage cannot load.",

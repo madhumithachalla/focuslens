@@ -114,3 +114,7 @@ Builds #148 to #152 passed compilation. Compiling is not the same as working on 
 | Publish step only runs on `main` | Built | Branch builds compile and test but do not push an APK |
 | Existing features checked on a phone | Not started | Needs a device run through the checklist in the plan |
 | Limits use drag-and-scroll pickers (doom-scroll, reels per day, quiz unlocks, emergency passes) | Built | Replaced +/- buttons with a shared WheelPicker. Compiles in CI on this branch; not device-tested |
+| Release 1.8.1 (versionCode 10801), changelog entry added | Built | Not device-tested. Build number entry is 0 until CI assigns one |
+| Keep all five tabs' extra pages (Learn, Explore, Guide, Birthdays, Playlists) | Decided | Owner: keep them all |
+| Keep-going daily cap = 2 | Decided | Owner's suggestion. Design only; not yet in the app |
+| Palette near-black, lilac-indigo accent, light view | Decided | Owner's suggestion. Design only; the app theme is not changed yet |
