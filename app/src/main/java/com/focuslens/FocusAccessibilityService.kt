@@ -164,12 +164,12 @@ class FocusAccessibilityService : AccessibilityService() {
                 }
                 ReelPlaceholder.showCounter(this, "Reels: $used used · ${(reelCap - used).coerceAtLeast(0)} left today")
             } else {
-                if (switchOn && !busy) ReelPlaceholder.showFull(this, back = back) else ReelPlaceholder.clearFull(this)
+                if (switchOn && !busy) ReelPlaceholder.showFull(this, onBack = back) else ReelPlaceholder.clearFull(this)
                 ReelPlaceholder.showCounter(this, "Reels: $used used today · no limit")
             }
         } else {
             ReelPlaceholder.clearCounter(this)
-            if (switchOn && section == feature && !busy) ReelPlaceholder.showFull(this, back = back)
+            if (switchOn && section == feature && !busy) ReelPlaceholder.showFull(this, onBack = back)
             else ReelPlaceholder.clearFull(this)
         }
         if (switchOn && reelCap == 0 && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
