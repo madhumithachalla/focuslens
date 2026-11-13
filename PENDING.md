@@ -113,3 +113,4 @@ Builds #148 to #152 passed compilation. Compiling is not the same as working on 
 | JUnit added to the app module; CI runs `testDebugUnitTest` before the APK build | Built | Run in CI on this branch. Result pending |
 | Publish step only runs on `main` | Built | Branch builds compile and test but do not push an APK |
 | Existing features checked on a phone | Not started | Needs a device run through the checklist in the plan |
+| Limits use drag-and-scroll pickers (doom-scroll, reels per day, quiz unlocks, emergency passes) | Built | Replaced +/- buttons with a shared WheelPicker. Compiles in CI on this branch; not device-tested |

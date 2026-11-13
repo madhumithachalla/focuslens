@@ -171,9 +171,5 @@ private fun QuizLabel(text: String) {
 
 @Composable
 private fun QuizStepper(value: Int, min: Int, max: Int, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = { if (value > min) onChange(value - 1) }) { Text("-") }
-        Text("$value", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        OutlinedButton(onClick = { if (value < max) onChange(value + 1) }) { Text("+") }
-    }
+    WheelPicker(value = value, min = min, max = max, onChange = onChange)
 }
