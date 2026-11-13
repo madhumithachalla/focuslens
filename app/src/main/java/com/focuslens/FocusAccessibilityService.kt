@@ -49,6 +49,8 @@ class FocusAccessibilityService : AccessibilityService() {
 
         /** Filter with: adb logcat -s FocusLens */
         const val TAG = "FocusLens"
+        /** A reel counts only after this long on screen. */
+        const val REEL_WATCHED_MS = 5_000L
     }
 
     // Windows that should never change which app we think is open.
@@ -63,6 +65,7 @@ class FocusAccessibilityService : AccessibilityService() {
         override fun run() {
             // Heartbeat: lets the Focus tab tell when the service has stopped running.
             lastHeartbeat = System.currentTimeMillis()
+            reelTick()
             // Lockdown: re-check the daily and peak-hour limits at most once a minute, off this thread.
             val svc = this@FocusAccessibilityService
             val nowTick = System.currentTimeMillis()
@@ -139,10 +142,6 @@ class FocusAccessibilityService : AccessibilityService() {
                 "feature=${SectionDetector.feedFeature[pkg]} blocked=${prefs.isSectionBlocked(pkg, SectionDetector.feedFeature[pkg] ?: "")} " +
                 "connected=$connected")
         }
-        // Count each visit to Reels (not every refresh), and enforce the daily Reels limit.
-        if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && lastReelsSection != "Reels") {
-            prefs.addReelToday()
-        }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // The Reels switch is checked first, by its own rule, so no other rule can skip it.
         // Reels, per app and per switch under Focus → Feature blocking.
@@ -156,16 +155,25 @@ class FocusAccessibilityService : AccessibilityService() {
         val back: () -> Unit = { performGlobalAction(GLOBAL_ACTION_BACK) }
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels") {
             val used = prefs.reelsToday()
+            val mins = prefs.reelWatchMsToday() / 60_000L
             if (reelCap > 0) {
+                ReelPlaceholder.clearFull(this)
                 if (used >= reelCap) {
-                    ReelPlaceholder.showFull(this, "Reels limit reached.\n$used of $reelCap used today.\nBack tomorrow after 6am.", back)
+                    // Leave Reels, so the next reel does not play; a short banner says why.
+                    ReelPlaceholder.showBanner(this, "Reel limit reached: $used of $reelCap. Back tomorrow after 6am.", back)
+                    val now = System.currentTimeMillis()
+                    if (now - lastLimitBackAt > 3_000L) {
+                        lastLimitBackAt = now
+                        back()
+                    }
                 } else {
-                    ReelPlaceholder.clearFull(this)
+                    ReelPlaceholder.clearBanner(this)
                 }
-                ReelPlaceholder.showCounter(this, "Reels: $used used · ${(reelCap - used).coerceAtLeast(0)} left today")
+                ReelPlaceholder.showCounter(this, "Reels: $used of $reelCap · ${(reelCap - used).coerceAtLeast(0)} left · $mins min")
             } else {
+                ReelPlaceholder.clearBanner(this)
                 if (switchOn && !busy) ReelPlaceholder.showFull(this, onBack = back) else ReelPlaceholder.clearFull(this)
-                ReelPlaceholder.showCounter(this, "Reels: $used used today · no limit")
+                ReelPlaceholder.showCounter(this, "Reels: $used watched · $mins min · no limit")
             }
         } else {
             ReelPlaceholder.clearCounter(this)
@@ -330,6 +338,28 @@ class FocusAccessibilityService : AccessibilityService() {
         handler.post(sampler)
     }
 
+    // Reels: a reel counts only after it has been on screen for REEL_WATCHED_MS.
+    private var reelStartAt = 0L
+    private var lastLimitBackAt = 0L
+
+    /** Called every ticker beat: adds watch time while Reels is on screen and the screen is on. */
+    private fun reelTick() {
+        val now = System.currentTimeMillis()
+        val inReels = current == SectionDetector.INSTAGRAM && lastReelsSection == "Reels"
+        val screenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+        if (inReels && screenOn) {
+            if (reelStartAt == 0L) reelStartAt = now
+            prefs.addReelWatchMs(10_000L)
+        } else {
+            finishPendingReel(now)
+        }
+    }
+
+    private fun finishPendingReel(now: Long) {
+        if (reelStartAt > 0L && now - reelStartAt >= REEL_WATCHED_MS) prefs.addReelToday()
+        reelStartAt = 0L
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
@@ -386,9 +416,10 @@ class FocusAccessibilityService : AccessibilityService() {
             lastSwipeCountAt = tNow
             // In Reels, each swipe moves to the next reel, so each one counts toward the limit.
             if (pkg == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
-                prefs.addReelToday()
-                val cap = prefs.reelLimit()
-                android.util.Log.d(TAG, "reel counted ${prefs.reelsToday()} of $cap")
+                // The previous reel counts only if it was watched for a while; this one starts now.
+                val now = System.currentTimeMillis()
+                finishPendingReel(now)
+                reelStartAt = now
             }
         }
         if (!prefs.doomScrollReminderEnabled()) return

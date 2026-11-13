@@ -109,6 +109,9 @@ class FocusPrefs(context: Context) {
     fun setReelLimit(n: Int) { sp.edit().putInt("reel_limit", n.coerceIn(0, 500)).apply() }
     fun reelsToday(): Int = sp.getInt("reels_${today()}", 0)
     fun addReelToday() { sp.edit().putInt("reels_${today()}", reelsToday() + 1).apply() }
+    /** Minutes of Reels actually on screen today, in milliseconds. */
+    fun reelWatchMsToday(): Long = sp.getLong("reelwatch_${today()}", 0L)
+    fun addReelWatchMs(ms: Long) { sp.edit().putLong("reelwatch_${today()}", reelWatchMsToday() + ms).apply() }
 
     fun addPass(pkg: String) {
         sp.edit().putInt("passes_${pkg}_${today()}", passesToday(pkg) + 1).apply()

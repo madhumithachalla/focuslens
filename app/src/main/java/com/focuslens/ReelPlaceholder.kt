@@ -40,7 +40,7 @@ object ReelPlaceholder {
             setPadding(padding, padding, padding, padding)
             addView(TextView(c).apply {
                 this.text = text
-                textSize = if (padding > 16) 18f else 12f
+                textSize = if (padding >= 48) 18f else if (padding > 16) 14f else 12f
                 gravity = Gravity.CENTER
                 setTextColor(0xFF2E2A25.toInt())
             })
@@ -112,6 +112,30 @@ object ReelPlaceholder {
         }
     }
 
+    private var bannerView: View? = null
+
+    /** A short banner at the bottom, not a full page. Used when the reel limit is reached. */
+    fun showBanner(c: Context, text: String, onBack: () -> Unit) {
+        if (bannerView != null) return
+        val v = card(c, text, 24, onBack)
+        val lp = params(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = 160
+        }
+        try {
+            windows(c).addView(v, lp)
+            bannerView = v
+        } catch (e: Exception) {
+            // Not shown.
+        }
+    }
+
+    fun clearBanner(c: Context) {
+        val v = bannerView ?: return
+        try { windows(c).removeView(v) } catch (e: Exception) { }
+        bannerView = null
+    }
+
     fun clearCounter(c: Context) {
         val v = counterView ?: return
         try { windows(c).removeView(v) } catch (e: Exception) { }
@@ -134,5 +158,6 @@ object ReelPlaceholder {
         clearRects(c)
         clearFull(c)
         clearCounter(c)
+        clearBanner(c)
     }
 }
