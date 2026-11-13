@@ -145,28 +145,38 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (pkg == SectionDetector.INSTAGRAM) lastReelsSection = section
         // The Reels switch is checked first, by its own rule, so no other rule can skip it.
-        // Reels, per app and per switch under Focus → Feature blocking. A full Reels screen (tab or
-        // player) gets a restricted card with Back; reels inside the feed get a cover over just that
-        // reel. Nothing is kicked out to the home screen.
+        // Reels, per app and per switch under Focus → Feature blocking.
+        // With a daily reel limit: Reels stay open until the limit, then a card (no kick-out).
+        // Without a limit: a switched-on Reels section gets the restricted card with Back.
+        // Reels inside the feed are covered only when there is no limit.
         val feature = SectionDetector.feedFeature[pkg]
         val switchOn = feature != null && prefs.isSectionBlocked(pkg, feature)
-        if (switchOn && section == feature && !BlockActivity.showing && !LockdownActivity.showing) {
-            ReelPlaceholder.showFull(this) { performGlobalAction(GLOBAL_ACTION_BACK) }
+        val busy = BlockActivity.showing || LockdownActivity.showing
+        val reelCap = if (pkg == SectionDetector.INSTAGRAM) prefs.reelLimit() else 0
+        val back: () -> Unit = { performGlobalAction(GLOBAL_ACTION_BACK) }
+        if (pkg == SectionDetector.INSTAGRAM && section == "Reels") {
+            val used = prefs.reelsToday()
+            if (reelCap > 0) {
+                if (used >= reelCap) {
+                    ReelPlaceholder.showFull(this, "Reels limit reached.\n$used of $reelCap used today.\nBack tomorrow after 6am.", back)
+                } else {
+                    ReelPlaceholder.clearFull(this)
+                }
+                ReelPlaceholder.showCounter(this, "Reels: $used used · ${(reelCap - used).coerceAtLeast(0)} left today")
+            } else {
+                if (switchOn && !busy) ReelPlaceholder.showFull(this, back = back) else ReelPlaceholder.clearFull(this)
+                ReelPlaceholder.showCounter(this, "Reels: $used used today · no limit")
+            }
         } else {
-            ReelPlaceholder.clearFull(this)
+            ReelPlaceholder.clearCounter(this)
+            if (switchOn && section == feature && !busy) ReelPlaceholder.showFull(this, back = back)
+            else ReelPlaceholder.clearFull(this)
         }
-        if (switchOn && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
+        if (switchOn && reelCap == 0 && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
             ReelPlaceholder.showOver(this, SectionDetector.lastEmbeddedReelRects)
         } else {
             ReelPlaceholder.clearRects(this)
         }
-        val reelCap = prefs.reelLimit()
-        if (pkg == SectionDetector.INSTAGRAM && section == "Reels" && reelCap > 0 && prefs.reelsToday() > reelCap) {
-            kickHome("reels limit")
-            launchFeatureBlock("Reels limit reached", "You've opened Reels $reelCap times today, your limit. Back tomorrow after 6am.")
-            return
-        }
-
         if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing ||
             SchedulePauseActivity.showing
         ) return
@@ -379,11 +389,6 @@ class FocusAccessibilityService : AccessibilityService() {
                 prefs.addReelToday()
                 val cap = prefs.reelLimit()
                 android.util.Log.d(TAG, "reel counted ${prefs.reelsToday()} of $cap")
-                if (cap > 0 && prefs.reelsToday() > cap && System.currentTimeMillis() - lastLaunch > 1_500L) {
-                    lastLaunch = System.currentTimeMillis()
-                    kickHome("reels limit (swipe)")
-                    launchFeatureBlock("Reels limit reached", "You've watched $cap Reels today, your limit. Back tomorrow after 6am.")
-                }
             }
         }
         if (!prefs.doomScrollReminderEnabled()) return

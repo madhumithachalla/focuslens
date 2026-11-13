@@ -516,8 +516,9 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             Column(Modifier.fillMaxWidth()) {
                 Text("Reels per day", fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    "How many times you can open Instagram Reels each day. " +
-                        "Used today: ${prefs.reelsToday()}. 0 means no limit.",
+                    "Used today: ${prefs.reelsToday()}" +
+                        (if (reelCap > 0) " · left today: ${(reelCap - prefs.reelsToday()).coerceAtLeast(0)}" else "") +
+                        ". With a limit, Reels stay open until it is reached. 0 means no limit.",
                     fontSize = 12.sp, color = Color.Gray
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

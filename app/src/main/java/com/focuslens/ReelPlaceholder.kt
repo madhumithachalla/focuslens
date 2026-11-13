@@ -19,6 +19,9 @@ import android.widget.TextView
 object ReelPlaceholder {
     private val rectViews = ArrayList<View>()
     private var fullView: View? = null
+    private var fullText = ""
+    private var counterView: View? = null
+    const val DEFAULT_FULL_TEXT = "Reels is restricted in FocusLens.\nThe rest of the app still works."
 
     private fun windows(c: Context) = c.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -69,16 +72,50 @@ object ReelPlaceholder {
         }
     }
 
-    /** Full-screen restricted card for a Reels tab or player. Back leaves the Reels screen. */
-    fun showFull(c: Context, onBack: () -> Unit) {
-        if (fullView != null) return
-        val v = card(c, "Reels is restricted in FocusLens.\nThe rest of the app still works.", 48, onBack)
+    /** Full-screen card for a Reels tab or player. Back leaves the Reels screen. */
+    fun showFull(c: Context, text: String = DEFAULT_FULL_TEXT, onBack: () -> Unit) {
+        if (fullView != null && fullText == text) return
+        clearFull(c)
+        val v = card(c, text, 48, onBack)
         try {
             windows(c).addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT))
             fullView = v
+            fullText = text
         } catch (e: Exception) {
             // Could not be shown; the Reels screen stays visible.
         }
+    }
+
+    /** A small chip at the top right, e.g. "Reels: 12 used · 8 left today". */
+    fun showCounter(c: Context, text: String) {
+        val existing = counterView
+        if (existing != null) {
+            (existing as? TextView)?.text = text
+            return
+        }
+        val chip = TextView(c).apply {
+            this.text = text
+            textSize = 12f
+            setTextColor(0xFF2E2A25.toInt())
+            setBackgroundColor(0xF2F6F0E6.toInt())
+            setPadding(20, 8, 20, 8)
+        }
+        val lp = params(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT).apply {
+            gravity = Gravity.TOP or Gravity.END
+            y = 120
+        }
+        try {
+            windows(c).addView(chip, lp)
+            counterView = chip
+        } catch (e: Exception) {
+            // Not shown; the limit still applies.
+        }
+    }
+
+    fun clearCounter(c: Context) {
+        val v = counterView ?: return
+        try { windows(c).removeView(v) } catch (e: Exception) { }
+        counterView = null
     }
 
     fun clearRects(c: Context) {
@@ -90,10 +127,12 @@ object ReelPlaceholder {
         val v = fullView ?: return
         try { windows(c).removeView(v) } catch (e: Exception) { }
         fullView = null
+        fullText = ""
     }
 
     fun hideAll(c: Context) {
         clearRects(c)
         clearFull(c)
+        clearCounter(c)
     }
 }
