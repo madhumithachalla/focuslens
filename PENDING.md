@@ -10,7 +10,8 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 |---|---|---|
 | App, feature and Reels blocking, reasons, counts, quiz unlock | Built | Device-tested in earlier versions |
 | Reels blocking for Facebook, YouTube Shorts, TikTok, Snapchat | Built | Only Instagram confirmed. Snapchat and TikTok need device samples |
-| Skip reel pop-up with Ignore (10 minutes) | Built | Not device-tested |
+| Skip reel pop-up with Ignore (10 minutes) | Removed | Replaced by reel covers (`938b96d`) |
+| Reels restricted: full card on the Reels screen (Back, no kick-out); reel covers in the feed | Built | Not device-tested. Instagram only for covers |
 | Reels "even better" | Not built | Owner to define what should change |
 | Phone lockdown (daily and peak-hour limits, allowed apps) | Built | Not device-tested. Settings, dialler and FocusLens always stay open |
 | Monochrome mode | Not built | |
