@@ -21,7 +21,7 @@ object ReelPlaceholder {
     private var fullView: View? = null
     private var fullText = ""
     private var counterView: View? = null
-    const val DEFAULT_FULL_TEXT = "Reels is restricted in FocusLens.\nThe rest of the app still works."
+    const val DEFAULT_FULL_TEXT = "Reels is restricted in FocusLens."
 
     private fun windows(c: Context) = c.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -72,13 +72,20 @@ object ReelPlaceholder {
         }
     }
 
-    /** Full-screen card for a Reels tab or player. Back leaves the Reels screen. */
+    /**
+     * A small card at the bottom for a Reels tab or player. It is deliberately NOT full screen: a
+     * full-screen overlay covered the navigation buttons and stopped the person leaving the app.
+     */
     fun showFull(c: Context, text: String = DEFAULT_FULL_TEXT, onBack: () -> Unit) {
         if (fullView != null && fullText == text) return
         clearFull(c)
-        val v = card(c, text, 48, onBack)
+        val v = card(c, text, 24, onBack)
+        val lp = params(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = 160
+        }
         try {
-            windows(c).addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT))
+            windows(c).addView(v, lp)
             fullView = v
             fullText = text
         } catch (e: Exception) {

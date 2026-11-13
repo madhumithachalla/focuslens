@@ -340,6 +340,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     // Reels: a reel counts only after it has been on screen for REEL_WATCHED_MS.
     private var reelStartAt = 0L
+    private var lastWindowPkg = ""
     private var lastLimitBackAt = 0L
 
     /** Called every ticker beat: adds watch time while Reels is on screen and the screen is on. */
@@ -368,6 +369,12 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
+        // Any change of app (including the home screen and system screens) clears every cover first,
+        // so nothing stays on top of the screen the person has moved to.
+        if (pkg != lastWindowPkg) {
+            lastWindowPkg = pkg
+            ReelPlaceholder.hideAll(this)
+        }
         // FocusLens itself (or a system screen) is now in front. The previous app is no longer in use,
         // so forget it: otherwise the timer keeps checking that app and can put a block over this screen.
         // The timer checks the last tracked package every 10 seconds. Clear it when
