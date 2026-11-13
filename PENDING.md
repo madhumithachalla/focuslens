@@ -92,3 +92,15 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 ## Last build
 
 Builds #148 to #152 passed compilation. Compiling is not the same as working on a phone.
+
+## Screen-break challenges (beta work)
+
+| Item | Status | Notes |
+|---|---|---|
+| NoBlue for 20 Hours and Semi-Blue for a Day: rules (`challenge/ChallengeLogic.kt`) | Built | Not compiled: no Android SDK in the working environment. See `docs/SCREEN_BREAK_CHALLENGES.md` |
+| Challenge rules unit tests (`ChallengeLogicTest.kt`) | Built | Not run: test dependencies not wired into the app module yet |
+| Challenge setup and active screens, app picker for Semi-Blue | Not built | Needs the Android SDK to compile |
+| Wiring the challenge into the accessibility blocker | Not built | Must reuse existing blocking; do not claim blocking without it |
+| 20Talk fundraiser link | Blocked | No verified fundraiser URL in the repository. Placeholder in the docs |
+| Google Play internal or closed beta | Blocked | Needs Play Console access, release signing key and the Accessibility declaration |
+| Device testing of challenges | Not started | No Android device available |
