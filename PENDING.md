@@ -101,6 +101,6 @@ Builds #148 to #152 passed compilation. Compiling is not the same as working on 
 | Challenge rules unit tests (`ChallengeLogicTest.kt`) | Built | Not run: test dependencies not wired into the app module yet |
 | Challenge setup and active screens, app picker for Semi-Blue | Not built | Needs the Android SDK to compile |
 | Wiring the challenge into the accessibility blocker | Not built | Must reuse existing blocking; do not claim blocking without it |
-| 20Talk fundraiser link | Blocked | No verified fundraiser URL in the repository. Placeholder in the docs |
+| 20Talk fundraiser link | Built | Owner-provided URL in the docs. Not confirmed to open from the build environment (proxy refused) |
 | Google Play internal or closed beta | Blocked | Needs Play Console access, release signing key and the Accessibility declaration |
 | Device testing of challenges | Not started | No Android device available |
