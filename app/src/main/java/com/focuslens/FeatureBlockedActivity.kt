@@ -1,9 +1,10 @@
 package com.focuslens
 
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +47,13 @@ class FeatureBlockedActivity : ComponentActivity() {
         val message = intent.getStringExtra("message")?.takeIf { it.isNotBlank() }
             ?: "Blocked by a rule you set in FocusLens."
         showing = true
+        // Paint the window in the same cream as the content, before the first frame,
+        // so the screen never flashes white while Compose starts up.
+        window.setBackgroundDrawable(ColorDrawable(0xFFF7F5F0.toInt()))
+        // Back leaves the block screen from the first frame, not only once Compose has drawn.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = goHome()
+        })
 
         setBrandedContent {
             MaterialTheme(
@@ -57,7 +65,6 @@ class FeatureBlockedActivity : ComponentActivity() {
                 )
             ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    BackHandler { goHome() }
                     Column(
                         modifier = Modifier.fillMaxSize().padding(28.dp),
                         verticalArrangement = Arrangement.Center,

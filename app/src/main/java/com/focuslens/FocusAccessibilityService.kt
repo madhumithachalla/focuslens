@@ -161,7 +161,7 @@ class FocusAccessibilityService : AccessibilityService() {
             ReelPlaceholder.clearCounter(this)
             ReelPlaceholder.clearBanner(this)
             val blockNow = System.currentTimeMillis()
-            if (blockNow - lastLaunch >= 1_500L) {
+            if (blockNow - lastLaunch >= 1_500L && !FeatureBlockedActivity.showing) {
                 lastLaunch = blockNow
                 kickHome("$section block")
                 val appName = SectionDetector.displayName[pkg] ?: pkg
