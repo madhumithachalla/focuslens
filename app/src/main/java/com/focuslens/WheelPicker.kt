@@ -1,5 +1,6 @@
 package com.focuslens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,8 @@ private val WHEEL_ITEM_HEIGHT = 40.dp
  * in the middle highlight is the one selected. [onChange] runs when the list stops moving.
  * [value] is clamped to [min]..[max].
  */
+// rememberSnapFlingBehavior is still marked experimental in this Compose version.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WheelPicker(
     value: Int,
