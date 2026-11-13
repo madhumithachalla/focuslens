@@ -67,6 +67,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 |---|---|---|
 | Setup checklist (permissions with live status) | Built | Not device-tested |
 | App version shown as 1.0.0 (build N), changelog grouped by version | Built | Bump `versionName` by hand per release |
+| Country for helplines: detected from the phone, then asked once | Built (detection only) | Not yet shown to the person; the helpline card is not built |
 | Spotify connection | Broken | "Explicit user authorization is required". Fix is in the Spotify dashboard and on the phone |
 | Firestore rules | Blocked | Owner to publish in the Firebase console |
 | Restore old data | Blocked | Needs older database layouts |
