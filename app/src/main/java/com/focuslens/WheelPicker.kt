@@ -1,7 +1,7 @@
 package com.focuslens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberSnapFlingBehavior
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
