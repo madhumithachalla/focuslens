@@ -36,7 +36,8 @@ Enforcement uses the existing FocusLens accessibility-based blocking. It can be 
 
 The feature is inspired by the owner's participation in 20 Hours for 20Talk. It is not an official 20Talk feature, partnership or endorsement, and it is not a replacement for the event. No 20Talk logo or branding is used without documented permission.
 
-Fundraiser link: **[PLACEHOLDER: verified personal fundraiser URL, not in repository]**. Add it only after it is verified. Donations are not required, and no donation collection happens inside FocusLens.
+Fundraiser link (optional, separate from the app's own features): https://www.20hoursfor20talk.com.au/fundraisers/madhumithachalla
+Provided by the owner. The owner confirmed the page opens (screenshot, 13 November 2026). Donations are not required, and no donation collection happens inside FocusLens.
 
 ## Status
 

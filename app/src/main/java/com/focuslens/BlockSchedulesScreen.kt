@@ -87,16 +87,18 @@ fun BlockSchedulesScreen() {
             }
         }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Emergency passes left today: $passesLeft of $perDay", modifier = Modifier.weight(1f))
-                TextButton(onClick = {
-                    prefs.setPassesPerDay(perDay - 1)
-                    rev++
-                }) { Text("-") }
-                TextButton(onClick = {
-                    prefs.setPassesPerDay(perDay + 1)
-                    rev++
-                }) { Text("+") }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Emergency passes per day: $perDay (left today: $passesLeft)")
+                WheelPicker(
+                    value = perDay,
+                    min = 0,
+                    max = 10,
+                    onChange = {
+                        prefs.setPassesPerDay(it)
+                        rev++
+                    },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
         item {

@@ -521,11 +521,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                         ". With a limit, Reels stay open until it is reached. 0 means no limit.",
                     fontSize = 12.sp, color = Color.Gray
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = { prefs.setReelLimit(reelCap - 1); reelRev++ }) { Text("-1") }
-                    Text(if (reelCap == 0) "No limit" else "$reelCap a day", fontWeight = FontWeight.Medium)
-                    OutlinedButton(onClick = { prefs.setReelLimit(reelCap + 1); reelRev++ }) { Text("+1") }
-                }
+                WheelPicker(
+                    value = reelCap,
+                    min = 0,
+                    max = 100,
+                    onChange = { prefs.setReelLimit(it); reelRev++ },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    format = { if (it == 0) "No limit" else "$it a day" }
+                )
             }
         }
         items(if (showAllApps) apps else apps.take(6), key = { "app-${it.packageName}" }) { app ->
@@ -596,14 +599,15 @@ private fun isInstalled(context: android.content.Context, pkg: String): Boolean 
 /** A label with − and + buttons for a whole number between [min] and [max]. */
 @Composable
 private fun MinuteRow(label: String, value: Int, min: Int, max: Int, onChange: (Int) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(label, fontSize = 13.sp, color = Color.Gray, modifier = Modifier.weight(1f))
-        OutlinedButton(onClick = { if (value > min) onChange(value - 1) }) { Text("-") }
-        Text("$value", fontWeight = FontWeight.Medium)
-        OutlinedButton(onClick = { if (value < max) onChange(value + 1) }) { Text("+") }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(label, fontSize = 13.sp, color = Color.Gray)
+        WheelPicker(
+            value = value,
+            min = min,
+            max = max,
+            onChange = onChange,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            format = { if (it == 0) "Off" else "$it" }
+        )
     }
 }

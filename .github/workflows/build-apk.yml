@@ -27,8 +27,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # No Android SDK setup step: ubuntu-latest's runner image ships with the SDK,
-      # platform 34, and build-tools already installed (and ANDROID_HOME already set).
+      # No Android SDK setup step: ubuntu-latest's runner image ships with the Android SDK,
+      # build-tools and ANDROID_HOME already set. The platform the app compiles against is
+      # compileSdk in app/build.gradle.kts, which the runner must provide.
       # android-actions/setup-android@v3 was tried here first and crashed trying to
       # install the legacy "tools" package, which Google removed from the SDK years
       # ago — that action is unmaintained for current SDK manager behavior.
@@ -61,6 +62,10 @@ jobs:
         # two to tell whether a newer build than the one installed is live on the website.
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> local.properties
 
+      # Unit tests run before the APK is built, so a failing test stops the publish step.
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --no-daemon
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon
 
@@ -73,6 +78,9 @@ jobs:
       # (docs/) is the one thing here that's already reachable by a plain visitor, so ship the
       # APK as a plain static file there instead of as a Release asset.
       - name: Publish APK + version.txt into docs/ (served by GitHub Pages, no auth needed)
+        # Only builds from main are published. Manual runs on other branches compile and test
+        # but do not push an APK to main.
+        if: github.ref == 'refs/heads/main'
         run: |
           cp focuslens-debug.apk docs/focuslens-debug.apk
           echo "${{ github.run_number }}" > docs/version.txt

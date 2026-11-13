@@ -153,6 +153,26 @@ class FocusAccessibilityService : AccessibilityService() {
         val busy = BlockActivity.showing || LockdownActivity.showing
         val reelCap = if (pkg == SectionDetector.INSTAGRAM) prefs.reelLimit() else 0
         val back: () -> Unit = { performGlobalAction(GLOBAL_ACTION_BACK) }
+        // The feature switch is a hard block: with it on, this section is blocked whatever the
+        // daily limit says. The limit (counting, banner) applies only while the switch is off.
+        if (switchOn && section == feature && !busy) {
+            ReelPlaceholder.clearFull(this)
+            ReelPlaceholder.clearRects(this)
+            ReelPlaceholder.clearCounter(this)
+            ReelPlaceholder.clearBanner(this)
+            val blockNow = System.currentTimeMillis()
+            if (blockNow - lastLaunch >= 1_500L && !FeatureBlockedActivity.showing) {
+                lastLaunch = blockNow
+                kickHome("$section block")
+                val appName = SectionDetector.displayName[pkg] ?: pkg
+                launchFeatureBlock(
+                    "$section is blocked",
+                    "You turned $section off for $appName in FocusLens. The rest of $appName still works. " +
+                        "Turn it back on under Focus → Feature blocking."
+                )
+            }
+            return
+        }
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels") {
             val used = prefs.reelsToday()
             val mins = prefs.reelWatchMsToday() / 60_000L
