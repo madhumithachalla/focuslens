@@ -150,29 +150,38 @@ class FocusAccessibilityService : AccessibilityService() {
         // Reels inside the feed are covered only when there is no limit.
         val feature = SectionDetector.feedFeature[pkg]
         val switchOn = feature != null && prefs.isSectionBlocked(pkg, feature)
-        val busy = BlockActivity.showing || LockdownActivity.showing
         val reelCap = if (pkg == SectionDetector.INSTAGRAM) prefs.reelLimit() else 0
-        val back: () -> Unit = { performGlobalAction(GLOBAL_ACTION_BACK) }
-        // The feature switch is a hard block: with it on, this section is blocked whatever the
-        // daily limit says. The limit (counting, banner) applies only while the switch is off.
-        if (switchOn && section == feature && !busy) {
+        // Guard rail 1: with the Reels switch on, Reels is blocked every time it is on screen.
+        // Guard rail 2: once today's reel limit is used up, Reels is blocked for the rest of the day.
+        // Both are decided on every check, so a block cannot stop firing after a while.
+        val reelsLimitHit = pkg == SectionDetector.INSTAGRAM && section == "Reels" &&
+            reelCap > 0 && prefs.reelsToday() >= reelCap
+        if ((switchOn && section == feature) || reelsLimitHit) {
             ReelPlaceholder.clearFull(this)
             ReelPlaceholder.clearRects(this)
             ReelPlaceholder.clearCounter(this)
             ReelPlaceholder.clearBanner(this)
             val blockNow = System.currentTimeMillis()
-            if (blockNow - lastLaunch >= 1_500L && !FeatureBlockedActivity.showing) {
+            if (blockNow - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
                 lastLaunch = blockNow
                 kickHome("$section block")
                 val appName = SectionDetector.displayName[pkg] ?: pkg
-                launchFeatureBlock(
-                    "$section is blocked",
-                    "You turned $section off for $appName in FocusLens. The rest of $appName still works. " +
-                        "Turn it back on under Focus → Feature blocking."
-                )
+                if (switchOn && section == feature) {
+                    launchFeatureBlock(
+                        "$section is blocked",
+                        "You turned $section off for $appName in FocusLens. The rest of $appName still works. " +
+                            "Turn it back on under Focus → Feature blocking."
+                    )
+                } else {
+                    launchFeatureBlock(
+                        "Reels is blocked for today",
+                        "You have used your $reelCap reels for today. Reels comes back after 6am."
+                    )
+                }
             }
             return
         }
+        val back: () -> Unit = { performGlobalAction(GLOBAL_ACTION_BACK) }
         if (pkg == SectionDetector.INSTAGRAM && section == "Reels") {
             val used = prefs.reelsToday()
             val mins = prefs.reelWatchMsToday() / 60_000L
@@ -189,15 +198,15 @@ class FocusAccessibilityService : AccessibilityService() {
                 } else {
                     ReelPlaceholder.clearBanner(this)
                 }
-                ReelPlaceholder.showCounter(this, "Reels: $used of $reelCap · ${(reelCap - used).coerceAtLeast(0)} left · $mins min")
+                ReelPlaceholder.showCounter(this, "Reels: $used of $reelCap · ${(reelCap - used).coerceAtLeast(0)} left · ${Clock.minutesHuman(mins)} watched")
             } else {
                 ReelPlaceholder.clearBanner(this)
-                if (switchOn && !busy) ReelPlaceholder.showFull(this, onBack = back) else ReelPlaceholder.clearFull(this)
-                ReelPlaceholder.showCounter(this, "Reels: $used watched · $mins min · no limit")
+                if (switchOn) ReelPlaceholder.showFull(this, onBack = back) else ReelPlaceholder.clearFull(this)
+                ReelPlaceholder.showCounter(this, "Reels: $used watched · ${Clock.minutesHuman(mins)} · no limit")
             }
         } else {
             ReelPlaceholder.clearCounter(this)
-            if (switchOn && section == feature && !busy) ReelPlaceholder.showFull(this, onBack = back)
+            if (switchOn && section == feature) ReelPlaceholder.showFull(this, onBack = back)
             else ReelPlaceholder.clearFull(this)
         }
         if (switchOn && reelCap == 0 && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
@@ -205,7 +214,7 @@ class FocusAccessibilityService : AccessibilityService() {
         } else {
             ReelPlaceholder.clearRects(this)
         }
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing ||
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.isUp() ||
             SchedulePauseActivity.showing
         ) return
         if (now - lastLaunch < 3_000L) return
@@ -269,7 +278,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun sampleBrowser(root: AccessibilityNodeInfo) {
         lastSampleT = 0L
         if (!prefs.socialBrowserBlockEnabled()) return
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.isUp()) return
         val now = System.currentTimeMillis()
         if (now - lastLaunch < 3_000L) return
         val urlText = BrowserDetector.currentUrl(root) ?: return
@@ -450,7 +459,7 @@ class FocusAccessibilityService : AccessibilityService() {
             }
         }
         if (!prefs.doomScrollReminderEnabled()) return
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing || ScrollReminderActivity.showing) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.isUp() || ScrollReminderActivity.showing) return
 
         val now = System.currentTimeMillis()
         // A run of scrolling starts fresh after a couple of minutes without any.
@@ -532,7 +541,7 @@ class FocusAccessibilityService : AccessibilityService() {
 
     private fun check(pkg: String) {
         blockPkg = pkg
-        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.showing) return
+        if (BlockActivity.showing || HyperFocusBlockActivity.showing || FeatureBlockedActivity.isUp()) return
         // Lockdown beats every other rule: only the allowed apps and always-open system screens get through.
         if (LockdownState.locked && !LockdownActivity.showing &&
             !LockdownPrefs.isAlwaysOpen(pkg, packageName) && pkg !in LockdownPrefs.allowed(this)

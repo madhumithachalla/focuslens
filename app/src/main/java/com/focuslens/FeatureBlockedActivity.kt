@@ -38,6 +38,11 @@ class FeatureBlockedActivity : ComponentActivity() {
     companion object {
         @Volatile
         var showing = false
+        /** When the block screen last started, so a flag left set by a screen that never closed can expire. */
+        @Volatile var shownAt = 0L
+
+        /** True only while a block screen is really up: the flag is set and it started recently. */
+        fun isUp(): Boolean = showing && System.currentTimeMillis() - shownAt < 20_000L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +52,7 @@ class FeatureBlockedActivity : ComponentActivity() {
         val message = intent.getStringExtra("message")?.takeIf { it.isNotBlank() }
             ?: "Blocked by a rule you set in FocusLens."
         showing = true
+        shownAt = System.currentTimeMillis()
         // Paint the window in the same cream as the content, before the first frame,
         // so the screen never flashes white while Compose starts up.
         window.setBackgroundDrawable(ColorDrawable(0xFFF7F5F0.toInt()))

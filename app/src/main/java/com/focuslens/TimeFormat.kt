@@ -12,6 +12,12 @@ object Clock {
     /** Time left until [untilMs], as hh:mm:ss. */
     fun untilHms(untilMs: Long, now: Long = System.currentTimeMillis()): String = hms((untilMs - now) / 1000L)
 
+    /** Minutes as people read them: 45 -> "45 min", 120 -> "2 h 00 min", 95 -> "1 h 35 min". */
+    fun minutesHuman(totalMinutes: Long): String {
+        val m = totalMinutes.coerceAtLeast(0L)
+        return if (m < 60L) "$m min" else String.format(Locale.US, "%d h %02d min", m / 60L, m % 60L)
+    }
+
     /** Time left of a daily limit, as hh:mm:ss. */
     fun limitLeftHms(limitMin: Int, usedMin: Long): String = hms((limitMin - usedMin) * 60L)
 }
