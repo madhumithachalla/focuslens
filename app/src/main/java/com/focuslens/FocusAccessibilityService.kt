@@ -209,7 +209,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (switchOn && section == feature) ReelPlaceholder.showFull(this, onBack = back)
             else ReelPlaceholder.clearFull(this)
         }
-        if (switchOn && reelCap == 0 && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
+        if (switchOn && pkg == SectionDetector.INSTAGRAM && SectionDetector.lastEmbeddedReelRects.isNotEmpty()) {
             ReelPlaceholder.showOver(this, SectionDetector.lastEmbeddedReelRects)
         } else {
             ReelPlaceholder.clearRects(this)
