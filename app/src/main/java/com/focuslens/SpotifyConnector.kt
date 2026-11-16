@@ -1,6 +1,7 @@
 package com.focuslens
 
 import android.content.Context
+import android.util.Log
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
@@ -30,6 +31,20 @@ sealed class SpotifyState {
 class SpotifyConnector(private val context: Context) {
     private var remote: SpotifyAppRemote? = null
 
+    companion object {
+        /** The live connection, so a break or a block can pause playback from anywhere. */
+        @Volatile private var live: SpotifyAppRemote? = null
+
+        /** Pauses Spotify if FocusLens is connected to it. Does nothing otherwise. */
+        fun pauseIfConnected() {
+            try {
+                live?.playerApi?.pause()
+            } catch (e: Exception) {
+                Log.e("FocusLens", "Spotify pause failed: ${e.message}", e)
+            }
+        }
+    }
+
     fun connect(onState: (SpotifyState) -> Unit) {
         if (!FocusPrefs(context).spotifyOn()) {
             onState(SpotifyState.Failed("Spotify is off. Turn it on in Settings → Connections if you want to use it."))
@@ -53,10 +68,12 @@ class SpotifyConnector(private val context: Context) {
         SpotifyAppRemote.connect(context, params, object : Connector.ConnectionListener {
             override fun onConnected(appRemote: SpotifyAppRemote) {
                 remote = appRemote
+                live = appRemote
                 onState(SpotifyState.Connected)
             }
 
             override fun onFailure(error: Throwable) {
+                Log.e("FocusLens", "Spotify connect failed: ${error.message}", error)
                 onState(SpotifyState.Failed(error.message ?: "Couldn't reach Spotify"))
             }
         })
@@ -73,5 +90,6 @@ class SpotifyConnector(private val context: Context) {
     fun disconnect() {
         remote?.let { SpotifyAppRemote.disconnect(it) }
         remote = null
+        live = null
     }
 }

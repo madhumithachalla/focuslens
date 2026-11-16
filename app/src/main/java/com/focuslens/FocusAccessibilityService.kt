@@ -294,6 +294,8 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun launchFeatureBlock(title: String, message: String) {
         lastLaunch = System.currentTimeMillis()
         android.util.Log.d(TAG, "block shown: $title")
+        // A break or block pauses Spotify, so music does not keep playing while the screen is blocked.
+        SpotifyConnector.pauseIfConnected()
         prefs.bump(blockPkg, "blocked_attempts")
         prefs.bump("all", "feature: $title")
         try {
