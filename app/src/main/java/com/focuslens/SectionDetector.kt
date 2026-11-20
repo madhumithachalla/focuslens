@@ -122,6 +122,12 @@ object SectionDetector {
                     hasFullReelBanner = true
                     embedded += ancestorRect(node, 3)
                 }
+                // A post or reel in the feed shows "Original audio" under the username. Treat it as a
+                // reel and cover the post area around it. Exact label only, so ordinary posts do not match.
+                if (bannerText == "original audio" || bannerText.startsWith("original audio") && bannerText.length <= 40) {
+                    hasFullReelBanner = true
+                    embedded += ancestorRect(node, 6)
+                }
                 if (!node.isSelected) {
                     // Deliberately NOT the same check as the tab-word match above: an icon
                     // badge's accessible name is just "Reel"/"Reels" on its own, not a tab's
