@@ -43,6 +43,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Light or dark colours (Settings, Light colours switch); dark is the default | Built | Greyish secondary text is still the same grey in both modes. Not checked on a phone |
 | Focus tab Reels tile: reels today, minutes watched, reels left if a limit is set | Built | Not checked on a phone |
 | Focus score: today from social media minutes vs yesterday, reels watched and stepping back; each part shows its number; up to 3 tips matched to the weakest part (on-device, no AI model) | Built | Not checked on a phone. An LLM or RAG model is not included: it would send usage data off the phone, which needs your explicit decision first |
+| 20 hours away: Start on the Focus tab. Everything pauses except the apps you keep open, for 20 hours. End early, no penalty. Inspired by 20 Hours for 20Talk, not an official feature | Built | Not checked on a phone. The 5-minute emergency override is not in this card yet |
 | Settings: Copy report button (version, device, blocking status, recent FocusLens log lines) | Built | Use it to send the developer what happened on the phone |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |

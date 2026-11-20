@@ -44,6 +44,10 @@ object LockdownPrefs {
 
     /** Set after a successful quiz: lockdown is off until this time. */
     fun unlockUntil(c: Context) = sp(c).getLong("unlock_until", 0L)
+
+    /** End of the 20-hour challenge, or 0 when none is running. */
+    fun challengeUntil(c: Context): Long = sp(c).getLong("challenge_until", 0L)
+    fun setChallengeUntil(c: Context, until: Long) = sp(c).edit().putLong("challenge_until", until).apply()
     fun setUnlockUntil(c: Context, v: Long) = sp(c).edit().putLong("unlock_until", v).apply()
 
     fun isAlwaysOpen(pkg: String, own: String): Boolean =
@@ -64,6 +68,11 @@ object LockdownChecker {
         recent.filterValues { it > 0 }.maxByOrNull { it.value }?.key
 
     fun evaluate(context: Context, now: Long): Pair<Boolean, String> {
+        // The 20-hour challenge locks everything except the apps you keep open, until it ends.
+        val challenge = LockdownPrefs.challengeUntil(context)
+        if (challenge > now) {
+            return true to "20-hour challenge: ${Clock.untilHms(challenge, now)} left. Only the apps you keep open work."
+        }
         if (!LockdownPrefs.enabled(context)) return false to ""
         if (LockdownPrefs.unlockUntil(context) > now) return false to ""
         val repo = UsageRepository(context)

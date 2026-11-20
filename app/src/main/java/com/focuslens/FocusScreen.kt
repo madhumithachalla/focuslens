@@ -191,6 +191,8 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
+        item { TwentyHoursCard() }
+
         item {
             var studyOpen by remember { mutableStateOf(false) }
             Card(Modifier.fillMaxWidth()) {
