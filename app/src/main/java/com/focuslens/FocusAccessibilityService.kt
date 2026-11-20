@@ -416,7 +416,14 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            trackScroll(event.packageName?.toString())
+            val scrolled = event.packageName?.toString()
+            // A swipe in Reels moves to the next reel: count the one just left, start timing the next.
+            if (scrolled == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
+                val now = System.currentTimeMillis()
+                finishPendingReel(now)
+                reelStartAt = now
+            }
+            trackScroll(scrolled)
             return
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
@@ -426,6 +433,11 @@ class FocusAccessibilityService : AccessibilityService() {
         val freshOpen = pkg != lastWindowPkg
         // FocusLens's own screens (including the open check) do not count as leaving Instagram.
         if (pkg != SectionDetector.INSTAGRAM && pkg != packageName) prefs.setOpenApproved(false)
+        // Leaving Instagram ends the Reels section, so its timer and count stop there.
+        if (pkg != SectionDetector.INSTAGRAM) {
+            if (lastReelsSection == "Reels") finishPendingReel(System.currentTimeMillis())
+            lastReelsSection = ""
+        }
         // Any change of app (including the home screen and system screens) clears every cover first,
         // so nothing stays on top of the screen the person has moved to.
         if (pkg != lastWindowPkg) {

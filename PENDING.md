@@ -38,6 +38,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | App-wide dark theme (design-board colours) | Built | Screens with their own light colours may still need a pass. Not checked on a phone |
 | Updates screen and update messages show the version name only (no build number). Release 1.9.0 | Built | Build number stays internal, for update checks |
 | Launcher: button opens the home app setting | Built | Not checked on a phone |
+| Reels count: each reel counts when you swipe to the next and watch it 5 seconds; leaving Instagram ends the count | Built | Was one count per Reels visit. Not checked on a phone |
 | Settings: Copy report button (version, device, blocking status, recent FocusLens log lines) | Built | Use it to send the developer what happened on the phone |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |
