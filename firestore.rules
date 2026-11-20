@@ -190,5 +190,50 @@ service cloud.firestore {
           && resource.data.status == 'open';
       }
     }
+    // ---- Study rooms: anonymous. Members are only user ids. No names, no chat, no free text. ----
+    // Room size: 2 for one-on-one, 8 for group. Members can only add or remove themselves,
+    // or set the shared timer. Only the owner can delete the room.
+    match /studyRooms/{roomId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['type', 'code', 'ownerUid', 'backdrop', 'memberUids', 'open', 'timerEnd', 'createdAt'])
+        && request.resource.data.type in ['one', 'group']
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberUids == [request.auth.uid]
+        && str(request.resource.data.code, 6, 6)
+        && request.resource.data.backdrop is int
+        && request.resource.data.backdrop >= 0
+        && request.resource.data.backdrop < 10
+        && request.resource.data.open is bool
+        && request.resource.data.timerEnd is int
+        && request.resource.data.createdAt == request.time;
+
+      // Join: add only yourself, and never past the room size.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'open'])
+        && !(request.auth.uid in resource.data.memberUids)
+        && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+        && (
+          (resource.data.type == 'one' && request.resource.data.memberUids.size() <= 2)
+          || (resource.data.type == 'group' && request.resource.data.memberUids.size() <= 8)
+        );
+
+      // Leave: remove only yourself.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberUids
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'open'])
+        && !(request.auth.uid in request.resource.data.memberUids)
+        && resource.data.memberUids.hasAll(request.resource.data.memberUids)
+        && request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1;
+
+      // Shared timer: any member can start it.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberUids
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timerEnd'])
+        && request.resource.data.timerEnd is int;
+
+      allow delete: if isUser(resource.data.ownerUid);
+    }
   }
 }

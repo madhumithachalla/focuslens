@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -183,6 +185,27 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                             prefs.setPomodoro(true, prefs.pomodoroFocusMin(), it); rev++
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            var studyOpen by remember { mutableStateOf(false) }
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Study room", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Study with someone one on one, or in a group", fontSize = 13.sp, color = Color.Gray)
+                    }
+                    Button(onClick = { studyOpen = true }) { Text("Open") }
+                }
+            }
+            if (studyOpen) {
+                Dialog(
+                    onDismissRequest = { studyOpen = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    StudyRoomScreen(onClose = { studyOpen = false })
                 }
             }
         }
