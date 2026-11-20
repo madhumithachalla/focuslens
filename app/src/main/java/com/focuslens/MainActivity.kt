@@ -127,6 +127,17 @@ fun FocusLensApp(repo: UsageRepository) {
         return
     }
 
+    // Asked once, before any usage is saved: yes turns on FocusLens's own snapshots, no keeps them off.
+    var usageAnswered by remember { mutableStateOf(PrivacyPrefs.answered(context)) }
+    if (!usageAnswered) {
+        UsageConsentScreen(onAnswer = { yes ->
+            PrivacyPrefs.setPersonalised(context, yes)
+            UsageTracking.apply(context, yes)
+            usageAnswered = true
+        })
+        return
+    }
+
     if (profile == null) {
         OnboardingScreen(onDone = { newProfile ->
             scope.launch {

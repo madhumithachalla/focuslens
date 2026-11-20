@@ -127,6 +127,8 @@ dependencies {
     // workaround (KSP1, the previous workaround, was removed entirely in KSP 2.3.x).
     implementation("androidx.room:room-runtime:2.7.2")
     implementation("androidx.room:room-ktx:2.7.2")
+    // Background job that saves usage snapshots every 6 hours, only after the user says yes.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     ksp("androidx.room:room-compiler:2.7.2")
 
     // Spotify's official App Remote SDK. Confirmed directly from spotify/android-sdk's own

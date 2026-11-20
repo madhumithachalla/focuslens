@@ -369,10 +369,11 @@ fun SettingsScreen() {
             Text(PrivacyPrefs.CONSENT_TEXT, fontSize = 12.sp, color = Color.Gray)
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text("Learn from my data on this phone", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text("Track my usage on this phone", fontSize = 14.sp, modifier = Modifier.weight(1f))
                 Switch(checked = personal, onCheckedChange = { on ->
                     personal = on
                     PrivacyPrefs.setPersonalised(context, on)
+                    UsageTracking.apply(context, on)
                 })
             }
             Spacer(Modifier.height(8.dp))
