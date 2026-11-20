@@ -128,7 +128,18 @@ fun MedsScreen() {
             }
         }
         if (doses.isEmpty()) {
-            item { Text("Nothing scheduled today.", color = Color.Gray) }
+            // A medicine saved with no time never makes a dose, so say which one needs a time.
+            val untimed = prefs.plans().filter { it.times.isEmpty() && MedLogic.appliesOnDate(it, Calendar.getInstance()) }
+            if (untimed.isEmpty()) {
+                item { Text("Nothing scheduled today.", color = Color.Gray) }
+            } else {
+                item {
+                    Text(
+                        "Add a time for ${untimed.joinToString { it.name }} (tap Edit) so it shows here.",
+                        color = Color.Gray
+                    )
+                }
+            }
         }
         items(doses, key = { it.key }) { dose ->
             Card(Modifier.fillMaxWidth()) {
