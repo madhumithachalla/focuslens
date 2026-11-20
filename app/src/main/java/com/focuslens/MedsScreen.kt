@@ -1,5 +1,6 @@
 package com.focuslens
 
+import java.util.Calendar
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -120,6 +121,12 @@ fun MedsScreen() {
         }
 
         item { Text("Today", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+        item {
+            TodayGrid(doses) { dose, checked ->
+                if (checked) prefs.markTaken(dose.key) else prefs.setTakenOn(Calendar.getInstance(), dose.key, null)
+                tick++
+            }
+        }
         if (doses.isEmpty()) {
             item { Text("Nothing scheduled today.", color = Color.Gray) }
         }
@@ -453,5 +460,35 @@ private fun MedPlanDialog(initial: MedPlan?, onSave: (MedPlan) -> Unit, onDismis
             onPicked = { rangeEnd = dayKeyOfMillis(it); pickingEnd = false },
             onDismiss = { pickingEnd = false }
         )
+    }
+}
+
+/** Morning, Afternoon and Night columns for today's doses. Tick a box when the dose is taken. */
+@Composable
+private fun TodayGrid(doses: List<Dose>, onToggle: (Dose, Boolean) -> Unit) {
+    fun slotOf(time: String): Int {
+        val hour = time.substringBefore(":").trim().toIntOrNull() ?: 0
+        return when {
+            hour < 12 -> 0
+            hour < 18 -> 1
+            else -> 2
+        }
+    }
+    val labels = listOf("Morning", "Afternoon", "Night")
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        labels.forEachIndexed { slot, label ->
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(label, fontSize = 12.sp, color = Color.Gray)
+                doses.filter { slotOf(it.time) == slot }.forEach { dose ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = dose.state == DoseState.TAKEN,
+                            onCheckedChange = { onToggle(dose, it) }
+                        )
+                        Text(dose.plan.name, fontSize = 13.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
     }
 }
