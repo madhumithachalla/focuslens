@@ -27,6 +27,10 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 |---|---|---|
 | Usage totals match Digital Wellbeing (last 7 days) | Built | Uses Android's own totals. Not checked against your phone |
 | Track my usage on this phone: yes = snapshots every 6 hours, no = Digital Wellbeing numbers | Built | Consent on first launch and in Settings. Not checked on a phone yet |
+| Instagram open check: Open or Not now each time it opens, Not now counted | Built | Not checked on a phone yet |
+| Daily limit and reel cap: locked 12 hours from when it is used up | Built | Quiz unlock still works on the lock screen. Break-count lock stays until 6am. Not checked on a phone yet |
+| Break after 1 hour of scrolling, 1 hour break (defaults, changeable in Focus) | Built | Not checked on a phone yet |
+| Emergency pass: 5 minutes (was 10) | Built | Not checked on a phone yet |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |
 | Peak hours from usage history | Built | Needs several days of history |

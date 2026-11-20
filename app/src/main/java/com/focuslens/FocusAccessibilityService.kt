@@ -154,8 +154,11 @@ class FocusAccessibilityService : AccessibilityService() {
         // Guard rail 1: with the Reels switch on, Reels is blocked every time it is on screen.
         // Guard rail 2: once today's reel limit is used up, Reels is blocked for the rest of the day.
         // Both are decided on every check, so a block cannot stop firing after a while.
-        val reelsLimitHit = pkg == SectionDetector.INSTAGRAM && section == "Reels" &&
-            reelCap > 0 && prefs.reelsToday() >= reelCap
+        // Once today's reel cap is used up, Reels is blocked for 12 hours from that moment.
+        val overReelCap = pkg == SectionDetector.INSTAGRAM && reelCap > 0 && prefs.reelsToday() >= reelCap
+        if (overReelCap && now >= prefs.reelLockUntil()) prefs.setReelLockUntil(now + LIMIT_LOCK_MS)
+        val reelsLimitHit = pkg == SectionDetector.INSTAGRAM && section == "Reels" && overReelCap &&
+            now < prefs.reelLockUntil()
         if ((switchOn && section == feature) || reelsLimitHit) {
             ReelPlaceholder.clearFull(this)
             ReelPlaceholder.clearRects(this)
@@ -175,7 +178,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 } else {
                     launchFeatureBlock(
                         "Reels is blocked for today",
-                        "You have used your $reelCap reels for today. Reels comes back after 6am."
+                        "You have used your $reelCap reels for today. Reels is blocked for ${Clock.untilHms(prefs.reelLockUntil(), now)}."
                     )
                 }
             }
@@ -225,26 +228,25 @@ class FocusAccessibilityService : AccessibilityService() {
             kickHome("break or day lock while open")
             val appName = SectionDetector.displayName[pkg] ?: pkg
             if (now < prefs.dayLockUntil(pkg)) {
-                launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
+                launchFeatureBlock("$appName is locked", "Back in ${Clock.untilHms(prefs.dayLockUntil(pkg), now)}.")
             } else {
                 launchFeatureBlock("On a break from $appName", "Back in ${Clock.untilHms(prefs.breakUntil(pkg), now)}.")
             }
             return
         }
 
-        // Daily screen-time limit reached while using the app: locked until 6am, no challenge.
+        // Daily screen-time limit reached while using the app: locked for 12 hours from now.
         if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.unlockUntil(pkg) &&
             usedMinToday(pkg) >= prefs.limitMin(pkg)
         ) {
             lastLaunch = now
             prefs.bump(pkg, "blocked_attempts")
+            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
             kickHome("daily limit while open")
-            startActivity(
-                Intent(this, BlockActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                    putExtra("pkg", pkg)
-                    putExtra("usedMin", usedMinForBlock(pkg).toLong())
-                }
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            launchFeatureBlock(
+                "$appName is locked for 12 hours",
+                "You used your ${prefs.limitMin(pkg)} minutes today. Back in ${Clock.untilHms(now + LIMIT_LOCK_MS, now)}."
             )
             return
         }
@@ -400,6 +402,11 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
+        // A fresh open is a change into the app from somewhere else. Leaving Instagram clears the
+        // "Open" approval, so the open check comes back the next time it is opened.
+        val freshOpen = pkg != lastWindowPkg
+        // FocusLens's own screens (including the open check) do not count as leaving Instagram.
+        if (pkg != SectionDetector.INSTAGRAM && pkg != packageName) prefs.setOpenApproved(false)
         // Any change of app (including the home screen and system screens) clears every cover first,
         // so nothing stays on top of the screen the person has moved to.
         if (pkg != lastWindowPkg) {
@@ -433,6 +440,14 @@ class FocusAccessibilityService : AccessibilityService() {
             lastScrollAt = 0L
         }
         current = pkg
+        // Every fresh open of Instagram gets the open check first: Open, or Not now (counted).
+        if (freshOpen && pkg == SectionDetector.INSTAGRAM && !prefs.openApproved() && !OpenCheckActivity.showing) {
+            startActivity(Intent(this, OpenCheckActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                putExtra("pkg", pkg)
+            })
+            return
+        }
         try {
             check(pkg)
         } catch (e: Exception) {
@@ -566,7 +581,7 @@ class FocusAccessibilityService : AccessibilityService() {
                 kickHome("break or day lock on open")
                 val appName = SectionDetector.displayName[pkg] ?: pkg
                 if (now < lockedUntil) {
-                    launchFeatureBlock("$appName is locked", "You've used up today's breaks from $appName. It unlocks at 6am.")
+                    launchFeatureBlock("$appName is locked", "Back in ${Clock.untilHms(lockedUntil, now)}.")
                 } else {
                     launchFeatureBlock("On a break from $appName", "Back in ${Clock.untilHms(prefs.breakUntil(pkg), now)}.")
                 }
@@ -598,6 +613,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (now - lastLaunch < 1_500L) return
             lastLaunch = now
             prefs.bump(pkg, "blocked_attempts")
+            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
             startActivity(
                 Intent(this, BlockActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
@@ -633,9 +649,10 @@ class FocusAccessibilityService : AccessibilityService() {
         val limitToday = prefs.limitMin(pkg)
         if (usedToday >= limitToday) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
+            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
             Toast.makeText(
                 this,
-                "$appName daily limit reached: $usedToday of $limitToday min used today. It unlocks at 6am.",
+                "$appName daily limit reached: $usedToday of $limitToday min used today. Locked for 12 hours.",
                 Toast.LENGTH_LONG
             ).show()
             kickHome("daily limit (toast)")
@@ -647,6 +664,9 @@ class FocusAccessibilityService : AccessibilityService() {
         }
         startActivity(intent)
     }
+
+    /** Once a daily limit or the reel cap is used up, the app (or Reels) is locked for this long. */
+    private val LIMIT_LOCK_MS = 12L * 60L * 60_000L
 
     private var lastReelsSection = ""
     private val usageCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Int>>()

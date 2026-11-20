@@ -133,6 +133,23 @@ class FocusPrefs(context: Context) {
         sp.edit().putLong(k, sp.getLong(k, 0L) + n).apply()
     }
 
+    /** Times you chose "Not now" on the open check for [pkg], across all days. */
+    fun notOpenedTotal(pkg: String): Long = sp.getLong("not_opened_total_$pkg", 0L)
+
+    /** Counts one "Not now" choice for [pkg]. */
+    fun addNotOpened(pkg: String) {
+        sp.edit().putLong("not_opened_total_$pkg", notOpenedTotal(pkg) + 1).apply()
+        bump(pkg, "chose_not_open")
+    }
+
+    /** True after you tapped "Open" on the open check, until you leave the app. */
+    fun openApproved(): Boolean = sp.getBoolean("open_approved", false)
+    fun setOpenApproved(on: Boolean) = sp.edit().putBoolean("open_approved", on).apply()
+
+    /** While this is in the future, Reels is blocked (set when the daily reel limit is used up). */
+    fun reelLockUntil(): Long = sp.getLong("reel_lock_until", 0L)
+    fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
+
     /** Counts per app and kind over the last [days] limit-days (6am-shifted, like the limits). */
     fun eventTotals(days: Int, now: Long = System.currentTimeMillis()): Map<String, Map<String, Long>> {
         val keep = (0 until days).map { back ->
@@ -348,13 +365,13 @@ class FocusPrefs(context: Context) {
 
     /** Continuous scrolling, in minutes, before a break starts. Default 30. */
     /** 0 turns scroll breaks off. */
-    fun scrollBreakAfterMinutes(): Int = sp.getInt("scroll_break_after_min", 30).coerceIn(0, 180)
+    fun scrollBreakAfterMinutes(): Int = sp.getInt("scroll_break_after_min", 60).coerceIn(0, 180)
 
     fun setScrollBreakAfterMinutes(n: Int) = sp.edit().putInt("scroll_break_after_min", n.coerceIn(0, 180)).apply()
 
     /** How long a break lasts. Default 15 minutes. */
     /** 0 means no break length, so breaks do nothing. */
-    fun breakMinutes(): Int = sp.getInt("break_min", 15).coerceIn(0, 120)
+    fun breakMinutes(): Int = sp.getInt("break_min", 60).coerceIn(0, 120)
 
     fun setBreakMinutes(n: Int) = sp.edit().putInt("break_min", n.coerceIn(0, 120)).apply()
 
