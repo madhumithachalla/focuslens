@@ -1,6 +1,20 @@
 package com.focuslens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.Alignment
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +73,50 @@ private data class Pact(val id: String, val memberUids: List<String>, val names:
 private data class PactTask(val id: String, val ownerUid: String, val title: String, val dueAt: Long, val status: String, val verified: Boolean)
 
 /** The Accountability pact: pair up with one other person, share tasks, and check each other's. */
+private val Dark = Color(0xFF0E0F13)
+private val PanelColor = Color(0xFF1A1C22)
+private val Chip = Color(0xFF272A33)
+private val Accent = Color(0xFFA9A6F7)
+private val Gold = Color(0xFFE0B25C)
+private val Muted = Color(0xFF9AA0AB)
+private val Coral = Color(0xFFD98C8C)
+
+@Composable
+private fun Panel(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().background(PanelColor, RoundedCornerShape(22.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        content = content
+    )
+}
+
+@Composable
+private fun StatBox(value: String, label: String, modifier: Modifier) {
+    Column(modifier.background(Chip, RoundedCornerShape(16.dp)).padding(12.dp)) {
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(label, fontSize = 12.sp, color = Muted)
+    }
+}
+
+@Composable
+private fun Avatar(name: String, uid: String) {
+    Box(
+        Modifier.size(56.dp).background(if (uid.hashCode() % 2 == 0) Accent else Gold, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(name.take(1).uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Dark)
+    }
+}
+
+/** A short status line for a task, in minutes, not sentences. */
+private fun taskHint(t: PactTask, mine: Boolean, now: Long): String = when {
+    t.verified -> "Checked"
+    t.status == "done" && mine -> "Waiting for a check"
+    t.status == "done" -> "Tap to check"
+    t.dueAt < now -> "Overdue"
+    else -> "${(t.dueAt - now) / 60_000L} min left"
+}
+
 @Composable
 fun AccountabilityScreen() {
     val context = LocalContext.current
@@ -145,181 +203,225 @@ fun AccountabilityScreen() {
     }
 
     if (me == null) {
-        Column(Modifier.fillMaxSize().padding(20.dp)) {
-            Text("Accountability pact", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("Sign in first (Account page). A pact needs your account, so the other person can find you.", fontSize = 13.sp, color = Color.Gray)
+        Column(Modifier.fillMaxSize().background(Dark).padding(20.dp)) {
+            Text("Accountability", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Sign in on the Account tab first.", fontSize = 14.sp, color = Muted)
         }
         return
     }
 
-    val open = pacts.firstOrNull { it.id == openPact }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-        Text("Accountability pact", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Pair up with one person. You each set tasks with a time, mark them done, and the other person checks them.",
-            fontSize = 13.sp, color = Color.Gray
-        )
-        message?.let { Spacer(Modifier.height(6.dp)); Text(it, fontSize = 12.sp, color = Color(0xFFB3261E)) }
-        Spacer(Modifier.height(12.dp))
+    val active = pacts.firstOrNull { it.status == "active" }
+    val pending = pacts.firstOrNull { it.status == "pending" }
+    // The active pact's tasks open by themselves.
+    LaunchedEffect(active?.id) { openPact = active?.id }
 
-        // Invite code: this is how someone finds you. Nobody can search for you by email.
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(14.dp)) {
-                Text("Your invite code", fontWeight = FontWeight.Medium)
-                Text(myCode ?: "Loading…", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Give this code to the person you want as your partner. They enter it under Find a partner. " +
-                        "You can also send it to them by message.",
-                    fontSize = 12.sp, color = Color.Gray
-                )
-            }
+    fun partnerOf(p: Pact): String = p.memberUids.firstOrNull { it != me.uid }?.let { p.names[it] } ?: "Partner"
+    fun setStatus(id: String, status: String, errorPrefix: String) {
+        scope.launch {
+            try { db.collection("pacts").document(id).update("status", status).awaitResult() }
+            catch (e: Exception) { message = "$errorPrefix: ${e.message}" }
         }
-
-        Spacer(Modifier.height(12.dp))
-        Text("Find a partner", fontWeight = FontWeight.Medium)
-        Text(
-            "Type their invite code. Contacts can't be matched automatically, because the people they know may not use FocusLens yet.",
-            fontSize = 12.sp, color = Color.Gray
-        )
-        OutlinedTextField(
-            value = partnerCode, onValueChange = { partnerCode = it.uppercase().take(8) },
-            label = { Text("Their invite code") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-        )
-        Button(
-            enabled = partnerCode.length == 8,
-            onClick = {
-                scope.launch {
-                    try {
-                        val found = db.collection("profiles").whereEqualTo("inviteCode", partnerCode).get().awaitResult()
-                        val doc = found.documents.firstOrNull()
-                        if (doc == null || doc.id == me.uid) {
-                            message = "No one has that code. Check it with them."
-                        } else {
-                            val theirName = doc.getString("displayName") ?: "Partner"
-                            db.collection("pacts").add(
-                                mapOf(
-                                    "memberUids" to listOf(me.uid, doc.id),
-                                    "names" to mapOf(me.uid to myName.ifBlank { "Me" }, doc.id to theirName),
-                                    "requesterUid" to me.uid,
-                                    "status" to "pending",
-                                    "createdAt" to FieldValue.serverTimestamp()
-                                )
-                            ).awaitResult()
-                            partnerCode = ""
-                            message = "Invite sent. It starts once $theirName accepts."
-                        }
-                    } catch (e: Exception) {
-                        message = "Could not send the invite: ${e.message}"
-                    }
-                }
-            }
-        ) { Text("Send invite") }
-
-        Spacer(Modifier.height(16.dp))
-        Text("Your pacts", fontWeight = FontWeight.Medium)
-        if (pacts.isEmpty()) Text("No pacts yet.", fontSize = 13.sp, color = Color.Gray)
-        pacts.forEach { p ->
-            val partner = p.memberUids.firstOrNull { it != me.uid }?.let { p.names[it] } ?: "Partner"
-            val statusText = when {
-                p.status == "pending" && p.requesterUid == me.uid -> "Waiting for $partner to accept"
-                p.status == "pending" -> "$partner invited you"
-                p.status == "active" -> "Active with $partner"
-                else -> "Ended"
-            }
-            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(partner, fontWeight = FontWeight.Medium)
-                    Text(statusText, fontSize = 12.sp, color = Color.Gray)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (p.status == "pending" && p.requesterUid != me.uid) {
-                            Button(onClick = {
-                                scope.launch {
-                                    try { db.collection("pacts").document(p.id).update("status", "active").awaitResult() }
-                                    catch (e: Exception) { message = "Could not accept: ${e.message}" }
-                                }
-                            }) { Text("Accept") }
-                        }
-                        if (p.status == "active") {
-                            OutlinedButton(onClick = { openPact = if (openPact == p.id) null else p.id }) {
-                                Text(if (openPact == p.id) "Close" else "Open tasks")
-                            }
-                        }
-                        if (p.status == "pending" || p.status == "active") {
-                            TextButton(onClick = {
-                                scope.launch {
-                                    try { db.collection("pacts").document(p.id).update("status", "ended").awaitResult() }
-                                    catch (e: Exception) { message = "Could not end it: ${e.message}" }
-                                }
-                            }) { Text("End pact") }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (open != null && open.status == "active") {
-            Spacer(Modifier.height(12.dp))
-            Text("Tasks", fontWeight = FontWeight.Medium)
-            OutlinedTextField(
-                value = taskTitle, onValueChange = { taskTitle = it },
-                label = { Text("What will you do? (due in 1 hour)") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-            )
-            Button(
-                enabled = taskTitle.isNotBlank(),
-                onClick = {
-                    scope.launch {
-                        try {
-                            db.collection("pacts").document(open.id).collection("tasks").add(
-                                mapOf(
-                                    "ownerUid" to me.uid,
-                                    "title" to taskTitle.trim(),
-                                    "dueAt" to System.currentTimeMillis() + 60L * 60 * 1000,
-                                    "status" to "open",
-                                    "verified" to false,
-                                    "createdAt" to FieldValue.serverTimestamp()
-                                )
-                            ).awaitResult()
-                            taskTitle = ""
-                        } catch (e: Exception) { message = "Could not add the task: ${e.message}" }
-                    }
-                }
-            ) { Text("Add task") }
-            tasks.forEach { t ->
-                val mine = t.ownerUid == me.uid
-                Card(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(t.title, fontWeight = FontWeight.Medium)
-                        Text(
-                            when {
-                                t.status == "open" -> if (mine) "Open. Mark it done when finished." else "Open"
-                                !t.verified && !mine -> "Done. Check it to confirm."
-                                t.verified -> "Done and checked"
-                                else -> "Done, waiting for a check"
-                            },
-                            fontSize = 12.sp, color = Color.Gray
+    }
+    fun sendInvite() {
+        scope.launch {
+            try {
+                val found = db.collection("profiles").whereEqualTo("inviteCode", partnerCode).get().awaitResult()
+                val doc = found.documents.firstOrNull()
+                if (doc == null || doc.id == me.uid) {
+                    message = "No one has that code. Check it with them."
+                } else {
+                    val theirName = doc.getString("displayName") ?: "Partner"
+                    db.collection("pacts").add(
+                        mapOf(
+                            "memberUids" to listOf(me.uid, doc.id),
+                            "names" to mapOf(me.uid to myName.ifBlank { "Me" }, doc.id to theirName),
+                            "requesterUid" to me.uid,
+                            "status" to "pending",
+                            "createdAt" to FieldValue.serverTimestamp()
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (mine && t.status == "open") {
-                                OutlinedButton(onClick = {
-                                    scope.launch {
-                                        try { db.collection("pacts").document(open.id).collection("tasks").document(t.id).update("status", "done").awaitResult() }
-                                        catch (e: Exception) { message = "Could not mark done: ${e.message}" }
-                                    }
-                                }) { Text("Mark done") }
+                    ).awaitResult()
+                    partnerCode = ""
+                    message = null
+                }
+            } catch (e: Exception) {
+                message = "Could not send the invite: ${e.message}"
+            }
+        }
+    }
+    fun addTask(pactId: String) {
+        scope.launch {
+            try {
+                db.collection("pacts").document(pactId).collection("tasks").add(
+                    mapOf(
+                        "ownerUid" to me.uid,
+                        "title" to taskTitle.trim(),
+                        "dueAt" to System.currentTimeMillis() + 60L * 60 * 1000,
+                        "status" to "open",
+                        "verified" to false,
+                        "createdAt" to FieldValue.serverTimestamp()
+                    )
+                ).awaitResult()
+                taskTitle = ""
+            } catch (e: Exception) { message = "Could not add the task: ${e.message}" }
+        }
+    }
+    fun tapTask(pactId: String, t: PactTask) {
+        val mine = t.ownerUid == me.uid
+        val ref = db.collection("pacts").document(pactId).collection("tasks").document(t.id)
+        scope.launch {
+            try {
+                when {
+                    mine && t.status == "open" -> ref.update("status", "done").awaitResult()
+                    !mine && t.status == "done" && !t.verified -> ref.update("verified", true).awaitResult()
+                }
+            } catch (e: Exception) { message = "Could not update the task: ${e.message}" }
+        }
+    }
+
+    val nowMs = System.currentTimeMillis()
+    val checked = tasks.count { it.verified }
+    val openCount = tasks.count { it.status == "open" }
+
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            primary = Accent, onPrimary = Dark, background = Dark, surface = PanelColor,
+            onSurface = Color.White, onBackground = Color.White, outline = Chip
+        )
+    ) {
+        Column(
+            Modifier.fillMaxSize().background(Dark).verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Spacer(Modifier.height(8.dp))
+            Text("Accountability", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            message?.let { Text(it, fontSize = 12.sp, color = Coral) }
+
+            // Partner: the one big card.
+            Panel {
+                when {
+                    active != null -> {
+                        val name = partnerOf(active)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(name, active.memberUids.firstOrNull { it != me.uid } ?: "")
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Active", fontSize = 13.sp, color = Accent)
                             }
-                            if (!mine && t.status == "done" && !t.verified) {
-                                OutlinedButton(onClick = {
-                                    scope.launch {
-                                        try { db.collection("pacts").document(open.id).collection("tasks").document(t.id).update("verified", true).awaitResult() }
-                                        catch (e: Exception) { message = "Could not check it: ${e.message}" }
-                                    }
-                                }) { Text("Confirm done") }
+                            TextButton(onClick = { setStatus(active.id, "ended", "Could not end it") }) {
+                                Text("End", color = Muted)
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            StatBox("$openCount", "Open", Modifier.weight(1f))
+                            StatBox("${tasks.count { it.status == "done" && !it.verified }}", "Waiting check", Modifier.weight(1f))
+                            StatBox("$checked", "Checked", Modifier.weight(1f))
+                        }
+                    }
+                    pending != null && pending.requesterUid == me.uid -> {
+                        Text("Waiting for ${partnerOf(pending)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Invite sent", fontSize = 13.sp, color = Gold)
+                        TextButton(onClick = { setStatus(pending.id, "ended", "Could not cancel") }) {
+                            Text("Cancel", color = Muted)
+                        }
+                    }
+                    pending != null -> {
+                        Text("${partnerOf(pending)} invited you", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { setStatus(pending.id, "active", "Could not accept") }) { Text("Accept") }
+                            TextButton(onClick = { setStatus(pending.id, "ended", "Could not decline") }) {
+                                Text("Decline", color = Muted)
+                            }
+                        }
+                    }
+                    else -> {
+                        Text("Find a partner", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = partnerCode,
+                                onValueChange = { partnerCode = it.uppercase().take(8) },
+                                placeholder = { Text("Their code") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Button(enabled = partnerCode.length == 8, onClick = { sendInvite() }) { Text("Invite") }
+                        }
+                    }
+                }
+            }
+
+            // Your code: how people find you.
+            Panel {
+                Text("Your code", fontSize = 13.sp, color = Muted)
+                Text(
+                    myCode ?: "…",
+                    fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp, color = Color.White
+                )
+                OutlinedButton(
+                    enabled = myCode != null,
+                    onClick = {
+                        context.startActivity(
+                            Intent.createChooser(
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, "Be my accountability partner on FocusLens. My code: $myCode")
+                                },
+                                "Share"
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                ) { Text("Share") }
+            }
+
+            // Tasks: only with an active partner.
+            if (active != null) {
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Tasks", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+                        Text("$checked of ${tasks.size} checked", fontSize = 13.sp, color = Muted)
+                    }
+                    val fraction = if (tasks.isEmpty()) 0f else checked.toFloat() / tasks.size
+                    Box(Modifier.fillMaxWidth().height(6.dp).background(Chip, RoundedCornerShape(3.dp))) {
+                        Box(Modifier.fillMaxWidth(fraction).height(6.dp).background(Accent, RoundedCornerShape(3.dp)))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = taskTitle,
+                            onValueChange = { taskTitle = it },
+                            placeholder = { Text("Add a task, due in 1 hour") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(enabled = taskTitle.isNotBlank(), onClick = { addTask(active.id) }) { Text("+") }
+                    }
+                    tasks.forEach { t ->
+                        val mine = t.ownerUid == me.uid
+                        val tappable = (mine && t.status == "open") || (!mine && t.status == "done" && !t.verified)
+                        val circle = when {
+                            t.verified -> Accent
+                            t.status == "done" -> Gold
+                            else -> Chip
+                        }
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.size(32.dp).background(circle, CircleShape)
+                                    .then(if (tappable) Modifier.clickable { tapTask(active.id, t) } else Modifier),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (t.status == "done" || t.verified) Text("✓", color = Dark, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(t.title, color = Color.White)
+                                Text(taskHint(t, mine, nowMs), fontSize = 12.sp, color = Muted)
                             }
                         }
                     }
                 }
             }
+            Spacer(Modifier.height(24.dp))
         }
-        Spacer(Modifier.height(24.dp))
     }
 }

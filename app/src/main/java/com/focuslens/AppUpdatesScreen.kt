@@ -57,7 +57,7 @@ fun AppUpdatesScreen() {
                 }
             }
         }
-        Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.BUILD_NUMBER})", fontSize = 13.sp)
+        Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 13.sp)
         Spacer(Modifier.height(12.dp))
         UpdateCard()
         Spacer(Modifier.height(20.dp))
@@ -66,7 +66,7 @@ fun AppUpdatesScreen() {
         Text("What changed", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         APP_CHANGELOG.sortedByDescending { it.build }.forEach { note ->
             Spacer(Modifier.height(10.dp))
-            val label = if (note.version.isNotBlank()) "Version ${note.version} (build ${note.build})" else "Build ${note.build}"
+            val label = if (note.version.isNotBlank()) "Version ${note.version}" else "Earlier update"
             Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             note.points.forEach { Text("• $it", fontSize = 13.sp) }
         }

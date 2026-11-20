@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 
 /**
  * Shown when a blocked app is opened during an active block schedule. Offers a way out
- * (home), and, for non-strict schedules, an emergency pass that opens the app for 10 minutes
+ * (home), and, for non-strict schedules, an emergency pass that opens the app for 5 minutes
  * once the configured delay has counted down.
  */
 class SchedulePauseActivity : ComponentActivity() {
@@ -85,7 +85,7 @@ class SchedulePauseActivity : ComponentActivity() {
                         onHome = { goHome() },
                         onPass = {
                             if (schedulePrefs.usePass()) {
-                                focusPrefs.grant(pkg, 10)
+                                focusPrefs.grant(pkg, 5)
                                 finish()
                             }
                         }
@@ -191,7 +191,7 @@ private fun SchedulePauseScreen(
                     Text("Emergency pass ($passesLeft left): answer to unlock", color = Color(0xFFBFD3C9))
                 }
                 else -> OutlinedButton(onClick = onPass) {
-                    Text("Emergency pass ($passesLeft left) - 10 min", color = Color(0xFFBFD3C9))
+                    Text("Emergency pass ($passesLeft left) - 5 min", color = Color(0xFFBFD3C9))
                 }
             }
         }

@@ -31,9 +31,9 @@ android {
         minSdk = 26
         targetSdk = 36
         // 1.8.1 becomes 10801: major * 10000 + minor * 100 + patch. Android needs this to keep rising.
-        versionCode = 10801
+        versionCode = 10900
         // Shown to people as the app version. Bump by hand for each release (1.0.0, 1.1.0, 1.1.1 ...).
-        versionName = "1.8.1"
+        versionName = "1.9.0"
 
         // From the Spotify Developer Dashboard (developer.spotify.com/dashboard) — create an
         // app there, add redirect URI focuslens://auth, and paste the Client ID into

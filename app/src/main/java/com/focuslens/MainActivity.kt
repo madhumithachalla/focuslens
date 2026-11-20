@@ -41,7 +41,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,10 +77,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 typography = AppTypography,
-                colorScheme = lightColorScheme(
-                    primary = Color(0xFF1F3A34),
-                    background = Color(0xFFF7F5F0),
-                    surface = Color(0xFFF7F5F0)
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFA9A6F7),
+                    onPrimary = Color(0xFF0E0F13),
+                    background = Color(0xFF0E0F13),
+                    surface = Color(0xFF1A1C22),
+                    onSurface = Color(0xFFFFFFFF),
+                    onBackground = Color(0xFFFFFFFF),
+                    outline = Color(0xFF3A3D47),
+                    secondary = Color(0xFFE0B25C)
                 )
             ) {
                 SleepCheckIn()
