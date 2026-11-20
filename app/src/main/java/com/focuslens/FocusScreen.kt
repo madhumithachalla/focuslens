@@ -7,7 +7,9 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +87,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
     val resisted = remember(rev, tick) { prefs.totalGaveUpToday() }
 
     var showAllApps by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -94,11 +98,6 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             Column {
                 Spacer(Modifier.height(16.dp))
                 Text("Focus", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Pick the apps that pull you in. When you open one, you get a short challenge first.",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
             }
         }
 
@@ -109,53 +108,50 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     containerColor = if (a11y) Color(0xFFE3EFE8) else Color(0xFFF6E3DF)
                 )
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    if (a11y) {
-                        Text("Blocking is active", fontWeight = FontWeight.Medium)
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (a11y) "🟢" else "🔴", fontSize = 28.sp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
                         Text(
-                            "FocusLens only reads which app is open. It does not read your screen.",
-                            fontSize = 12.sp,
-                            color = Color.Gray
+                            if (a11y) "Blocking on" else "Blocking off",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    } else {
-                        Text("Blocking is off", fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "To show the challenge when you open an app, turn on FocusLens in " +
-                                "Accessibility settings (look under Installed apps or Downloaded apps). " +
-                                "FocusLens only reads which app is open, not what is on screen.",
-                            fontSize = 13.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
+                        TextButton(
+                            onClick = { showDetails = !showDetails },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(if (showDetails) "Hide details" else "Details", fontSize = 13.sp)
+                        }
+                    }
+                    if (!a11y) {
                         Button(onClick = {
                             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        }) {
-                            Text("Open Accessibility settings")
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "If the switch is greyed out: Settings > Apps > FocusLens > menu (three dots) > " +
-                                "Allow restricted settings.",
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Still won't turn on after that? Some Android builds block it from the switch " +
-                                "entirely for sideloaded apps, no matter what. With a computer and a USB cable, " +
-                                "turn on Settings > About phone > tap \"Build number\" 7 times > Developer " +
-                                "options > USB debugging, then run this once from the computer: " +
-                                "adb shell appops set --uid com.focuslens ACCESS_RESTRICTED_SETTINGS allow " +
-                                "— then the Accessibility switch above should work normally.",
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
+                        }) { Text("Turn on") }
                     }
                 }
             }
         }
 
         item {
+            val reelLimit = remember(rev) { prefs.reelLimit() }
+            val reelsUsed = remember(rev, tick) { prefs.reelsToday() }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatTile(
+                    value = if (reelLimit > 0) "${(reelLimit - reelsUsed).coerceAtLeast(0)}" else "∞",
+                    label = "Reels left today",
+                    modifier = Modifier.weight(1f)
+                )
+                StatTile(
+                    value = "${prefs.notOpenedTotal(SectionDetector.INSTAGRAM)}",
+                    label = "Times you chose not to open Instagram",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        item {
+            if (showDetails) Column {
             val seen = remember(tick) { prefs.lastSeen() }
             val ago = seen?.let { (System.currentTimeMillis() - it.third) / 1000 }
             val reelsOn = remember(rev) { prefs.isSectionBlocked(SectionDetector.INSTAGRAM, "Reels") }
@@ -191,6 +187,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 fontSize = 12.sp,
                 color = Color.Gray
             )
+            }
         }
 
         item {
@@ -594,6 +591,16 @@ private fun isInstalled(context: android.content.Context, pkg: String): Boolean 
     true
 } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
     false
+}
+
+@Composable
+private fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
+        Column(Modifier.padding(16.dp)) {
+            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = 12.sp, color = Color.Gray)
+        }
+    }
 }
 
 /** A label with − and + buttons for a whole number between [min] and [max]. */
