@@ -88,6 +88,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
 
     var showAllApps by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
+    var pomoOn by remember { mutableStateOf(prefs.pomodoroOn()) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -147,6 +148,42 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     label = "Times you chose not to open Instagram",
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+
+        item {
+            val now = System.currentTimeMillis()
+            val (inFocus, phaseEnd) = remember(tick, rev, pomoOn) { prefs.pomodoroPhase(now) }
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Pomodoro", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                when {
+                                    !pomoOn -> "Off"
+                                    inFocus -> "Focus: ${Clock.untilHms(phaseEnd, now)} left"
+                                    else -> "Break: ${Clock.untilHms(phaseEnd, now)} left"
+                                },
+                                fontSize = 13.sp,
+                                color = Color.Gray
+                            )
+                        }
+                        Switch(checked = pomoOn, onCheckedChange = { on ->
+                            pomoOn = on
+                            prefs.setPomodoro(on)
+                            rev++
+                        })
+                    }
+                    if (pomoOn) {
+                        MinuteRow("Focus minutes", prefs.pomodoroFocusMin(), 5, 120) {
+                            prefs.setPomodoro(true, it, prefs.pomodoroBreakMin()); rev++
+                        }
+                        MinuteRow("Break minutes", prefs.pomodoroBreakMin(), 1, 60) {
+                            prefs.setPomodoro(true, prefs.pomodoroFocusMin(), it); rev++
+                        }
+                    }
+                }
             }
         }
 

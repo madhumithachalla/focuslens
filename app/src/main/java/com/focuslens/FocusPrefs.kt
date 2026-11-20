@@ -150,6 +150,31 @@ class FocusPrefs(context: Context) {
     fun reelLockUntil(): Long = sp.getLong("reel_lock_until", 0L)
     fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
 
+    // ---- Pomodoro: a focus phase, then a break, repeating. Only in focus are blocked apps paused. ----
+    fun pomodoroOn(): Boolean = sp.getBoolean("pomo_on", false)
+    fun pomodoroFocusMin(): Int = sp.getInt("pomo_focus_min", 25).coerceIn(5, 120)
+    fun pomodoroBreakMin(): Int = sp.getInt("pomo_break_min", 5).coerceIn(1, 60)
+
+    /** Turns Pomodoro on or off. Each change starts a new cycle from now, with a focus phase first. */
+    fun setPomodoro(on: Boolean, focusMin: Int = pomodoroFocusMin(), breakMin: Int = pomodoroBreakMin()) {
+        sp.edit()
+            .putBoolean("pomo_on", on)
+            .putInt("pomo_focus_min", focusMin.coerceIn(5, 120))
+            .putInt("pomo_break_min", breakMin.coerceIn(1, 60))
+            .putLong("pomo_start", System.currentTimeMillis())
+            .apply()
+    }
+
+    /** (inFocus, phaseEndMillis) for the current Pomodoro phase. When Pomodoro is off: (false, 0). */
+    fun pomodoroPhase(now: Long): Pair<Boolean, Long> {
+        if (!pomodoroOn()) return false to 0L
+        val focus = pomodoroFocusMin() * 60_000L
+        val cycle = focus + pomodoroBreakMin() * 60_000L
+        val elapsed = (now - sp.getLong("pomo_start", now)).coerceAtLeast(0L) % cycle
+        return if (elapsed < focus) true to now + (focus - elapsed)
+        else false to now + (cycle - elapsed)
+    }
+
     /** Counts per app and kind over the last [days] limit-days (6am-shifted, like the limits). */
     fun eventTotals(days: Int, now: Long = System.currentTimeMillis()): Map<String, Map<String, Long>> {
         val keep = (0 until days).map { back ->

@@ -235,6 +235,8 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
+        if (pomodoroBlock(pkg, now)) return
+
         // Daily screen-time limit reached while using the app: locked for 12 hours from now.
         if (prefs.enabled && prefs.isBlocked(pkg) && now >= prefs.unlockUntil(pkg) &&
             usedMinToday(pkg) >= prefs.limitMin(pkg)
@@ -291,6 +293,22 @@ class FocusAccessibilityService : AccessibilityService() {
                 "$host is on your social media block list. Academic sites are never blocked by this rule."
             )
         }
+    }
+
+    /**
+     * Pomodoro: during a focus phase, an app you blocked is paused until the break.
+     * Returns true when focus is on, so the caller stops checking that app.
+     */
+    private fun pomodoroBlock(pkg: String, now: Long): Boolean {
+        if (!prefs.enabled || !prefs.isBlocked(pkg)) return false
+        val (inFocus, phaseEnd) = prefs.pomodoroPhase(now)
+        if (!inFocus) return false
+        if (now - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
+            val appName = SectionDetector.displayName[pkg] ?: pkg
+            kickHome("pomodoro focus")
+            launchFeatureBlock("Focus time", "$appName waits for your break, in ${Clock.untilHms(phaseEnd, now)}.")
+        }
+        return true
     }
 
     private fun launchFeatureBlock(title: String, message: String) {
@@ -605,6 +623,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
 
         if (!prefs.enabled || !prefs.isBlocked(pkg)) return
+        if (pomodoroBlock(pkg, now)) return
 
         // Daily limit used up: no way in, except a quiz unlock. Checked on a fresh figure, and before
         // any short "allowed for a while" window from earlier, so an old window cannot carry you past it.
