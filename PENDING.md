@@ -36,6 +36,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Study room: one on one or group, join at random or with a code, invite, shared 25-min timer, random backdrop. Anonymous, no chat | Built | Needs the updated firestore.rules deployed in the Firebase console first. Not checked on a phone |
 | Accountability screen: redesigned (dark cards, one partner card, your code with Share, tasks as tappable circles, short status text) | Built | First screen of the full design change. Same Firestore logic as before. Not checked on a phone |
 | App-wide dark theme (design-board colours) | Built | Screens with their own light colours may still need a pass. Not checked on a phone |
+| Updates screen and update messages show the version name only (no build number). Release 1.9.0 | Built | Build number stays internal, for update checks |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |

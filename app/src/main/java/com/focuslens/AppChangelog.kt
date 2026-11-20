@@ -6,6 +6,17 @@ data class BuildNote(val build: Int, val points: List<String>, val version: Stri
 
 val APP_CHANGELOG: List<BuildNote> = listOf(
     BuildNote(0, listOf(
+        "Interception on every Instagram open: a breathing exercise or a maths question, alternating each time.",
+        "Not now is counted, and the count shows on the screen.",
+        "Pomodoro: focus phases pause social media apps and your blocked apps. Breaks let you back in.",
+        "Daily limit and reel cap lock for 12 hours. Breaks default to 1 hour.",
+        "Emergency pass is 5 minutes.",
+        "Study room: one on one or group, invite with a code, shared 25-minute timer. Anonymous, no chat.",
+        "Accountability: one partner card, your code with Share, tasks as tappable circles.",
+        "Dark theme across the app.",
+        "Home launcher: type an app name and tap it. Set it as your home app in Settings."
+    ), version = "1.9.0"),
+    BuildNote(0, listOf(
         "Limits (doom-scroll, reels per day, quiz unlocks, emergency passes) use a drag-and-scroll picker.",
         "Reels switch on: Reels is blocked, whatever the daily limit.",
         "Blocked short videos show a full screen with Back. Back leaves it straight away.",
