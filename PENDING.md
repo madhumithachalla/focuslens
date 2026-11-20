@@ -34,6 +34,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Redesign, Focus tab: status card, two stat tiles, details hidden under Details | Built | First screen of the redesign. The rest of the design boards are not built yet. Not checked on a phone |
 | Pomodoro: focus phase (default 25 min) then break (default 5 min), repeating; social media apps and blocked apps paused in focus | Built | Social media apps are always included. Turn on and set lengths on the Focus tab. Not checked on a phone |
 | Study room: one on one or group, join at random or with a code, invite, shared 25-min timer, random backdrop. Anonymous, no chat | Built | Needs the updated firestore.rules deployed in the Firebase console first. Not checked on a phone |
+| Accountability screen: redesigned (dark cards, one partner card, your code with Share, tasks as tappable circles, short status text) | Built | First screen of the full design change. Same Firestore logic as before. Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |
 | Peak hours from usage history | Built | Needs several days of history |
