@@ -42,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +78,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 typography = AppTypography,
-                colorScheme = darkColorScheme(
+                colorScheme = if (FocusPrefs(context).themeLight()) lightColorScheme(
+                    primary = Color(0xFF1F3A34),
+                    onPrimary = Color(0xFFFFFFFF),
+                    background = Color(0xFFF7F5F0),
+                    surface = Color(0xFFFFFFFF),
+                    onSurface = Color(0xFF1A1C22),
+                    onBackground = Color(0xFF1A1C22),
+                    outline = Color(0xFFCFCBC0),
+                    secondary = Color(0xFFB8862E)
+                ) else darkColorScheme(
                     primary = Color(0xFFA9A6F7),
                     onPrimary = Color(0xFF0E0F13),
                     background = Color(0xFF0E0F13),

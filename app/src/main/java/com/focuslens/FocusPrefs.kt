@@ -154,6 +154,10 @@ class FocusPrefs(context: Context) {
     }
 
     /** While this is in the future, Reels is blocked (set when the daily reel limit is used up). */
+    /** Light colours instead of dark. Off by default: the app is dark. */
+    fun themeLight(): Boolean = sp.getBoolean("theme_light", false)
+    fun setThemeLight(on: Boolean) = sp.edit().putBoolean("theme_light", on).apply()
+
     fun reelLockUntil(): Long = sp.getLong("reel_lock_until", 0L)
     fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
 

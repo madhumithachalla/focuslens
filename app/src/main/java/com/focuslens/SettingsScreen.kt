@@ -363,6 +363,19 @@ fun SettingsScreen() {
                     })
                 }
             }
+            // Light or dark colours for the whole app. Dark is the default.
+            var lightOn by remember { mutableStateOf(FocusPrefs(context).themeLight()) }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Light colours", fontSize = 16.sp, modifier = Modifier.weight(1f))
+                    Switch(checked = lightOn, onCheckedChange = {
+                        lightOn = it
+                        FocusPrefs(context).setThemeLight(it)
+                        (context as? android.app.Activity)?.recreate()
+                    })
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             // One tap copies the app version, the blocking status and recent FocusLens log lines.
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {

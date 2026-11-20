@@ -139,10 +139,12 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         item {
             val reelLimit = remember(rev) { prefs.reelLimit() }
             val reelsUsed = remember(rev, tick) { prefs.reelsToday() }
+            val reelMins = remember(rev, tick) { prefs.reelWatchMsToday() / 60_000L }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile(
-                    value = if (reelLimit > 0) "${(reelLimit - reelsUsed).coerceAtLeast(0)}" else "∞",
-                    label = "Reels left today",
+                    value = "$reelsUsed",
+                    label = (if (reelLimit > 0) "Reels today, ${(reelLimit - reelsUsed).coerceAtLeast(0)} left" else "Reels today") +
+                        " · ${Clock.minutesHuman(reelMins)} watched",
                     modifier = Modifier.weight(1f)
                 )
                 StatTile(

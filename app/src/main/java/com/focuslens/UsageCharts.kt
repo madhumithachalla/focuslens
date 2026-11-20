@@ -1,5 +1,10 @@
 package com.focuslens
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -138,13 +143,45 @@ fun BarChart(
     }
 }
 
+/** A line through the values, with a dot on the latest one. Only the first and last labels are printed. */
+@Composable
+fun LineChart(
+    values: List<Long>,
+    firstLabel: String,
+    lastLabel: String,
+    color: Color = UsageColors.Apps
+) {
+    val max = values.maxOrNull()?.coerceAtLeast(1L) ?: 1L
+    Canvas(Modifier.fillMaxWidth().height(110.dp)) {
+        if (values.isEmpty()) return@Canvas
+        val w = size.width
+        val h = size.height
+        val step = if (values.size > 1) w / (values.size - 1) else 0f
+        fun yOf(v: Long): Float = h - (v.toFloat() / max) * h * 0.9f - h * 0.05f
+        val path = Path()
+        values.forEachIndexed { i, v ->
+            if (i == 0) path.moveTo(0f, yOf(v)) else path.lineTo(i * step, yOf(v))
+        }
+        drawPath(
+            path, color,
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        drawCircle(color, radius = 4.dp.toPx(), center = Offset((values.size - 1) * step, yOf(values.last())))
+    }
+    Spacer(Modifier.height(4.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(firstLabel, fontSize = 10.sp, color = Color.Gray)
+        Text(lastLabel, fontSize = 10.sp, color = Color.Gray)
+    }
+}
+
 @Composable
 fun OverTimeCard(buckets: List<Pair<String, Long>>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text("Over time", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             Spacer(Modifier.height(10.dp))
-            BarChart(
+            LineChart(
                 values = buckets.map { it.second },
                 firstLabel = buckets.first().first,
                 lastLabel = buckets.last().first,
