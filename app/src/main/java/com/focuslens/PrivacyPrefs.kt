@@ -32,6 +32,7 @@ object PrivacyPrefs {
      * Call off the main thread.
      */
     fun deleteAllLocalData(c: Context) {
+        UsageTracking.apply(c, false)
         AppDatabase.get(c).clearAllTables()
         UsageDatabase.get(c).clearAllTables()
         File(c.applicationInfo.dataDir, "shared_prefs").listFiles()?.forEach { f ->
@@ -43,10 +44,8 @@ object PrivacyPrefs {
 
     /** The wording shown with the consent question. Plain, and says what else the data is used for. */
     const val CONSENT_TEXT =
-        "FocusLens learns from your tasks, check-ins, journal moods and screen time, on this phone, " +
-        "to make predictions and insights for you.\n\n" +
-        "Your data is also used to tune those predictions and to improve FocusLens features. " +
-        "It is not sold and is not uploaded for these purposes.\n\n" +
-        "You can opt out at any time. Predictions will be less accurate without your history. " +
-        "You can also delete all of it on this phone in Settings."
+        "Yes: FocusLens saves your app usage on this phone every 6 hours, so your numbers are more accurate.\n\n" +
+        "No: FocusLens shows Digital Wellbeing's numbers instead.\n\n" +
+        "We don't sell your data, and we don't use it to train AI models outside FocusLens. " +
+        "You can change this in Settings any time."
 }

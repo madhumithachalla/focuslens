@@ -26,6 +26,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Item | Status | Notes |
 |---|---|---|
 | Usage totals match Digital Wellbeing (last 7 days) | Built | Uses Android's own totals. Not checked against your phone |
+| Track my usage on this phone: yes = snapshots every 6 hours, no = Digital Wellbeing numbers | Built | Consent on first launch and in Settings. Not checked on a phone yet |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |
 | Peak hours from usage history | Built | Needs several days of history |

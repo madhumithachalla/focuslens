@@ -27,6 +27,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
     private val dao = UsageDatabase.get(context).dailyUsageDao()
     private val hourlyDao = UsageDatabase.get(context).hourlyUsageDao()
     private val legacy = AppDatabase.get(context)
+    private val appCtx = context.applicationContext
     private val prefs = context.applicationContext.getSharedPreferences("focus", Context.MODE_PRIVATE)
 
     /** One-time copy of history from the old AppDatabase tables into the protected database. */
@@ -40,6 +41,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
 
     /** Snapshots any finished day in the last [daysBack] days that isn't already stored. Call once per app open. */
     suspend fun catchUp(daysBack: Int = 10) {
+        if (!PrivacyPrefs.personalised(appCtx)) return  // no yes from the user, so nothing is saved
         migrateLegacyOnce()
         rebuildRecentOnce()
         val todayStart = startOfDay(System.currentTimeMillis())
@@ -79,6 +81,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
      *  for more than about a week, so capturing it before then is the only way an hourly view
      *  can ever cover days further back than that. */
     suspend fun catchUpHourly(daysBack: Int = 7) {
+        if (!PrivacyPrefs.personalised(appCtx)) return  // no yes from the user, so nothing is saved
         val todayStart = startOfDay(System.currentTimeMillis())
         for (back in 1..daysBack) {
             val dayStart = todayStart - back * DAY_MS

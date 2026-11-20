@@ -32,6 +32,20 @@ object ReelPlaceholder {
         PixelFormat.TRANSLUCENT
     )
 
+    /** A solid black cover for a reel in the feed: it hides the reel and fills exactly its rectangle. */
+    private fun blackCover(c: Context): LinearLayout =
+        LinearLayout(c).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(0xFF000000.toInt())
+            addView(TextView(c).apply {
+                text = "Reel hidden"
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setTextColor(0xFF9AA0AB.toInt())
+            })
+        }
+
     private fun card(c: Context, text: String, padding: Int, onBack: (() -> Unit)?): LinearLayout =
         LinearLayout(c).apply {
             orientation = LinearLayout.VERTICAL
@@ -57,7 +71,7 @@ object ReelPlaceholder {
         clearRects(c)
         rects.forEach { r ->
             if (r.width() <= 0 || r.height() <= 0) return@forEach
-            val v = card(c, "Reel hidden. Reels is restricted in FocusLens.", 8, null)
+            val v = blackCover(c)
             val lp = params(r.width(), r.height()).apply {
                 gravity = Gravity.TOP or Gravity.START
                 x = r.left

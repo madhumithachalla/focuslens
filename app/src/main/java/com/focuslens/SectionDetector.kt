@@ -122,6 +122,12 @@ object SectionDetector {
                     hasFullReelBanner = true
                     embedded += ancestorRect(node, 3)
                 }
+                // A post or reel in the feed shows "Original audio" under the username. Treat it as a
+                // reel and cover the post area around it. Exact label only, so ordinary posts do not match.
+                if (bannerText == "original audio" || bannerText.startsWith("original audio") && bannerText.length <= 40) {
+                    hasFullReelBanner = true
+                    embedded += ancestorRect(node, 6)
+                }
                 if (!node.isSelected) {
                     // Deliberately NOT the same check as the tab-word match above: an icon
                     // badge's accessible name is just "Reel"/"Reels" on its own, not a tab's
@@ -181,6 +187,9 @@ object SectionDetector {
         fun has(vararg k: String) = ids.any { id -> k.any { id.contains(it) } }
         fun sel(vararg k: String) = selIds.any { id -> k.any { id.contains(it) } }
         return when {
+            // Recording or creating a post or reel: the camera and capture controls are up. Checked
+            // first, so a reel-style camera screen is not read as watching Reels and blocked.
+            has("camera", "capture", "shutter", "creation") || "camera" in words -> "Creating a post"
             // Checked first, and wins even when Stories-viewer ids are also present: real
             // Reels-player elements (clips_viewer/clips_video/clips_swipe, the dedicated Reels
             // tab, a "reels" tab word, the "View/Show full reel" banner, or a reel-icon badge —
