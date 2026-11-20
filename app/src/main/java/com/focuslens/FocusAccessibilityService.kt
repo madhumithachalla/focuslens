@@ -296,11 +296,12 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Pomodoro: during a focus phase, an app you blocked is paused until the break.
+     * Pomodoro: during a focus phase, social media apps and any app you blocked are paused until the break.
      * Returns true when focus is on, so the caller stops checking that app.
      */
     private fun pomodoroBlock(pkg: String, now: Long): Boolean {
-        if (!prefs.enabled || !prefs.isBlocked(pkg)) return false
+        // Social media apps are always included; any other app you blocked is included too.
+        if (!prefs.enabled || (pkg !in SectionDetector.tracked && !prefs.isBlocked(pkg))) return false
         val (inFocus, phaseEnd) = prefs.pomodoroPhase(now)
         if (!inFocus) return false
         if (now - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
@@ -622,8 +623,8 @@ class FocusAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (!prefs.enabled || !prefs.isBlocked(pkg)) return
         if (pomodoroBlock(pkg, now)) return
+        if (!prefs.enabled || !prefs.isBlocked(pkg)) return
 
         // Daily limit used up: no way in, except a quiz unlock. Checked on a fresh figure, and before
         // any short "allowed for a while" window from earlier, so an old window cannot carry you past it.

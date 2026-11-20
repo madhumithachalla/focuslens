@@ -161,7 +161,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                             Text("Pomodoro", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(
                                 when {
-                                    !pomoOn -> "Off"
+                                    !pomoOn -> "Off. Covers social media and your blocked apps."
                                     inFocus -> "Focus: ${Clock.untilHms(phaseEnd, now)} left"
                                     else -> "Break: ${Clock.untilHms(phaseEnd, now)} left"
                                 },

@@ -32,7 +32,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Break after 1 hour of scrolling, 1 hour break (defaults, changeable in Focus) | Built | Not checked on a phone yet |
 | Emergency pass: 5 minutes (was 10) | Built | Not checked on a phone yet |
 | Redesign, Focus tab: status card, two stat tiles, details hidden under Details | Built | First screen of the redesign. The rest of the design boards are not built yet. Not checked on a phone |
-| Pomodoro: focus phase (default 25 min) then break (default 5 min), repeating; blocked apps paused in focus only | Built | Turn on and set lengths on the Focus tab. Not checked on a phone |
+| Pomodoro: focus phase (default 25 min) then break (default 5 min), repeating; social media apps and blocked apps paused in focus | Built | Social media apps are always included. Turn on and set lengths on the Focus tab. Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |
 | Peak hours from usage history | Built | Needs several days of history |
