@@ -1,123 +1,140 @@
 package com.focuslens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.focuslens.data.AppDatabase
-import com.focuslens.data.JournalRepository
-
-private data class ScoreBreakdown(
-    val total: Int,
-    val resistRatio: Double,
-    val resistPasses: Int,
-    val resistGaveUp: Int,
-    val journalDays30: Int,
-    val journalStreak: Int
-)
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 /**
- * A composite index of how consistently the user is sticking to the limits and habits
- * they set for themselves in FocusLens — NOT a measure of grades, productivity, or any
- * real-world outcome. There's no grade data anywhere in this app (no LMS connection),
- * and the research behind the blocker design (Zimmermann & Sobolev, 2023) found that
- * cutting screen time did not reliably move academic performance either — so this
- * screen must never imply it predicts that. It only reflects behavior inside the app.
+ * Focus score for today, from this phone's usage only: social media time against yesterday,
+ * reels watched, and how often you stepped back. It shows the number behind each part, and
+ * the tips that match the weakest part. It is not a grade or a productivity measure.
  */
 @Composable
 fun FocusScoreScreen() {
     val context = LocalContext.current
     val prefs = remember { FocusPrefs(context) }
-    val db = remember { AppDatabase.get(context) }
-    val journalRepo = remember { JournalRepository(db.journalDao()) }
-
-    var breakdown by remember { mutableStateOf<ScoreBreakdown?>(null) }
+    var report by remember { mutableStateOf<FocusReport?>(null) }
 
     LaunchedEffect(Unit) {
-        val (passes, gaveUp) = prefs.resistStatsLast(30)
-        val resistRatio = if (passes + gaveUp == 0) 0.5 else gaveUp.toDouble() / (passes + gaveUp)
-
-        val journalEntries = journalRepo.recent(30).size
-        val journalDays30 = journalEntries.coerceAtMost(30)
-        val streak = journalRepo.currentStreak()
-
-        val journalConsistency = (journalDays30 / 30.0).coerceIn(0.0, 1.0)
-        val streakBonus = (streak / 14.0).coerceIn(0.0, 1.0)
-
-        val score = (resistRatio * 0.4 + journalConsistency * 0.3 + streakBonus * 0.3) * 100
-
-        breakdown = ScoreBreakdown(
-            total = score.toInt().coerceIn(0, 100),
-            resistRatio = resistRatio,
-            resistPasses = passes,
-            resistGaveUp = gaveUp,
-            journalDays30 = journalDays30,
-            journalStreak = streak
-        )
+        report = withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val todayStart = cal.timeInMillis
+            val yesterdayStart = todayStart - 86_400_000L
+            val repo = UsageRepository(context)
+            val social: (List<AppUsage>) -> Long = { rows ->
+                rows.filter { it.packageName in SectionDetector.tracked }.sumOf { it.millis } / 60_000L
+            }
+            val (passes, gaveUp) = prefs.resistStatsLast(30)
+            FocusInsights.build(
+                FocusSignals(
+                    socialMinToday = social(repo.loadCustom(todayStart, now)),
+                    socialMinYesterday = social(repo.loadCustom(yesterdayStart, todayStart)),
+                    reelsToday = prefs.reelsToday(),
+                    reelMinToday = prefs.reelWatchMsToday() / 60_000L,
+                    reelLimit = prefs.reelLimit(),
+                    notOpenedAll = prefs.notOpenedTotal(SectionDetector.INSTAGRAM),
+                    resistPasses = passes,
+                    resistGaveUp = gaveUp
+                )
+            )
+        }
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
-        Text("Focus Score", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "How consistently you're sticking to your own limits — not a measure of grades, productivity, or any outcome outside the app.",
-            fontSize = 13.sp,
-            color = Color.Gray
-        )
-        Spacer(Modifier.height(24.dp))
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Spacer(Modifier.height(8.dp))
+        Text("Focus score", fontSize = 26.sp, fontWeight = FontWeight.Bold)
 
-        val b = breakdown
-        if (b == null) {
-            CircularProgressIndicator()
+        val r = report
+        if (r == null) {
+            Text("Working it out…", color = Color.Gray)
             return@Column
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${b.total}", fontSize = 56.sp, fontWeight = FontWeight.Bold)
-            Text("/100", fontSize = 20.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
+        // The score, and what colour it is.
+        val tone = when {
+            r.score >= 70 -> Color(0xFF9CC4A8)
+            r.score >= 40 -> Color(0xFFE0B25C)
+            else -> Color(0xFFD98C8C)
         }
-        Spacer(Modifier.height(20.dp))
-
         Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("WHAT MADE THIS UP", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                Spacer(Modifier.height(10.dp))
-                ScoreLine("Resisted vs. opened anyway (last 30 days)", "${b.resistGaveUp} resisted / ${b.resistPasses} opened", "40%")
-                ScoreLine("Journal entries (last 30 days)", "${b.journalDays30}/30 days", "30%")
-                ScoreLine("Current journal streak", "${b.journalStreak} days", "30%")
+            Column(Modifier.padding(18.dp)) {
+                Text("${r.score}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = tone)
+                Text("out of 100 today", fontSize = 13.sp, color = Color.Gray)
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        // One bar per part, with the number behind it.
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                r.parts.forEach { p ->
+                    Column {
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(p.name, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                            Text("${(p.score * 100).toInt()}", fontWeight = FontWeight.Bold)
+                        }
+                        Box(Modifier.fillMaxWidth().height(8.dp).background(Color(0xFF3A3D47), RoundedCornerShape(4.dp))) {
+                            Box(
+                                Modifier.fillMaxWidth(p.score.toFloat().coerceIn(0.02f, 1f))
+                                    .height(8.dp)
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                            )
+                        }
+                        Text(p.detail, fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+            }
+        }
+
+        // Tips that match the weakest parts. Nothing is shown when every part is good.
+        if (r.tips.isNotEmpty()) {
+            Text("Do next", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            r.tips.forEach { t ->
+                Card(Modifier.fillMaxWidth()) {
+                    Text(t.text, modifier = Modifier.padding(16.dp))
+                }
+            }
+        }
+
         Text(
-            "This can't tell you anything about your grades or real-world outcomes — there's no " +
-                "connection to any gradebook here, and even published research on screen-time " +
-                "interventions hasn't found a reliable link to academic performance. Treat this as " +
-                "a mirror on your own app habits, nothing more.",
-            fontSize = 12.sp,
+            "Based only on this phone's usage. Not a grade or productivity measure.",
+            fontSize = 11.sp,
             color = Color.Gray
         )
-    }
-}
-
-@Composable
-private fun ScoreLine(label: String, value: String, weight: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(label, fontSize = 12.5.sp)
-            Text(value, fontSize = 11.sp, color = Color.Gray)
-        }
-        Text(weight, fontSize = 11.sp, color = Color.Gray)
+        Spacer(Modifier.height(24.dp))
     }
 }
