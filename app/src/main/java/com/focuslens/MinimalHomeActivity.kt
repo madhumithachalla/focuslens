@@ -139,7 +139,8 @@ fun MinimalHomeScreen() {
     var favorites by remember { mutableStateOf(HomePrefs.favorites(context)) }
     var zones by remember { mutableStateOf(HomePrefs.zones(context)) }
     var query by remember { mutableStateOf("") }
-    var searching by remember { mutableStateOf(false) }
+    // The search box is open from the start: type an app name and tap it.
+    var searching by remember { mutableStateOf(true) }
     var note by remember { mutableStateOf<String?>(null) }
     var todayMillis by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var warnFor by remember { mutableStateOf<LaunchableApp?>(null) }

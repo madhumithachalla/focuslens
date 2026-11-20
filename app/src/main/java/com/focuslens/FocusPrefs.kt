@@ -146,6 +146,13 @@ class FocusPrefs(context: Context) {
     fun openApproved(): Boolean = sp.getBoolean("open_approved", false)
     fun setOpenApproved(on: Boolean) = sp.edit().putBoolean("open_approved", on).apply()
 
+    /** The interception kind for this open: always the other kind from last time. "breathing" or "question". */
+    fun nextInterceptMode(): String {
+        val next = if (sp.getString("intercept_last", "question") == "breathing") "question" else "breathing"
+        sp.edit().putString("intercept_last", next).apply()
+        return next
+    }
+
     /** While this is in the future, Reels is blocked (set when the daily reel limit is used up). */
     fun reelLockUntil(): Long = sp.getLong("reel_lock_until", 0L)
     fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
