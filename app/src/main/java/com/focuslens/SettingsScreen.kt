@@ -363,6 +363,19 @@ fun SettingsScreen() {
                     })
                 }
             }
+            // One tap copies the app version, the blocking status and recent FocusLens log lines.
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Problem? Copy a report", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text("Send it to the developer so the problem can be fixed.", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = {
+                        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("FocusLens report", buildDebugReport(context)))
+                        android.widget.Toast.makeText(context, "Report copied", android.widget.Toast.LENGTH_SHORT).show()
+                    }) { Text("Copy report") }
+                }
+            }
             Spacer(Modifier.height(16.dp))
             Text("Privacy & your data", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
             Spacer(Modifier.height(4.dp))
