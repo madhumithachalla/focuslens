@@ -301,13 +301,15 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun pomodoroBlock(pkg: String, now: Long): Boolean {
         // Social media apps are always included; any other app you blocked is included too.
-        if (!prefs.enabled || (pkg !in SectionDetector.tracked && !prefs.isBlocked(pkg))) return false
+        // Social media apps are included, except LinkedIn. Any other app you blocked is included too.
+        val pomodoroApps = SectionDetector.tracked - SectionDetector.LINKEDIN
+        if (!prefs.enabled || (pkg !in pomodoroApps && !prefs.isBlocked(pkg))) return false
         val (inFocus, phaseEnd) = prefs.pomodoroPhase(now)
         if (!inFocus) return false
         if (now - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
             kickHome("pomodoro focus")
-            launchFeatureBlock("Focus time", "$appName waits for your break, in ${Clock.untilHms(phaseEnd, now)}.")
+            launchFeatureBlock("Focus time", "$appName waits for your break, in ${Clock.untilHms(phaseEnd, now)}. To stop this, turn off Pomodoro on the Focus tab.")
         }
         return true
     }
