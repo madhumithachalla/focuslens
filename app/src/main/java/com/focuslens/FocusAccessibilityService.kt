@@ -427,6 +427,14 @@ class FocusAccessibilityService : AccessibilityService() {
                 finishPendingReel(now)
                 reelStartAt = now
             }
+            // A scroll in a tracked app re-checks it at once, so a swipe into Reels is blocked straight away.
+            if (scrolled != null && scrolled == current && scrolled in SectionDetector.tracked) {
+                try {
+                    sample()
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Scroll check failed for $scrolled", e)
+                }
+            }
             trackScroll(scrolled)
             return
         }
