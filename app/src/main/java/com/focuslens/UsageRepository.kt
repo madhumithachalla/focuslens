@@ -136,12 +136,40 @@ class UsageRepository(private val context: Context) {
     private fun systemTotals(start: Long, end: Long, withLaunches: Boolean = true): List<AppUsage> {
         // The event log is the expensive part; skip it when launch counts are not needed.
         val launches = if (withLaunches) usageBetween(start, end).associate { it.packageName to it.launches } else emptyMap()
-        return usm.queryAndAggregateUsageStats(start, end).orEmpty()
-            .filter { (pkg, s) ->
-                s.totalTimeInForeground > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg)
+        return exactForegroundTotals(start, end)
+            .filter { (pkg, ms) ->
+                ms > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg)
             }
-            .map { (pkg, s) -> AppUsage(pkg, labelFor(pkg), s.totalTimeInForeground, launches[pkg] ?: 0) }
+            .map { (pkg, ms) -> AppUsage(pkg, labelFor(pkg), ms, launches[pkg] ?: 0) }
             .sortedByDescending { it.millis }
+    }
+
+    /**
+     * Time each app was in front inside [start, end), from Android's event log and clipped to
+     * the window. Aggregated buckets can include time from neighbouring days, which made some
+     * saved days larger than 24 hours. Counting only events inside the window avoids that.
+     */
+    private fun exactForegroundTotals(start: Long, end: Long): Map<String, Long> {
+        val totals = HashMap<String, Long>()
+        val openSince = HashMap<String, Long>()
+        val events = usm.queryEvents(start, end)
+        val event = android.app.usage.UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            when (event.eventType) {
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> openSince[pkg] = event.timeStamp
+                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val from = openSince.remove(pkg) ?: start
+                    totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - from).coerceAtLeast(0L)
+                }
+            }
+        }
+        // Apps still in front when the window ends.
+        for ((pkg, from) in openSince) {
+            totals[pkg] = (totals[pkg] ?: 0L) + (end - from).coerceAtLeast(0L)
+        }
+        return totals
     }
 
     /**
