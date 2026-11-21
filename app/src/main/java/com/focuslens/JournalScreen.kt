@@ -18,7 +18,7 @@ import com.focuslens.data.JournalRepository
 import kotlinx.coroutines.launch
 
 // Same prompt library as the web app (docs/content.js JOURNAL_CATEGORIES), minus the
-// category browsing UI — a flat, varied pool instead of three fixed questions.
+// category browsing UI, a flat, varied pool instead of three fixed questions.
 private val PROMPTS = listOf(
     "🪞" to "What did I spend the most energy on today, and was it worth it?",
     "🪞" to "What am I avoiding, and what is the smallest first step?",
@@ -39,7 +39,7 @@ private val PROMPTS = listOf(
 )
 private val MOODS = listOf("😔" to "low", "😐" to "flat", "🙂" to "okay", "😊" to "good", "🤩" to "great")
 
-/** A starting structure, not a question — unlike PROMPTS, these pre-fill the text field so
+/** A starting structure, not a question, unlike PROMPTS, these pre-fill the text field so
  *  there's a shape to write into rather than a blank box. Still just text underneath: nothing
  *  about saving or reading an entry back treats a template differently from free writing. */
 private data class JournalTemplate(val emoji: String, val title: String, val scaffold: String)
@@ -167,7 +167,7 @@ fun JournalScreen() {
                 Spacer(Modifier.height(16.dp))
                 Text("Journal", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you — nothing here leaves your device",
+                    if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you, nothing here leaves your device",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
@@ -179,7 +179,7 @@ fun JournalScreen() {
                 Text("SUGGESTED FOR YOU", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "From your own usage this week — not a fixed list.",
+                    "From your own usage this week, not a fixed list.",
                     fontSize = 11.sp,
                     color = Color.Gray
                 )

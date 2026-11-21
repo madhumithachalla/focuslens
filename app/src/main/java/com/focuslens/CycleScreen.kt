@@ -27,7 +27,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Commonly-cited "cycle syncing" guidance — widely circulated wellness framing, not a
+ * Commonly-cited "cycle syncing" guidance, widely circulated wellness framing, not a
  * clinically proven formula. Everyone's actual experience varies; a starting suggestion to
  * notice how you feel against, not a rule to follow regardless of how you actually feel.
  * Colors are four distinct hues (not shades of one color) chosen to stay distinguishable for
@@ -46,7 +46,7 @@ private val PHASE_GUIDANCE = mapOf(
     ),
     "Ovulation" to PhaseGuidance(
         Color(0xFFA8336B),
-        "Energy often peaks around now for many people. Often suggested for: your most demanding task or a big social event — but only if your own energy actually backs it up today."
+        "Energy often peaks around now for many people. Often suggested for: your most demanding task or a big social event, but only if your own energy actually backs it up today."
     ),
     "Luteal phase" to PhaseGuidance(
         Color(0xFF4F5584),
@@ -57,10 +57,10 @@ private val PHASE_GUIDANCE = mapOf(
 private data class TrackerType(val mode: CycleMode, val label: String, val hint: String)
 
 private val TRACKER_TYPES = listOf(
-    TrackerType(CycleMode.GENERAL_ENERGY, "Energy", "1 low – 5 high"),
-    TrackerType(CycleMode.MOOD, "Mood", "1 low – 5 great"),
-    TrackerType(CycleMode.SLEEP, "Sleep quality", "1 poor – 5 great"),
-    TrackerType(CycleMode.WATER, "Water intake", "1 very little – 5 plenty")
+    TrackerType(CycleMode.GENERAL_ENERGY, "Energy", "1 low, 5 high"),
+    TrackerType(CycleMode.MOOD, "Mood", "1 low, 5 great"),
+    TrackerType(CycleMode.SLEEP, "Sleep quality", "1 poor, 5 great"),
+    TrackerType(CycleMode.WATER, "Water intake", "1 very little, 5 plenty")
 )
 
 @Composable
@@ -95,11 +95,11 @@ fun CycleScreen() {
                     refresh()
                     healthConnectStatus = "Imported ${dates.size} period start date${if (dates.size == 1) "" else "s"} from Health Connect."
                 } else {
-                    healthConnectStatus = "No period data found in Health Connect yet — not every watch or app writes it there."
+                    healthConnectStatus = "No period data found in Health Connect yet, not every watch or app writes it there."
                 }
             }
         } else {
-            healthConnectStatus = "Permission not granted — nothing imported."
+            healthConnectStatus = "Permission not granted, nothing imported."
         }
     }
 
@@ -127,7 +127,7 @@ fun CycleScreen() {
         Text("Tracking", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Anyone who gets periods can track that directly — everyone else can pick whichever of the other trackers fit, any subset, any day.",
+            "Anyone who gets periods can track that directly, everyone else can pick whichever of the other trackers fit, any subset, any day.",
             fontSize = 12.sp
         )
         Spacer(Modifier.height(16.dp))
@@ -146,7 +146,7 @@ fun CycleScreen() {
             val pred = prediction
             if (pred == null) {
                 Text(
-                    "No period start logged yet — log today as day 1 of a period to begin building an estimate.",
+                    "No period start logged yet, log today as day 1 of a period to begin building an estimate.",
                     fontSize = 13.sp
                 )
             } else {
@@ -173,7 +173,7 @@ fun CycleScreen() {
                         Text("${pred.phase} · estimated fertile window: day ${pred.fertileWindowStartDay}–${pred.fertileWindowEndDay}", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg) — your own data, not a clinical model. The phase and fertile window assume a standard ~14-day luteal phase, which varies person to person (roughly 11-17 days) — only basal body temperature, LH strips, or an ultrasound can actually confirm ovulation. Treat all of this as a rough guide, not a diagnosis or contraception method.",
+                            "A rolling average of your last ${if (pred.isConfident) "3+" else "few"} logged cycles (${pred.averageCycleLengthDays} days avg), your own data, not a clinical model. The phase and fertile window assume a standard ~14-day luteal phase, which varies person to person (roughly 11-17 days), only basal body temperature, LH strips, or an ultrasound can actually confirm ovulation. Treat all of this as a rough guide, not a diagnosis or contraception method.",
                             fontSize = 11.sp
                         )
                         if (guidance != null) {
@@ -237,7 +237,7 @@ fun CycleScreen() {
             }
             Text(
                 "Reads period-start dates your watch or another health app (Samsung Health, Fitbit, Flo, etc.) " +
-                    "may have already saved to Health Connect — only if you tap this, and only that one data type.",
+                    "may have already saved to Health Connect, only if you tap this, and only that one data type.",
                 fontSize = 11.sp,
                 color = Color.Gray
             )
@@ -251,7 +251,7 @@ fun CycleScreen() {
         if (p.trackGeneralEnergy) {
             Text("Trackers", fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
-            Text("Pick whichever you want to log today — logging one never requires the others.", fontSize = 11.sp, color = Color.Gray)
+            Text("Pick whichever you want to log today, logging one never requires the others.", fontSize = 11.sp, color = Color.Gray)
             Spacer(Modifier.height(8.dp))
             TRACKER_TYPES.forEach { tracker ->
                 Text("${tracker.label} (${tracker.hint})", fontSize = 12.sp, fontWeight = FontWeight.Medium)

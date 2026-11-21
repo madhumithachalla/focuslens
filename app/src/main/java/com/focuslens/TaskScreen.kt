@@ -105,7 +105,7 @@ fun TaskScreen() {
             }
 
             if (tasks.isEmpty()) {
-                item { Text("Nothing added yet — tap + to add your first task.", fontSize = 13.sp, color = Color.Gray) }
+                item { Text("Nothing added yet, tap + to add your first task.", fontSize = 13.sp, color = Color.Gray) }
             }
 
             items(tasks, key = { it.id }) { task ->

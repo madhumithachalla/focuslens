@@ -27,7 +27,7 @@ fun FocusPlaylistsScreen() {
         Text("Focus playlists", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Plays in your own Spotify app — FocusLens just tells it what to queue.",
+            "Plays in your own Spotify app, FocusLens just tells it what to queue.",
             fontSize = 13.sp
         )
         Spacer(Modifier.height(20.dp))

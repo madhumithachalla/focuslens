@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** "1h 30m" / "45m" style label for a minute value — used by the picker's chips. */
+/** "1h 30m" / "45m" style label for a minute value, used by the picker's chips. */
 fun formatMinutesHM(totalMinutes: Int): String {
     val h = totalMinutes / 60
     val m = totalMinutes % 60
@@ -32,7 +32,7 @@ fun formatMinutesHM(totalMinutes: Int): String {
 
 /**
  * A horizontally scrollable row of selectable duration chips, each labelled in h:mm format
- * (seconds are always :00 — session lengths are picked to the minute, same as every other
+ * (seconds are always :00, session lengths are picked to the minute, same as every other
  * duration control in this app; this is the "scrollable range" version of that same picker,
  * not a finer-grained one). Scrolls to the selected value on first composition so it's never
  * off-screen when the picker opens.

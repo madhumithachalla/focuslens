@@ -42,7 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * The real, survives-closing-the-app alarm screen — shown over the lock screen with the screen
+ * The real, survives-closing-the-app alarm screen, shown over the lock screen with the screen
  * forced on, a looping alarm tone at full alarm-stream volume, and repeating vibration, until
  * Snoozed or Dismissed. This is the one thing the web version genuinely cannot do.
  */
@@ -78,7 +78,7 @@ class AlarmRingActivity : ComponentActivity() {
                 colorScheme = lightColorScheme(primary = Color(0xFFB3261E), background = Color(0xFFB3261E))
             ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFB3261E)) {
-                    BackHandler { /* swallow back — must Dismiss or Snooze explicitly */ }
+                    BackHandler { /* swallow back, must Dismiss or Snooze explicitly */ }
                     AlarmRingScreen(
                         label = label,
                         time = time,
@@ -107,7 +107,7 @@ class AlarmRingActivity : ComponentActivity() {
                 start()
             }
         } catch (e: Exception) {
-            // No alarm sound available on this device/emulator — vibration still runs.
+            // No alarm sound available on this device/emulator, vibration still runs.
         }
     }
 

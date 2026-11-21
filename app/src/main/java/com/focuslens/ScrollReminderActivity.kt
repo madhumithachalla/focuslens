@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * A doom-scroll nudge — not a block. Shows after a continuous streak of scrolling in a
+ * A doom-scroll nudge, not a block. Shows after a continuous streak of scrolling in a
  * tracked social app (FocusAccessibilityService counts TYPE_VIEW_SCROLLED events; see
  * doomScrollThreshold in FocusPrefs). Unlike BlockActivity/FeatureBlockedActivity, both
  * choices here are legitimate: keep scrolling is one tap away, same as take a break —

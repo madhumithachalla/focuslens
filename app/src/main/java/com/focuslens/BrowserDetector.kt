@@ -7,12 +7,12 @@ import android.view.accessibility.AccessibilityNodeInfo
  * social-media browser block. Only runs when that setting is turned on.
  *
  * Privacy: the extracted host (e.g. "instagram.com") is held in memory only for this one
- * comparison — never stored or sent anywhere. This depends on Chrome's current layout
+ * comparison, never stored or sent anywhere. This depends on Chrome's current layout
  * (its address bar's element id), so a Chrome update could break it; when the address bar
  * can't be found, nothing is blocked rather than guessing.
  *
  * Scope: this covers Chrome only, and the domains below are a starting list, not an
- * exhaustive one — add more in Focus settings. youtube.com is deliberately left out here;
+ * exhaustive one, add more in Focus settings. youtube.com is deliberately left out here;
  * the Shorts rule only covers the native YouTube app, not the mobile site in Chrome.
  */
 object BrowserDetector {

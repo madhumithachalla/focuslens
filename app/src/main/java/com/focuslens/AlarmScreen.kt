@@ -41,7 +41,7 @@ fun AlarmScreen() {
                 Text("Alarms", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "A real alarm — fires even if FocusLens is fully closed or your phone is locked.",
+                    "A real alarm, fires even if FocusLens is fully closed or your phone is locked.",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
@@ -108,7 +108,7 @@ private fun AlarmRow(alarm: AlarmEntity, onToggle: (Boolean) -> Unit, onDelete: 
         ) {
             Column {
                 Text(
-                    String.format("%02d:%02d", alarm.hour, alarm.minute) + " — " + alarm.label,
+                    String.format("%02d:%02d", alarm.hour, alarm.minute) + ", " + alarm.label,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )

@@ -15,7 +15,7 @@ import android.view.accessibility.AccessibilityNodeInfo
  * Watches which app comes to the front. By default it only reads the app's package name,
  * never what is on the screen. Two opt-in settings change that, and only while turned on:
  * the Chrome social-media block reads the address bar, and YouTube's academic/podcast-only
- * mode reads on-screen text for a keyword check — both held in memory for one comparison
+ * mode reads on-screen text for a keyword check, both held in memory for one comparison
  * and discarded. When a blocked app, feature, or site opens, it shows the matching block
  * screen.
  */
@@ -27,7 +27,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastLaunch = 0L
 
     // Doom-scroll tracking: counts TYPE_VIEW_SCROLLED events in one continuous streak within
-    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak — this is
+    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak, this is
     // meant to catch continuous scrolling, not ordinary on-and-off browsing across a session.
     private var streakStart = 0L
     private var lastReminderAt = 0L
@@ -258,7 +258,7 @@ class FocusAccessibilityService : AccessibilityService() {
             val appName = SectionDetector.displayName[pkg] ?: pkg
             launchFeatureBlock(
                 "$feedFeature is blocked",
-                "You've turned off $feedFeature specifically — the rest of $appName still works."
+                "You've turned off $feedFeature specifically, the rest of $appName still works."
             )
             return
         }
@@ -409,7 +409,10 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun finishPendingReel(now: Long) {
-        if (reelStartAt > 0L && now - reelStartAt >= REEL_WATCHED_MS) prefs.addReelToday()
+        if (reelStartAt > 0L && now - reelStartAt >= REEL_WATCHED_MS) {
+            prefs.addReelToday()
+            android.util.Log.d(TAG, "reel counted: ${prefs.reelsToday()} today")
+        }
         reelStartAt = 0L
     }
 
@@ -420,6 +423,7 @@ class FocusAccessibilityService : AccessibilityService() {
             // A swipe in Reels moves to the next reel: count the one just left, start timing the next.
             if (scrolled == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
                 val now = System.currentTimeMillis()
+                android.util.Log.d(TAG, "reel swipe")
                 finishPendingReel(now)
                 reelStartAt = now
             }
@@ -486,7 +490,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** A nudge, not a block — see ScrollReminderActivity. Only tracked social apps (the ones
+    /** A nudge, not a block, see ScrollReminderActivity. Only tracked social apps (the ones
      *  actually built for an endless scroll) count; a long list in a shopping or news app
      *  doesn't trip this. */
     private fun trackScroll(pkg: String?) {

@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
                 SleepCheckIn()
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     // targetSdk 36 means the system draws edge-to-edge by default and no longer
-                    // reserves space for the status/navigation bars on its own — without this,
+                    // reserves space for the status/navigation bars on its own, without this,
                     // the top tab row sits flush against the status bar/clock and bottom content
                     // sits under the gesture bar. This is the one place that needs to know about
                     // it; everything below keeps assuming a normal, inset-free canvas.
@@ -182,7 +182,7 @@ fun WelcomeAuthScreen(onContinue: () -> Unit) {
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().padding(24.dp)
         ) {
-            Text("Skip for now — I'll sign in later")
+            Text("Skip for now, I'll sign in later")
         }
     }
 }
@@ -340,7 +340,7 @@ fun PermissionScreen() {
         Text(
             "Got \"App was denied access\" instead of the switch? That's Android blocking a " +
                 "sensitive permission for apps installed outside the Play Store (this debug build is " +
-                "sideloaded) — it isn't anything wrong with FocusLens itself, and takes one extra step:",
+                "sideloaded), it isn't anything wrong with FocusLens itself, and takes one extra step:",
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )

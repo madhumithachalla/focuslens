@@ -57,7 +57,7 @@ enum class Range(val title: String, val approximate: Boolean = false) {
     MONTH("Last 30 days", approximate = true),
     YEAR("Last 12 months", approximate = true),
     ALL("All available", approximate = true),
-    /** The actual window is whatever the user picked — see loadCustom(). */
+    /** The actual window is whatever the user picked, see loadCustom(). */
     CUSTOM("Custom range", approximate = true)
 }
 
@@ -246,7 +246,7 @@ class UsageRepository(private val context: Context) {
      * dayEnd). A session that crosses an hour boundary is split across both hours by actual
      * overlap, so summing every hour's totals equals the same total [usageBetween] would give
      * for the same window. Only meaningful while Android's raw event log still covers this
-     * day (about a week) — same constraint as [usageBetween], which is why
+     * day (about a week), same constraint as [usageBetween], which is why
      * UsageHistoryRepository snapshots this before it ages out.
      */
     @Suppress("DEPRECATION")

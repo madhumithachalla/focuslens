@@ -37,11 +37,11 @@ val AGE_OPTIONS = listOf(
     AgeOption(AgeBracket.PREFER_NOT_TO_SAY, "Prefer not to say")
 )
 
-/** A dropdown with a real escape hatch — never force someone into a fixed gender list. */
+/** A dropdown with a real escape hatch, never force someone into a fixed gender list. */
 const val SELF_DESCRIBE = "Prefer to self-describe"
 val GENDER_OPTIONS = listOf("Woman", "Man", "Non-binary", SELF_DESCRIBE, "Prefer not to say")
 
-/** Free-form life-context tags, not a fixed identity — used later to tailor journal prompts and suggestions. */
+/** Free-form life-context tags, not a fixed identity, used later to tailor journal prompts and suggestions. */
 val TOPIC_OPTIONS = listOf(
     "student" to "Student",
     "graduate" to "Graduate",
@@ -57,7 +57,7 @@ val TOPIC_OPTIONS = listOf(
 )
 
 /**
- * Why someone's actually here — read later by Learn/Guide to lead with the right section
+ * Why someone's actually here, read later by Learn/Guide to lead with the right section
  * (e.g. doom-scrolling → Focus tips first) instead of showing everything with equal weight.
  * "Prefer not to say" is its own exclusive option, same pattern as the cycle-tracking skip.
  */
@@ -71,13 +71,13 @@ val MOTIVATION_OPTIONS = listOf(
 )
 
 /**
- * Entirely optional, never required to continue, never used to gate any feature — only to
+ * Entirely optional, never required to continue, never used to gate any feature, only to
  * more readily surface relevant Learn resources (ADHD/neurodivergence screeners, anxiety/
- * depression screeners — see MentalHealthScreen.kt). A free-form list, not a diagnosis:
+ * depression screeners, see MentalHealthScreen.kt). A free-form list, not a diagnosis:
  * anyone can pick whatever applies, self-identified or diagnosed, or skip entirely. STRICT
- * RULE: this section never gates, limits, or changes which features are usable — only which
+ * RULE: this section never gates, limits, or changes which features are usable, only which
  * Learn resources get surfaced more readily. "Prefer not to say" and "Not sure" are their own
- * exclusive choices (not silence) — picking either clears every checkbox below, same pattern
+ * exclusive choices (not silence), picking either clears every checkbox below, same pattern
  * as elsewhere in this screen; "Not sure" additionally flags MentalHealthScreen to offer real
  * screeners rather than a diagnosis of its own.
  */
@@ -98,7 +98,7 @@ val NEURODIVERGENT_OPTIONS = listOf(
  * a long list of rows); gender keeps a self-describe text fallback so the dropdown never
  * becomes a forced fixed list. Cycle tracking and topics stay checklists since both are
  * genuinely multi-select. Continue is a fixed footer; a visible scroll thumb on the right
- * edge makes it clear there's more content below. No real account behind "name" — it's
+ * edge makes it clear there's more content below. No real account behind "name", it's
  * stored locally like the rest of this profile, same privacy pitch as everywhere else.
  */
 @Composable
@@ -189,7 +189,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     Text("Quick setup", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Just enough to set sensible defaults — everything here is editable later in Settings.",
+                        "Just enough to set sensible defaults, everything here is editable later in Settings.",
                         fontSize = 14.sp
                     )
                     Spacer(Modifier.height(14.dp))
@@ -303,7 +303,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     Spacer(Modifier.height(20.dp))
                     Text("Why are you using FocusLens? (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text("Pick as many as apply — helps Guide and Learn lead with what's relevant to you.", fontSize = 12.sp)
+                    Text("Pick as many as apply, helps Guide and Learn lead with what's relevant to you.", fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                 }
 
@@ -319,18 +319,18 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         "If you get periods, pick that directly below. Either way, you can also turn on the other " +
-                            "trackers (energy, mood, sleep, water) — pick as many as apply, none are exclusive.",
+                            "trackers (energy, mood, sleep, water), pick as many as apply, none are exclusive.",
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.height(8.dp))
-                    ChecklistRow("I get periods — track my cycle", trackMenstrual, { toggleMenstrual() })
+                    ChecklistRow("I get periods, track my cycle", trackMenstrual, { toggleMenstrual() })
                     ChecklistRow("Show other trackers (energy, mood, sleep, water)", trackGeneral, { toggleGeneral() })
                     ChecklistRow("Skip for now", skipCycle, { toggleSkipCycle() })
 
                     Spacer(Modifier.height(20.dp))
                     Text("Topics you're part of (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
-                    Text("Pick any that apply — helps tailor journal prompts and suggestions later.", fontSize = 12.sp)
+                    Text("Pick any that apply, helps tailor journal prompts and suggestions later.", fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                 }
 
@@ -349,11 +349,11 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
                     Text("Disability, neurodivergence & mental health (optional)", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "Completely optional, skippable, and never used to limit anything in the app — strictly: " +
+                        "Completely optional, skippable, and never used to limit anything in the app, strictly: " +
                             "nothing below ever gates or changes which features you can use. It only lets us more " +
                             "readily point you toward relevant resources in Learn, since this app already builds in " +
                             "things that can help (structured to-dos, gentle reminders, focus tools). Self-identified " +
-                            "or diagnosed, whatever applies to you — and \"Not sure\" is a real answer, not a gap: " +
+                            "or diagnosed, whatever applies to you, and \"Not sure\" is a real answer, not a gap: " +
                             "picking it offers real screening resources, never a diagnosis of our own.",
                         fontSize = 12.sp
                     )
@@ -386,7 +386,7 @@ fun OnboardingScreen(onDone: (ProfileEntity) -> Unit) {
             ScrollThumb(listState, Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(vertical = 4.dp))
         }
 
-        // Fixed footer — always visible, never requires scrolling to find.
+        // Fixed footer, always visible, never requires scrolling to find.
         Surface(shadowElevation = 8.dp) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                 if (!canContinue) {
@@ -443,7 +443,7 @@ fun formatYyyyMmDd(date: String): String {
     return "${names[month - 1]} $day"
 }
 
-/** A minimal always-visible scroll indicator — shows there's more content without needing a swipe to discover it. */
+/** A minimal always-visible scroll indicator, shows there's more content without needing a swipe to discover it. */
 @Composable
 private fun ScrollThumb(state: androidx.compose.foundation.lazy.LazyListState, modifier: Modifier = Modifier) {
     val info = state.layoutInfo

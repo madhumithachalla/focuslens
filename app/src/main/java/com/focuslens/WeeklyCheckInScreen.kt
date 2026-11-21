@@ -13,7 +13,7 @@ import com.focuslens.data.WeeklyCheckInEntity
 import java.util.concurrent.TimeUnit
 
 /** True once [CHECKIN_INTERVAL_DAYS] have passed since the last check-in, or there's never
- *  been one — this app still runs the check-in entirely on the user's own terms (a button,
+ *  been one, this app still runs the check-in entirely on the user's own terms (a button,
  *  never a forced interruption), this just decides whether to surface it proactively. */
 fun isCheckInDue(lastCreatedAt: Long?): Boolean {
     if (lastCreatedAt == null) return true
@@ -24,7 +24,7 @@ fun isCheckInDue(lastCreatedAt: Long?): Boolean {
 private val SCALE_1_5 = 1..5
 
 /**
- * A short recurring check-in — mood, stress, and what's actually been taking up time/energy
+ * A short recurring check-in, mood, stress, and what's actually been taking up time/energy
  * lately, in the user's own words. Distinct from the one-time Quick setup profile: that's
  * "who you are," this is "how it's actually been going," re-askable as often as it's useful.
  */
@@ -46,7 +46,7 @@ fun WeeklyCheckInSheet(onSubmit: (WeeklyCheckInEntity) -> Unit, onDismiss: () ->
                     color = Color.Gray
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("Mood this week (1 low – 5 great)", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("Mood this week (1 low, 5 great)", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SCALE_1_5.forEach { n ->
@@ -54,7 +54,7 @@ fun WeeklyCheckInSheet(onSubmit: (WeeklyCheckInEntity) -> Unit, onDismiss: () ->
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                Text("Stress this week (1 low – 5 high)", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("Stress this week (1 low, 5 high)", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SCALE_1_5.forEach { n ->

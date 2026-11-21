@@ -38,7 +38,7 @@ private fun launchMusicApp(context: android.content.Context, pkg: String?) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         }
-    } catch (e: Exception) { /* no music app found — session still starts */ }
+    } catch (e: Exception) { /* no music app found, session still starts */ }
 }
 
 /**
@@ -47,7 +47,7 @@ private fun launchMusicApp(context: android.content.Context, pkg: String?) {
  * "studying" actually means something (everything else is locked out), not just a playlist.
  *
  * The in-session screen is a minimal on-screen ambiance (dark background, a slow breathing
- * dot, a timer) — not a camera-based AR virtual background. Building an actual photorealistic
+ * dot, a timer), not a camera-based AR virtual background. Building an actual photorealistic
  * study-room backdrop would need real image/video assets this project doesn't have; this is
  * the honest, buildable version of "feels like a quiet place to study."
  */
@@ -147,7 +147,7 @@ fun StudyModeScreen() {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                "No time limit — stay on until I turn it off",
+                "No time limit, stay on until I turn it off",
                 color = Color(0xFFB0B0B0),
                 fontSize = 13.sp
             )
@@ -158,12 +158,12 @@ fun StudyModeScreen() {
         Spacer(Modifier.height(10.dp))
 
         MinimalRow(
-            label = "System default — Lo-fi focus",
+            label = "System default, Lo-fi focus",
             selected = audioChoice == AudioChoice.SYSTEM_DEFAULT,
             onClick = { audioChoice = AudioChoice.SYSTEM_DEFAULT }
         )
         MinimalRow(
-            label = if (audioChoice == AudioChoice.SPOTIFY_PICK) "Spotify — ${spotifyPlaylist.label}" else "Choose a Spotify playlist",
+            label = if (audioChoice == AudioChoice.SPOTIFY_PICK) "Spotify, ${spotifyPlaylist.label}" else "Choose a Spotify playlist",
             selected = audioChoice == AudioChoice.SPOTIFY_PICK,
             onClick = { audioChoice = AudioChoice.SPOTIFY_PICK; showSpotifyPicker = true }
         )
@@ -178,7 +178,7 @@ fun StudyModeScreen() {
             onClick = { audioChoice = AudioChoice.LOCAL_MUSIC }
         )
         MinimalRow(
-            label = "Silence — no audio",
+            label = "Silence, no audio",
             selected = audioChoice == AudioChoice.SILENCE,
             onClick = { audioChoice = AudioChoice.SILENCE }
         )
@@ -254,7 +254,7 @@ private fun InSessionScreen(resetAt: Long, indefinite: Boolean, onEnded: () -> U
         mutableLongStateOf(if (indefinite) 0L else (resetAt - System.currentTimeMillis()).coerceAtLeast(0L))
     }
 
-    // Indefinite sessions never auto-end — only onEndEarly (the "End session" button) can stop one.
+    // Indefinite sessions never auto-end, only onEndEarly (the "End session" button) can stop one.
     if (!indefinite) {
         LaunchedEffect(Unit) {
             while (remainingMs > 0) {
@@ -294,7 +294,7 @@ private fun InSessionScreen(resetAt: Long, indefinite: Boolean, onEnded: () -> U
         Text("Studying", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (indefinite) "No time limit — tap below to stop" else String.format("%02d:%02d", mins, secs),
+            if (indefinite) "No time limit, tap below to stop" else String.format("%02d:%02d", mins, secs),
             color = Color(0xFF9A9A9A),
             fontSize = 15.sp
         )

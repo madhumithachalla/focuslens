@@ -37,16 +37,16 @@ private suspend fun <T> Task<T>.awaitResult(): T = suspendCancellableCoroutine {
 private fun authErrorMessage(e: Exception): String {
     val code = (e as? FirebaseAuthException)?.errorCode
     return when (code) {
-        "ERROR_EMAIL_ALREADY_IN_USE" -> "That email already has an account — try signing in instead."
+        "ERROR_EMAIL_ALREADY_IN_USE" -> "That email already has an account, try signing in instead."
         "ERROR_INVALID_EMAIL" -> "That doesn't look like a valid email address."
         "ERROR_WEAK_PASSWORD" -> "Password needs to be at least 6 characters."
         "ERROR_WRONG_PASSWORD", "ERROR_INVALID_CREDENTIAL" -> "Email or password is wrong."
-        "ERROR_USER_NOT_FOUND" -> "No account with that email — try signing up instead."
-        "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts — wait a bit and try again."
-        "ERROR_OPERATION_NOT_ALLOWED" -> "Email sign-in isn't turned on for this project yet — in Firebase console: Authentication → Sign-in method → Email/Password → Enable."
+        "ERROR_USER_NOT_FOUND" -> "No account with that email, try signing up instead."
+        "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts, wait a bit and try again."
+        "ERROR_OPERATION_NOT_ALLOWED" -> "Email sign-in isn't turned on for this project yet, in Firebase console: Authentication → Sign-in method → Email/Password → Enable."
         "ERROR_USER_DISABLED" -> "This account has been disabled."
         else -> if (e.message?.contains("CONFIGURATION_NOT_FOUND") == true)
-            "Authentication hasn't been turned on for this Firebase project yet — in Firebase console: Authentication → click \"Get started\" (a one-time setup step, separate from enabling any specific provider). Until that's done, every sign-in method — Google and email both — fails with this same error."
+            "Authentication hasn't been turned on for this Firebase project yet, in Firebase console: Authentication → click \"Get started\" (a one-time setup step, separate from enabling any specific provider). Until that's done, every sign-in method, Google and email both, fails with this same error."
         else e.message ?: "Something went wrong. Try again."
     }
 }
@@ -75,7 +75,7 @@ private suspend fun signInWithGoogle(context: android.content.Context, auth: Fir
         val signedInUser = authResult.user!!
         // merge: true so a returning user's doc isn't clobbered, just kept current. This is the
         // "auto-fetch" path: name, email and photo come straight from the Google account the
-        // person just chose to sign in with — the email form below is the manual alternative.
+        // person just chose to sign in with, the email form below is the manual alternative.
         db.collection("users").document(signedInUser.uid).set(
             mapOf(
                 "displayName" to signedInUser.displayName,
@@ -92,10 +92,10 @@ private suspend fun signInWithGoogle(context: android.content.Context, auth: Fir
 }
 
 /**
- * Email sign-in via the same Firebase project as the web app (focuslens-d5379) — same
+ * Email sign-in via the same Firebase project as the web app (focuslens-d5379), same
  * accounts, same Firestore `users` collection, so a future community/sharing/accountability
  * feature works identically on both. Doesn't sync Journal/Cycle/To-do data to the account
- * yet (still local-only, same as the web app) — this just establishes who's signed in.
+ * yet (still local-only, same as the web app), this just establishes who's signed in.
  */
 @Composable
 fun AccountScreen(onSignedIn: () -> Unit = {}) {
@@ -113,7 +113,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
 
     fun onGoogleClick() {
         if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
-            error = "Google sign-in needs one more setup step (the Web client ID isn't set yet) — " +
+            error = "Google sign-in needs one more setup step (the Web client ID isn't set yet), " +
                 "use email sign-in below for now, or see the Guide tab's Account entry for what's missing."
             return
         }
@@ -150,7 +150,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
                     AccountField("Email", current.email ?: "(not set)")
                     AccountField("Signed in with", if (current.photoUrl != null) "Google" else "Email & password")
                     if (current.photoUrl != null) {
-                        AccountField("Profile photo", "Fetched from Google — not shown here, no image loader in this app yet")
+                        AccountField("Profile photo", "Fetched from Google, not shown here, no image loader in this app yet")
                     }
                     val createdAt = current.metadata?.creationTimestamp
                     AccountField("Account created", if (createdAt != null && createdAt > 0) formatPickedDate(createdAt) else "(unknown)")
@@ -160,7 +160,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
             Card {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        "Community posts, achievement sharing and accountability partners aren't wired up yet — " +
+                        "Community posts, achievement sharing and accountability partners aren't wired up yet, " +
                             "this account will unlock them once they're built. Your Journal/Cycle/To-do data on " +
                             "this device stays local for now, not yet synced to this account.",
                         fontSize = 13.sp
@@ -186,7 +186,7 @@ fun AccountScreen(onSignedIn: () -> Unit = {}) {
         Spacer(Modifier.height(16.dp))
         Text(
             "Choose how: \"Continue with Google\" auto-fetches your name, email and photo from the " +
-                "Google account you pick — nothing else on that account is touched. Prefer not to share " +
+                "Google account you pick, nothing else on that account is touched. Prefer not to share " +
                 "it? Skip straight to email below and type everything in yourself.",
             fontSize = 12.sp,
             color = Color.Gray

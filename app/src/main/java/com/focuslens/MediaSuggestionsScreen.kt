@@ -41,12 +41,12 @@ data class MediaItem(
     val blurb: String
 )
 
-// Real, correctly-attributed titles only — this is a short curated starter list, not a
+// Real, correctly-attributed titles only, this is a short curated starter list, not a
 // live catalog, so it won't reflect every new release. No links out: where to watch or
 // buy changes by region and service too often to point at honestly from here.
 private val MEDIA_ITEMS = listOf(
     MediaItem("Atomic Habits", "James Clear", 2018, MediaKind.BOOK, setOf(MediaGenre.PRODUCTIVITY),
-        "Small, consistent changes compound — the book behind most modern habit-building advice."),
+        "Small, consistent changes compound, the book behind most modern habit-building advice."),
     MediaItem("Deep Work", "Cal Newport", 2016, MediaKind.BOOK, setOf(MediaGenre.PRODUCTIVITY),
         "The case for long, undistracted stretches of focused work in a world built to fragment it."),
     MediaItem("Sapiens", "Yuval Noah Harari", 2011, MediaKind.BOOK, setOf(MediaGenre.MEMOIR),
@@ -59,7 +59,7 @@ private val MEDIA_ITEMS = listOf(
         "A quiet, hopeful novel about regret and the lives you didn't live."),
 
     MediaItem("Inside Out", "Pixar, dir. Pete Docter", 2015, MediaKind.MOVIE, setOf(MediaGenre.FEEL_GOOD),
-        "Emotions as characters inside a kid's head — funnier and sadder than it sounds."),
+        "Emotions as characters inside a kid's head, funnier and sadder than it sounds."),
     MediaItem("Soul", "Pixar, dir. Pete Docter", 2020, MediaKind.MOVIE, setOf(MediaGenre.FEEL_GOOD, MediaGenre.DRAMA),
         "What actually makes a life worth living, wrapped in a jazz musician's afterlife detour."),
     MediaItem("The Secret Life of Walter Mitty", "dir. Ben Stiller", 2013, MediaKind.MOVIE, setOf(MediaGenre.FEEL_GOOD),
@@ -76,7 +76,7 @@ private val MEDIA_ITEMS = listOf(
     MediaItem("Abbott Elementary", "ABC", 2021, MediaKind.SERIES, setOf(MediaGenre.COMEDY),
         "A mockumentary about underfunded teachers who keep showing up anyway."),
     MediaItem("Brooklyn Nine-Nine", "NBC / Fox", 2013, MediaKind.SERIES, setOf(MediaGenre.COMEDY),
-        "A precinct of very silly detectives. Easy to watch an episode and stop — or not."),
+        "A precinct of very silly detectives. Easy to watch an episode and stop, or not."),
     MediaItem("Planet Earth II", "BBC", 2016, MediaKind.SERIES, setOf(MediaGenre.DOCUMENTARY),
         "Nature documentary filmmaking at its most jaw-dropping, narrated by David Attenborough.")
 )
@@ -97,7 +97,7 @@ fun MediaSuggestionsScreen() {
                 Spacer(Modifier.height(16.dp))
                 Text("Explore", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "Books, movies and series worth your reclaimed time — a short curated starter list, " +
+                    "Books, movies and series worth your reclaimed time, a short curated starter list, " +
                         "not a live catalog. Pick an interest to narrow it down.",
                     fontSize = 13.sp,
                     color = Color.Gray

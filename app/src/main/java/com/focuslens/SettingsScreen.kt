@@ -24,7 +24,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Everything from Quick setup, editable after the fact — onboarding's own copy promises
+ * Everything from Quick setup, editable after the fact, onboarding's own copy promises
  * "editable later in Settings," so this is that screen. Reuses the exact same option lists
  * and ChecklistRow as OnboardingScreen.kt (made non-private there) so editing never shows a
  * second, drifted copy of the same choices.
@@ -128,7 +128,7 @@ fun SettingsScreen() {
     }
     if (profile == null) {
         Box(Modifier.fillMaxSize().padding(24.dp)) {
-            Text("No profile found yet — complete setup first.", fontSize = 14.sp, color = Color.Gray)
+            Text("No profile found yet, complete setup first.", fontSize = 14.sp, color = Color.Gray)
         }
         return
     }
@@ -142,7 +142,7 @@ fun SettingsScreen() {
         ) {
             Spacer(Modifier.height(16.dp))
             Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-            Text("Everything from setup, editable any time — nothing here leaves this device unless you turn on screen-time sync below.", fontSize = 13.sp, color = Color.Gray)
+            Text("Everything from setup, editable any time, nothing here leaves this device unless you turn on screen-time sync below.", fontSize = 13.sp, color = Color.Gray)
 
             Spacer(Modifier.height(16.dp))
             UpdateCard()
@@ -229,7 +229,7 @@ fun SettingsScreen() {
             Spacer(Modifier.height(20.dp))
             Text("Tracking", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(8.dp))
-            ChecklistRow("I get periods — track my cycle", trackMenstrual, { trackMenstrual = !trackMenstrual })
+            ChecklistRow("I get periods, track my cycle", trackMenstrual, { trackMenstrual = !trackMenstrual })
             ChecklistRow("Show other trackers (energy, mood, sleep, water)", trackGeneral, { trackGeneral = !trackGeneral })
 
             Spacer(Modifier.height(20.dp))
@@ -332,7 +332,7 @@ fun SettingsScreen() {
                     scope.launch {
                         val ok = UsageSync.deleteAll()
                         syncBusy = false
-                        syncMessage = if (ok) "Deleted your synced usage." else "Couldn't delete right now — check your connection and try again."
+                        syncMessage = if (ok) "Deleted your synced usage." else "Couldn't delete right now, check your connection and try again."
                     }
                 },
                 enabled = signedIn && !syncBusy

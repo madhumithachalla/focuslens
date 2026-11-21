@@ -37,13 +37,13 @@ data class LearnItem(
     val source: String,
     val url: String,
     val topic: LearnTopic,
-    /** How many reflection prompts to answer before "Mark as read" unlocks — roughly how dense the material is. */
+    /** How many reflection prompts to answer before "Mark as read" unlocks, roughly how dense the material is. */
     val complexity: Int,
     val kind: String
 )
 
 // Established, stable organizations only, and homepage/hub-level links where I can't
-// confirm a specific deep page resolves from this sandbox (no live browser here) — same
+// confirm a specific deep page resolves from this sandbox (no live browser here), same
 // policy as the original Reading list: a verified real front page beats a guessed URL
 // that might be dead.
 val LEARN_ITEMS = listOf(
@@ -144,7 +144,7 @@ fun LearnScreen() {
                 Spacer(Modifier.height(16.dp))
                 Text("Learn", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    "Newsletters, articles and research hubs to learn from, on your own schedule — " +
+                    "Newsletters, articles and research hubs to learn from, on your own schedule, " +
                         "a few honest starting points, not a feed. $readCount of ${LEARN_ITEMS.size} marked read.",
                     fontSize = 13.sp,
                     color = Color.Gray
@@ -211,7 +211,7 @@ fun LearnScreen() {
 }
 
 /**
- * Before "Mark as read" sticks, answer a short prompt per [LearnItem.complexity] — more for
+ * Before "Mark as read" sticks, answer a short prompt per [LearnItem.complexity], more for
  * a research hub than a short newsletter. This is a self-reflection nudge, not a graded
  * comprehension check (there's no way to verify an answer against the source from here):
  * answers only have to be non-empty to continue, and are discarded immediately, never stored.
@@ -227,7 +227,7 @@ private fun ReflectionDialog(item: LearnItem, onConfirm: () -> Unit, onDismiss: 
         text = {
             Column {
                 Text(
-                    "Quick self-check, not graded — just enough to make sure this wasn't a blind tap.",
+                    "Quick self-check, not graded, just enough to make sure this wasn't a blind tap.",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )

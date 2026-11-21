@@ -100,7 +100,7 @@ class BlockActivity : ComponentActivity() {
         val maxSkips = prefs.maxSkipsPerDay(pkg)
 
         // Two independent hard stops, same idea as Minimalist Focus Launcher's time-based
-        // app locks: once either is hit, there is no challenge left to beat today — only
+        // app locks: once either is hit, there is no challenge left to beat today, only
         // BREATHE/MATH/PHRASE earns a few more minutes; neither does once locked.
         val skipLimitReached = passes >= maxSkips
         val locked = skipLimitReached || over
@@ -147,12 +147,12 @@ class BlockActivity : ComponentActivity() {
 
         val grantMin = 10
 
-        // Still under budget: a quick acknowledgement, not an obstacle — the challenge/quiz
+        // Still under budget: a quick acknowledgement, not an obstacle, the challenge/quiz
         // gate is for once you're actually over the limit, same idea as a lot of digital-
         // wellbeing tools (friction scales with how far over you are, not a flat tax on
         // every single open). This is the "Continue" path that was missing entirely before —
         // under budget used to get exactly the same breathing/math/quiz gate as over budget.
-        // Grants access without counting as a "pass" — passesToday drives the daily skip
+        // Grants access without counting as a "pass", passesToday drives the daily skip
         // limit (see skipLimitReached below), which exists to cap how many times the actual
         // over-budget challenge gets beaten, not to penalize ordinary under-budget opens.
         if (!over) {
@@ -348,7 +348,7 @@ fun BlockScreen(
     }
 }
 
-/** Shown while still under the daily limit — the "Continue" path. A brief check-in, not an
+/** Shown while still under the daily limit, the "Continue" path. A brief check-in, not an
  *  obstacle; the real friction (BlockScreen/LockedScreen) is reserved for once the budget's
  *  actually spent. */
 @Composable
@@ -377,7 +377,7 @@ fun UnderLimitScreen(label: String, usedMin: Long, limit: Int, onContinue: () ->
     }
 }
 
-/** No challenge, no bypass — the daily allotment (skips or time) is spent. */
+/** No challenge, no bypass, the daily allotment (skips or time) is spent. */
 @Composable
 fun LockedScreen(
     label: String,
