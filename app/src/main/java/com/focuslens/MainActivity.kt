@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 typography = AppTypography,
-                colorScheme = if (FocusPrefs(context).themeLight()) lightColorScheme(
+                colorScheme = if (FocusPrefs(applicationContext).themeLight()) lightColorScheme(
                     primary = Color(0xFF1F3A34),
                     onPrimary = Color(0xFFFFFFFF),
                     background = Color(0xFFF7F5F0),
