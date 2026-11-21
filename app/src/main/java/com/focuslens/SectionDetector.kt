@@ -153,7 +153,9 @@ object SectionDetector {
 
         lastScanCapped = queue.isNotEmpty()
         // Only very large rectangles are ignored: a reel is a single post-sized block, never the whole feed.
-        lastEmbeddedReelRects = if (pkg == INSTAGRAM) embedded.filter { it.height() < rootRect.height() * 0.7 } else emptyList()
+        // Only a rectangle the full height of the screen is ignored. A feed reel is usually nearly
+        // full-screen, so the old 70% cut-off dropped exactly the reels that needed covering.
+        lastEmbeddedReelRects = if (pkg == INSTAGRAM) embedded.filter { it.height() < rootRect.height() * 0.98f } else emptyList()
         val result = when (pkg) {
             INSTAGRAM -> instagram(ids, selectedIds, words)
             YOUTUBE -> youtube(ids, words)

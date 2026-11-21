@@ -45,6 +45,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Focus score: today from social media minutes vs yesterday, reels watched and stepping back; each part shows its number; up to 3 tips matched to the weakest part (on-device, no AI model) | Built | Not checked on a phone. An LLM or RAG model is not included: it would send usage data off the phone, which needs your explicit decision first |
 | Search icon in the top bar: finds any page by name or keyword (water, period, habit, mood) | Built | Not checked on a phone |
 | Symbols: water drops, mood faces, energy and sleep symbols, period drop, habit ticks and crosses | Built | Not checked on a phone |
+| Feed reels: covered when the Reels switch is on, including full-screen reels in the feed | Built | Not checked on a phone. Audio can still play under the cover |
 | 20 hours away: Start on the Focus tab. Everything pauses except the apps you keep open, for 20 hours. End early, no penalty. Inspired by 20 Hours for 20Talk, not an official feature | Built | Not checked on a phone. The 5-minute emergency override is not in this card yet |
 | Settings: Copy report button (version, device, blocking status, recent FocusLens log lines) | Built | Use it to send the developer what happened on the phone |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
