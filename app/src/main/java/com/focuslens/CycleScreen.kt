@@ -56,6 +56,14 @@ private val PHASE_GUIDANCE = mapOf(
 
 private data class TrackerType(val mode: CycleMode, val label: String, val hint: String)
 
+/** The symbol shown for each 1 to 5 level: faces for mood, drops for water, and so on. */
+private fun levelSymbol(mode: CycleMode, level: Int): String = when (mode) {
+    CycleMode.MOOD -> listOf("😞", "😕", "😐", "🙂", "😄")[(level - 1).coerceIn(0, 4)]
+    CycleMode.WATER -> "💧".repeat(level)
+    CycleMode.SLEEP -> "🌙".repeat(level)
+    else -> "⚡".repeat(level)
+}
+
 private val TRACKER_TYPES = listOf(
     TrackerType(CycleMode.GENERAL_ENERGY, "Energy", "1 low, 5 high"),
     TrackerType(CycleMode.MOOD, "Mood", "1 low, 5 great"),
@@ -198,7 +206,7 @@ fun CycleScreen() {
                         refresh()
                     }
                 }) {
-                    Text("Log today as period start")
+                    Text("🩸 Log today as period start")
                 }
                 OutlinedButton(onClick = { pickingPeriodDate = true }) {
                     Text("Log a different date")
@@ -266,7 +274,7 @@ fun CycleScreen() {
                                     repo.logToday(tracker.mode, periodStart = false, energyLevel = level, moodTags = null)
                                 }
                             },
-                            label = { Text("$level") }
+                            label = { Text(levelSymbol(tracker.mode, level)) }
                         )
                     }
                 }

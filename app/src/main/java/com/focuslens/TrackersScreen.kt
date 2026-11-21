@@ -86,7 +86,7 @@ fun TrackersScreen() {
         val goal = remember(tick) { TrackersStore.waterGoalMl(context) }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("Water today", fontWeight = FontWeight.Medium)
+                Text("💧 Water today", fontWeight = FontWeight.Medium)
                 Text("${mlLabel(drunk)} of ${mlLabel(goal)}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 LinearProgressIndicator(
@@ -98,7 +98,7 @@ fun TrackersScreen() {
                     WATER_PRESETS.forEach { ml ->
                         FilterChip(selected = false, onClick = {
                             TrackersStore.addDrink(context, ml); tick++; message = "Added ${mlLabel(ml)}."
-                        }, label = { Text("+ ${mlLabel(ml)}") })
+                        }, label = { Text("💧 ${mlLabel(ml)}") })
                     }
                 }
                 Spacer(Modifier.height(8.dp))

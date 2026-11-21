@@ -93,9 +93,9 @@ fun MedHabitGrid(plan: MedPlan, tick: Int, onChanged: () -> Unit) {
                             else -> MedLogic.doseState(nowMinute, MedLogic.minutesOf(t), null)
                         }
                         val (bg, symbol, ink) = when (state) {
-                            DoseState.TAKEN -> Triple(Color(0xFF3A7D5C), "✓", Color.White)
-                            DoseState.MISSED -> Triple(Color(0xFFF3D6D9), "✕", Color(0xFFB00020))
-                            DoseState.DUE -> Triple(Color(0xFFFFE9B0), "•", Color(0xFF6B4E00))
+                            DoseState.TAKEN -> Triple(Color(0xFF3A7D5C), "✅", Color.White)
+                            DoseState.MISSED -> Triple(Color(0xFFF3D6D9), "❌", Color(0xFFB00020))
+                            DoseState.DUE -> Triple(Color(0xFFFFE9B0), "⏰", Color(0xFF6B4E00))
                             DoseState.UPCOMING -> Triple(Color(0xFFE8E6E1), "", Color.Gray)
                             null -> Triple(Color.Transparent, "", Color.Gray)
                         }
@@ -114,7 +114,7 @@ fun MedHabitGrid(plan: MedPlan, tick: Int, onChanged: () -> Unit) {
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text("✓ taken   ✕ missed   • due now   empty box = not scheduled", fontSize = 11.sp, color = Color.Gray)
+        Text("✅ taken   ❌ missed   ⏰ due now   blank = not scheduled", fontSize = 11.sp, color = Color.Gray)
     }
 
     selected?.let { (day, time) ->
