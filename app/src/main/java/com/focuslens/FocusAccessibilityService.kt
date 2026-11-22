@@ -295,21 +295,38 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
+    // Pomodoro state. Focus time counts only while one app stays in front without a break.
+    private var pomoSessionPkg: String? = null
+    private var pomoSessionStart = 0L
+    private var pomoBreakUntil = 0L
+
     /**
-     * Pomodoro: during a focus phase, social media apps and any app you blocked are paused until the break.
-     * Returns true when focus is on, so the caller stops checking that app.
+     * Pomodoro: after the focus time of continuous use, the app is blocked for the break.
+     * Focus time starts when the app comes to the front and resets when you leave it.
+     * Returns true when a break is running, so the caller stops checking that app.
      */
     private fun pomodoroBlock(pkg: String, now: Long): Boolean {
-        // Social media apps are always included; any other app you blocked is included too.
         // Social media apps are included, except LinkedIn. Any other app you blocked is included too.
         val pomodoroApps = SectionDetector.tracked - SectionDetector.LINKEDIN
-        if (!prefs.enabled || (pkg !in pomodoroApps && !prefs.isBlocked(pkg))) return false
-        val (inFocus, phaseEnd) = prefs.pomodoroPhase(now)
-        if (!inFocus) return false
+        if (!prefs.enabled || !prefs.pomodoroOn() || (pkg !in pomodoroApps && !prefs.isBlocked(pkg))) return false
+        if (now >= pomoBreakUntil) {
+            if (pomoSessionPkg != pkg) {
+                pomoSessionPkg = pkg
+                pomoSessionStart = now
+            }
+            val focusMs = prefs.pomodoroFocusMin() * 60_000L
+            if (now - pomoSessionStart < focusMs) return false
+            // Focus time is used up: the break starts now. The next focus starts when you come back.
+            pomoBreakUntil = now + prefs.pomodoroBreakMin() * 60_000L
+            pomoSessionPkg = null
+        }
         if (now - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
-            kickHome("pomodoro focus")
-            launchFeatureBlock("Focus time", "$appName waits for your break, in ${Clock.untilHms(phaseEnd, now)}. To stop this, turn off Pomodoro on the Focus tab.")
+            kickHome("pomodoro break")
+            launchFeatureBlock(
+                "Break time",
+                "$appName is back in ${Clock.untilHms(pomoBreakUntil, now)}. To stop this, turn off Pomodoro on the Focus tab."
+            )
         }
         return true
     }
@@ -467,6 +484,7 @@ class FocusAccessibilityService : AccessibilityService() {
         if (pkg.contains("inputmethod")) return
         if (pkg == packageName || pkg in ignored || pkg.contains("launcher")) {
             current = null
+            pomoSessionPkg = null
             lastSampleT = 0L
             streakStart = 0L
             lastReminderAt = 0L
@@ -478,6 +496,7 @@ class FocusAccessibilityService : AccessibilityService() {
         // The Skip reel button only belongs to Instagram.
         if (current != pkg) ReelPlaceholder.hideAll(this)
         if (current != pkg) {
+            pomoSessionPkg = null
             lastSampleT = 0L
             streakStart = 0L
             lastReminderAt = 0L

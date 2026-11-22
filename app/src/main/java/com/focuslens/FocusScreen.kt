@@ -156,19 +156,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
-            val now = System.currentTimeMillis()
-            val (inFocus, phaseEnd) = remember(tick, rev, pomoOn) { prefs.pomodoroPhase(now) }
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Pomodoro", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(
-                                when {
-                                    !pomoOn -> "Off. Covers social media and your blocked apps."
-                                    inFocus -> "Focus: ${Clock.untilHms(phaseEnd, now)} left"
-                                    else -> "Break: ${Clock.untilHms(phaseEnd, now)} left"
-                                },
+                                if (pomoOn) "On. After ${prefs.pomodoroFocusMin()} min of continuous use, a ${prefs.pomodoroBreakMin()} min break."
+                                else "Off. Covers social media and your blocked apps.",
                                 fontSize = 13.sp,
                                 color = Color.Gray
                             )
