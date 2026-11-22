@@ -234,6 +234,26 @@ service cloud.firestore {
         && request.resource.data.timerEnd is int;
 
       allow delete: if isUser(resource.data.ownerUid);
+
+      // Group tasks: only members of the room can see or change them.
+      match /tasks/{taskId} {
+        function inRoom() {
+          return signedIn() && request.auth.uid in get(/databases/$(database)/documents/studyRooms/$(roomId)).data.memberUids;
+        }
+        allow read: if inRoom();
+        allow create: if inRoom()
+          && request.resource.data.keys().hasOnly(['title', 'done', 'createdBy', 'createdAt'])
+          && request.resource.data.createdBy == request.auth.uid
+          && str(request.resource.data.title, 1, 120)
+          && request.resource.data.done == false
+          && request.resource.data.createdAt == request.time;
+        // Anyone in the room can tick a task off or back on, and see who did it.
+        allow update: if inRoom()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'doneBy'])
+          && request.resource.data.done is bool;
+        // Only whoever added the task can remove it.
+        allow delete: if signedIn() && request.auth.uid == resource.data.createdBy;
+      }
     }
   }
 }

@@ -3,6 +3,9 @@ package com.focuslens
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Card
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -134,6 +137,8 @@ private suspend fun leaveRoom(roomId: String, uid: String) {
     ).awaitTask()
 }
 
+private data class RoomTask(val id: String, val title: String, val done: Boolean)
+
 private fun avatarColor(uid: String): Color {
     val palette = listOf(0xFFA9A6F7L, 0xFFE0B25CL, 0xFF7FA8C9L, 0xFFD98C8CL, 0xFF9CC4A8L, 0xFFB8A6D9L)
     return Color(palette[(uid.hashCode() and Int.MAX_VALUE) % palette.size])
@@ -245,7 +250,19 @@ private fun StudyRoomView(roomId: String, uid: String, onInvite: (String) -> Uni
     var timerEnd by remember { mutableLongStateOf(0L) }
     var isOne by remember { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var roomTasks by remember { mutableStateOf<List<RoomTask>>(emptyList()) }
+    var taskTitle by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+
+    DisposableEffect("tasks-$roomId") {
+        val reg: ListenerRegistration = roomsRef().document(roomId).collection("tasks")
+            .addSnapshotListener { snap, _ ->
+                roomTasks = snap?.documents.orEmpty().map { d ->
+                    RoomTask(d.id, d.getString("title") ?: "", d.getBoolean("done") ?: false)
+                }
+            }
+        onDispose { reg.remove() }
+    }
 
     DisposableEffect(roomId) {
         val reg: ListenerRegistration = roomsRef().document(roomId).addSnapshotListener { snap, _ ->
@@ -275,6 +292,63 @@ private fun StudyRoomView(roomId: String, uid: String, onInvite: (String) -> Uni
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 members.forEach { m ->
                     Box(Modifier.size(36.dp).background(avatarColor(m), CircleShape))
+                }
+            }
+
+            // Group tasks: anyone in the room can add one, and anyone can tick it off.
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("Group tasks", fontWeight = FontWeight.Bold)
+                    Text("Anyone in the room can add a task and tick it off.", fontSize = 12.sp, color = Color.Gray)
+                    roomTasks.forEach { t ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            roomsRef().document(roomId).collection("tasks").document(t.id)
+                                                .update(mapOf("done" to !t.done, "doneBy" to uid)).awaitTask()
+                                        } catch (e: Exception) { }
+                                    }
+                                },
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier.size(30.dp),
+                                shape = CircleShape
+                            ) { Text(if (t.done) "✓" else "") }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                t.title,
+                                textDecoration = if (t.done) TextDecoration.LineThrough else null,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = taskTitle,
+                            onValueChange = { taskTitle = it.take(120) },
+                            placeholder = { Text("Add a task") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(enabled = taskTitle.isNotBlank(), onClick = {
+                            val text = taskTitle.trim()
+                            taskTitle = ""
+                            scope.launch {
+                                try {
+                                    roomsRef().document(roomId).collection("tasks").add(
+                                        mapOf(
+                                            "title" to text,
+                                            "done" to false,
+                                            "createdBy" to uid,
+                                            "createdAt" to FieldValue.serverTimestamp()
+                                        )
+                                    ).awaitTask()
+                                } catch (e: Exception) { }
+                            }
+                        }) { Text("Add") }
+                    }
                 }
             }
 

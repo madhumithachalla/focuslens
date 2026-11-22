@@ -49,6 +49,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Usage line graph: Today uses 24 hourly points so the line shows; longer ranges use one point per day | Built | Not checked on a phone |
 | Medication: "+ Add a medicine" at the top with a how-to line; an empty state that says what to do | Built | Not checked on a phone |
 | Medication history: "Days you took it" section under Today, with a 4-week grid for each medicine (taken, missed, not scheduled) | Built | Not checked on a phone |
+| Group tasks in a study room: anyone in the room adds a task and ticks it off; only the person who added it can remove it. Rules updated | Built | Needs the updated firestore.rules published. Not checked on a phone |
 | Period tracker: next period shown as a range from your cycle lengths; a Period phase for the first 5 days | Built | Still a simple average, not Flo's model. Not checked on a phone |
 | Spotify Playlists stuck on "Connecting": client ID is set, the connection hangs. Needs the dashboard check and a Copy report | Not fixed | Needs logcat or a Copy report |
 | Interception questions: three per try from different categories (books, movies, vocabulary, general knowledge, English, maths), changing each time; alternates with breathing | Built | Question bank is on the phone. Live questions from online sources are not connected yet. Not checked on a phone |

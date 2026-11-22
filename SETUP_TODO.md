@@ -5,7 +5,7 @@ Update this file when something changes. The build also warns about missing secr
 
 ## Needs you (not done yet)
 
-- [ ] **Firestore rules.** Paste `firestore.rules` into the Firebase console (Firestore, then Rules), then Publish. Study rooms and accountability won't work until this is done.
+- [ ] **Firestore rules.** Paste `firestore.rules` into the Firebase console (Firestore, then Rules), then Publish. This now includes group tasks in study rooms. Study rooms won't work until this is done.
 - [ ] **Home app.** On the phone: Settings, Apps, Default apps, Home app, FocusLens. The launcher only opens from Home when this is set. Or use the "Make FocusLens my home app" button in the launcher.
 - [ ] **Permissions on the phone.** Accessibility (FocusLens on), Usage access, and battery set to "Unrestricted" for FocusLens. Without these, blocks and usage don't work.
 - [ ] **Spotify.** Add the `SPOTIFY_CLIENT_ID` secret in GitHub (Settings, Secrets and variables, Actions). In the Spotify developer dashboard, check the package name `com.focuslens`, the debug SHA-1 fingerprint, and that your account is under User Management. If it still fails, send a Copy report from Settings.
