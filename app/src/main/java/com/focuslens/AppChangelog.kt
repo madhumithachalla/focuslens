@@ -6,6 +6,20 @@ data class BuildNote(val build: Int, val points: List<String>, val version: Stri
 
 val APP_CHANGELOG: List<BuildNote> = listOf(
     BuildNote(0, listOf(
+        "Interception: three questions per try from six categories, or breathing. The kind changes each time.",
+        "Pomodoro counts continuous use of an app. Focus time starts when you open it. LinkedIn is not included.",
+        "Study room: group tasks everyone in the room can tick off.",
+        "Medication: + Add a medicine at the top, and a 4-week grid of the days you took it.",
+        "Period tracker: next period shown as a range, and a Period phase.",
+        "Usage: the Over time graph shows a line on Today.",
+        "Focus score: built from your usage, with the number behind each part and tips.",
+        "Week planner: fixed day names (planning and admin, money, future you, maintenance, fun, meal prep, self-care, upskill, prep, do nothing).",
+        "Search icon in the top bar finds any page.",
+        "Symbols for water, mood, energy, sleep and habits.",
+        "Blocks inside a social app fire on each scroll. Feed reels are covered even when full-screen.",
+        "Usage per day counts only time inside that day, so saved days no longer go over 24 hours."
+    ), version = "1.9.1"),
+    BuildNote(0, listOf(
         "Interception on every Instagram open: a breathing exercise or a maths question, alternating each time.",
         "Not now is counted, and the count shows on the screen.",
         "Pomodoro: focus phases pause social media apps and your blocked apps. Breaks let you back in.",

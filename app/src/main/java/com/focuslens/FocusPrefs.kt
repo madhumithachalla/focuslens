@@ -37,7 +37,7 @@ class FocusPrefs(context: Context) {
 
     /**
      * How many times a day the user can pass the challenge and get back into an app
-     * before it locks for the rest of the day — same idea as Minimalist Focus Launcher's
+     * before it locks for the rest of the day, same idea as Minimalist Focus Launcher's
      * time-based app locks: once the daily allotment is spent, there is no further
      * challenge to beat, only a wait until the next day. Default 3, per-app.
      */
@@ -55,7 +55,7 @@ class FocusPrefs(context: Context) {
     }
 
     /**
-     * The "day" for skip counts, limits and locks resets at 6am, not midnight — a 1am
+     * The "day" for skip counts, limits and locks resets at 6am, not midnight, a 1am
      * reopen shouldn't quietly count as a fresh day. Shift the clock back 6 hours before
      * taking the date, so anything before 6am still belongs to the previous day's key.
      */
@@ -65,7 +65,7 @@ class FocusPrefs(context: Context) {
         return SimpleDateFormat("yyyyMMdd", Locale.US).format(cal.time)
     }
 
-    /** Epoch millis of the next 6am — what a locked app is actually waiting for. */
+    /** Epoch millis of the next 6am, what a locked app is actually waiting for. */
     fun nextResetAt(): Long {
         val cal = java.util.Calendar.getInstance()
         cal.set(java.util.Calendar.HOUR_OF_DAY, RESET_HOUR)
@@ -154,6 +154,10 @@ class FocusPrefs(context: Context) {
     }
 
     /** While this is in the future, Reels is blocked (set when the daily reel limit is used up). */
+    /** Light colours instead of dark. Off by default: the app is dark. */
+    fun themeLight(): Boolean = sp.getBoolean("theme_light", false)
+    fun setThemeLight(on: Boolean) = sp.edit().putBoolean("theme_light", on).apply()
+
     fun reelLockUntil(): Long = sp.getLong("reel_lock_until", 0L)
     fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
 
@@ -271,7 +275,7 @@ class FocusPrefs(context: Context) {
 
     /**
      * Sum of passes (opened anyway) and gave-ups (resisted) across every currently
-     * blocked app over the last [days] days — the raw numbers the Focus Score reads.
+     * blocked app over the last [days] days, the raw numbers the Focus Score reads.
      * Walking real stored per-date keys, not an estimate.
      */
     fun resistStatsLast(days: Int): Pair<Int, Int> {
@@ -294,14 +298,14 @@ class FocusPrefs(context: Context) {
     // ---- Hyper Focus: blocks every app device-wide, not just the ones toggled on ----
 
     /** 0 means off. Everything except the allowlist and FocusLens itself is blocked until this
-     *  time — or, if this equals [HYPERFOCUS_INDEFINITE], until [endHyperFocus] is called. */
+     *  time, or, if this equals [HYPERFOCUS_INDEFINITE], until [endHyperFocus] is called. */
     fun hyperFocusUntil(): Long = sp.getLong("hyperfocus_until", 0L)
 
     fun startHyperFocus(minutes: Int) {
         sp.edit().putLong("hyperfocus_until", System.currentTimeMillis() + minutes * 60_000L).apply()
     }
 
-    /** "Stay on until I turn it off" — no auto-end time, same block everything else. */
+    /** "Stay on until I turn it off", no auto-end time, same block everything else. */
     fun startHyperFocusIndefinite() {
         sp.edit().putLong("hyperfocus_until", HYPERFOCUS_INDEFINITE).apply()
     }
@@ -324,7 +328,7 @@ class FocusPrefs(context: Context) {
     }
 
     // ---- Feature-level blocking: a specific section of an app (Reels, Shorts), not the
-    // whole app. Independent of the daily-limit/skip system above — while this is on,
+    // whole app. Independent of the daily-limit/skip system above, while this is on,
     // opening that section is a flat rule with no challenge to beat. ----
 
     fun blockedSections(pkg: String): Set<String> =
@@ -361,7 +365,7 @@ class FocusPrefs(context: Context) {
     }
 
     // ---- Doom-scroll reminders: a nudge after continuous scrolling in a tracked app, not a
-    // block — see FocusAccessibilityService's scroll tracking. On by default, since it's a
+    // block, see FocusAccessibilityService's scroll tracking. On by default, since it's a
     // reminder, not a restriction. ----
 
     fun doomScrollReminderEnabled(): Boolean = sp.getBoolean("doomscroll_enabled", true)

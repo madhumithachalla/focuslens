@@ -51,7 +51,7 @@ private fun formatMmdd(mmdd: String): String {
 
 /**
  * Reads birthdays from the device's own Contacts app via the standard ContactsContract
- * provider — this already includes any Google account's contacts synced to the device, so it
+ * provider, this already includes any Google account's contacts synced to the device, so it
  * covers the common "my contacts/Gmail have birthdays in them" case without needing a Google
  * Cloud OAuth app, API enablement, or Google's app-verification review. Only runs after the
  * user explicitly taps "Import from Contacts" and grants the permission prompt.
@@ -59,7 +59,7 @@ private fun formatMmdd(mmdd: String): String {
 private fun importBirthdaysFromContacts(context: Context): List<Pair<String, String>> {
     val results = mutableListOf<Pair<String, String>>()
     val resolver = context.contentResolver
-    // Event has no CONTENT_URI of its own (unlike Phone/Email) — birthdays live in the
+    // Event has no CONTENT_URI of its own (unlike Phone/Email), birthdays live in the
     // generic Data table, filtered down to just the Event/birthday rows.
     val cursor = resolver.query(
         ContactsContract.Data.CONTENT_URI,
@@ -123,7 +123,7 @@ fun BirthdaysScreen() {
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) scope.launch { runImport() }
-        else importStatus = "Permission not granted — add birthdays manually below instead."
+        else importStatus = "Permission not granted, add birthdays manually below instead."
     }
 
     LaunchedEffect(Unit) { refresh() }
@@ -151,7 +151,7 @@ fun BirthdaysScreen() {
                     Text("Import from Contacts", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Reads names and birthdays already in your phone's Contacts app — this includes any " +
+                        "Reads names and birthdays already in your phone's Contacts app, this includes any " +
                             "Google account's contacts synced to this device, not just ones added manually. " +
                             "Nothing is uploaded anywhere; it's a one-time local copy into FocusLens, only if " +
                             "you tap below and grant the permission.",
@@ -245,7 +245,7 @@ fun BirthdaysScreen() {
             Text("$currentYear birthday wishes", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text(
                 "Tick off who's wished you this year so you don't lose track of who to thank or wish back. " +
-                    "Nothing here reads your messages or calls automatically — you check these off yourself.",
+                    "Nothing here reads your messages or calls automatically, you check these off yourself.",
                 fontSize = 12.sp,
                 color = Color.Gray
             )

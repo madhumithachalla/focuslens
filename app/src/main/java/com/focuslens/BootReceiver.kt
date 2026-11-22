@@ -8,7 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** AlarmManager entries are cleared on reboot — re-arm every enabled alarm so none silently
+/** AlarmManager entries are cleared on reboot, re-arm every enabled alarm so none silently
  *  stop working just because the phone restarted. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

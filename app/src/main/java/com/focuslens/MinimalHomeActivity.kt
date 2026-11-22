@@ -260,6 +260,9 @@ fun MinimalHomeScreen() {
                     modifier = Modifier.fillMaxWidth()
                 )
                 TextButton(onClick = { searching = false; query = "" }) { Text("Close search", color = dim) }
+                TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }) {
+                    Text("Make FocusLens my home app", color = dim)
+                }
             }
 
             if (favoriteApps.isNotEmpty() && !searching) {

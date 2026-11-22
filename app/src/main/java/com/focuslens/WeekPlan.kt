@@ -33,6 +33,12 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
         "month" to "Coming month: key dates",
         "priorities" to "Top 3 priorities"
     )),
+    MONEY("Money", listOf(
+        "bills" to "Bills to pay",
+        "budget" to "Check the budget and savings",
+        "subs" to "Subscriptions to review",
+        "minutes" to "Time (minutes)"
+    )),
     ADMIN("Admin", listOf(
         "inbox" to "Inbox tidy (20 minutes)",
         "grocery" to "Grocery order",
@@ -55,6 +61,7 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
                 "content" in t || "personal project" in t -> PERSONAL_PROJECT
                 "meal" in t -> MEAL_PREP
                 "planning" in t || "rest" in t -> PLANNING_REST
+                "money" in t || "bills" in t -> MONEY
                 "admin" in t -> ADMIN
                 "fun" in t || "self-care" in t || "self care" in t -> FUN_SELF_CARE
                 else -> NONE
@@ -62,6 +69,23 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
         }
     }
 }
+
+/**
+ * The standard day themes. The names are fixed: a day can be given any of these, and its template
+ * goes with it, but a name cannot be typed in. Change the week's events by moving themes between days.
+ */
+val STANDARD_THEMES: List<Pair<String, DayTemplate>> = listOf(
+    "Planning and admin day" to DayTemplate.ADMIN,
+    "Money day" to DayTemplate.MONEY,
+    "Future you day" to DayTemplate.NONE,
+    "Maintenance day" to DayTemplate.NONE,
+    "Fun day" to DayTemplate.FUN_SELF_CARE,
+    "Meal prep day" to DayTemplate.MEAL_PREP,
+    "Fun and self-care day" to DayTemplate.FUN_SELF_CARE,
+    "Upskill day" to DayTemplate.PROFESSIONAL,
+    "Prep day" to DayTemplate.MEAL_PREP,
+    "Let it be day" to DayTemplate.NONE
+)
 
 /** One day of the week. Index 0 is Monday. */
 data class WeekDay(
@@ -122,12 +146,12 @@ object WeekPlanStore {
 
     private fun sp(c: Context) = c.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    /** The starting week: five days for the person to name, and the two suggested additions. */
+    /** The starting week: Monday planning and admin, Tuesday money, Wednesday future you, Thursday maintenance, Friday fun, Saturday meal prep, Sunday fun and self-care. */
     fun defaultPlan(): WeekPlan = WeekPlan(
-        days = List(5) { WeekDay("", DayTemplate.NONE, emptyMap()) } + listOf(
-            WeekDay("Meal Prep", DayTemplate.MEAL_PREP, emptyMap(), suggested = true),
-            WeekDay("Weekly Planning + Rest", DayTemplate.PLANNING_REST, emptyMap(), suggested = true, protectedDay = true)
-        ),
+        days = listOf(
+            "Planning and admin day", "Money day", "Future you day", "Maintenance day",
+            "Fun day", "Meal prep day", "Fun and self-care day"
+        ).map { name -> WeekDay(name, STANDARD_THEMES.first { it.first == name }.second, emptyMap()) },
         items = emptyList(),
         routines = emptyList(),
         routineDone = emptyMap()

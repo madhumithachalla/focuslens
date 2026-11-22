@@ -15,7 +15,7 @@ import android.view.accessibility.AccessibilityNodeInfo
  * Watches which app comes to the front. By default it only reads the app's package name,
  * never what is on the screen. Two opt-in settings change that, and only while turned on:
  * the Chrome social-media block reads the address bar, and YouTube's academic/podcast-only
- * mode reads on-screen text for a keyword check — both held in memory for one comparison
+ * mode reads on-screen text for a keyword check, both held in memory for one comparison
  * and discarded. When a blocked app, feature, or site opens, it shows the matching block
  * screen.
  */
@@ -27,7 +27,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private var lastLaunch = 0L
 
     // Doom-scroll tracking: counts TYPE_VIEW_SCROLLED events in one continuous streak within
-    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak — this is
+    // a tracked social app. A gap of more than SCROLL_IDLE_GAP_MS resets the streak, this is
     // meant to catch continuous scrolling, not ordinary on-and-off browsing across a session.
     private var streakStart = 0L
     private var lastReminderAt = 0L
@@ -258,7 +258,7 @@ class FocusAccessibilityService : AccessibilityService() {
             val appName = SectionDetector.displayName[pkg] ?: pkg
             launchFeatureBlock(
                 "$feedFeature is blocked",
-                "You've turned off $feedFeature specifically — the rest of $appName still works."
+                "You've turned off $feedFeature specifically, the rest of $appName still works."
             )
             return
         }
@@ -295,19 +295,38 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
+    // Pomodoro state. Focus time counts only while one app stays in front without a break.
+    private var pomoSessionPkg: String? = null
+    private var pomoSessionStart = 0L
+    private var pomoBreakUntil = 0L
+
     /**
-     * Pomodoro: during a focus phase, social media apps and any app you blocked are paused until the break.
-     * Returns true when focus is on, so the caller stops checking that app.
+     * Pomodoro: after the focus time of continuous use, the app is blocked for the break.
+     * Focus time starts when the app comes to the front and resets when you leave it.
+     * Returns true when a break is running, so the caller stops checking that app.
      */
     private fun pomodoroBlock(pkg: String, now: Long): Boolean {
-        // Social media apps are always included; any other app you blocked is included too.
-        if (!prefs.enabled || (pkg !in SectionDetector.tracked && !prefs.isBlocked(pkg))) return false
-        val (inFocus, phaseEnd) = prefs.pomodoroPhase(now)
-        if (!inFocus) return false
+        // Social media apps are included, except LinkedIn. Any other app you blocked is included too.
+        val pomodoroApps = SectionDetector.tracked - SectionDetector.LINKEDIN
+        if (!prefs.enabled || !prefs.pomodoroOn() || (pkg !in pomodoroApps && !prefs.isBlocked(pkg))) return false
+        if (now >= pomoBreakUntil) {
+            if (pomoSessionPkg != pkg) {
+                pomoSessionPkg = pkg
+                pomoSessionStart = now
+            }
+            val focusMs = prefs.pomodoroFocusMin() * 60_000L
+            if (now - pomoSessionStart < focusMs) return false
+            // Focus time is used up: the break starts now. The next focus starts when you come back.
+            pomoBreakUntil = now + prefs.pomodoroBreakMin() * 60_000L
+            pomoSessionPkg = null
+        }
         if (now - lastLaunch >= 1_500L && !FeatureBlockedActivity.isUp()) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
-            kickHome("pomodoro focus")
-            launchFeatureBlock("Focus time", "$appName waits for your break, in ${Clock.untilHms(phaseEnd, now)}.")
+            kickHome("pomodoro break")
+            launchFeatureBlock(
+                "Break time",
+                "$appName is back in ${Clock.untilHms(pomoBreakUntil, now)}. To stop this, turn off Pomodoro on the Focus tab."
+            )
         }
         return true
     }
@@ -409,14 +428,33 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     private fun finishPendingReel(now: Long) {
-        if (reelStartAt > 0L && now - reelStartAt >= REEL_WATCHED_MS) prefs.addReelToday()
+        if (reelStartAt > 0L && now - reelStartAt >= REEL_WATCHED_MS) {
+            prefs.addReelToday()
+            android.util.Log.d(TAG, "reel counted: ${prefs.reelsToday()} today")
+        }
         reelStartAt = 0L
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            trackScroll(event.packageName?.toString())
+            val scrolled = event.packageName?.toString()
+            // A swipe in Reels moves to the next reel: count the one just left, start timing the next.
+            if (scrolled == SectionDetector.INSTAGRAM && lastReelsSection == "Reels") {
+                val now = System.currentTimeMillis()
+                android.util.Log.d(TAG, "reel swipe")
+                finishPendingReel(now)
+                reelStartAt = now
+            }
+            // A scroll in a tracked app re-checks it at once, so a swipe into Reels is blocked straight away.
+            if (scrolled != null && scrolled == current && scrolled in SectionDetector.tracked) {
+                try {
+                    sample()
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Scroll check failed for $scrolled", e)
+                }
+            }
+            trackScroll(scrolled)
             return
         }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
@@ -426,6 +464,11 @@ class FocusAccessibilityService : AccessibilityService() {
         val freshOpen = pkg != lastWindowPkg
         // FocusLens's own screens (including the open check) do not count as leaving Instagram.
         if (pkg != SectionDetector.INSTAGRAM && pkg != packageName) prefs.setOpenApproved(false)
+        // Leaving Instagram ends the Reels section, so its timer and count stop there.
+        if (pkg != SectionDetector.INSTAGRAM) {
+            if (lastReelsSection == "Reels") finishPendingReel(System.currentTimeMillis())
+            lastReelsSection = ""
+        }
         // Any change of app (including the home screen and system screens) clears every cover first,
         // so nothing stays on top of the screen the person has moved to.
         if (pkg != lastWindowPkg) {
@@ -441,6 +484,7 @@ class FocusAccessibilityService : AccessibilityService() {
         if (pkg.contains("inputmethod")) return
         if (pkg == packageName || pkg in ignored || pkg.contains("launcher")) {
             current = null
+            pomoSessionPkg = null
             lastSampleT = 0L
             streakStart = 0L
             lastReminderAt = 0L
@@ -452,6 +496,7 @@ class FocusAccessibilityService : AccessibilityService() {
         // The Skip reel button only belongs to Instagram.
         if (current != pkg) ReelPlaceholder.hideAll(this)
         if (current != pkg) {
+            pomoSessionPkg = null
             lastSampleT = 0L
             streakStart = 0L
             lastReminderAt = 0L
@@ -474,7 +519,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** A nudge, not a block — see ScrollReminderActivity. Only tracked social apps (the ones
+    /** A nudge, not a block, see ScrollReminderActivity. Only tracked social apps (the ones
      *  actually built for an endless scroll) count; a long list in a shopping or news app
      *  doesn't trip this. */
     private fun trackScroll(pkg: String?) {

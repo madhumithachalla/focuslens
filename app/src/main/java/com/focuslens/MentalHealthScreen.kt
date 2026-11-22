@@ -34,7 +34,7 @@ private val MOOD_COLOR = mapOf(
 private data class DayMood(val date: String, val score: Int?)
 
 /**
- * Picks one Learn topic based on a few plain, inspectable rules — not AI, not a diagnosis.
+ * Picks one Learn topic based on a few plain, inspectable rules, not AI, not a diagnosis.
  * A low mood/energy average points at Mental Health resources; "tired" as the top reason
  * for missed tasks this week points at Sleep; "distracted" points at Focus & Productivity.
  * Falls back to a general pick. Mirrors the same rules in the web app's app.js.
@@ -46,7 +46,7 @@ private val MENTAL_HEALTH_TAG_IDS = setOf("anxiety", "depression", "other_health
 /**
  * Mood/energy and missed-task signals take priority since they're acute (something's off
  * right now); the onboarding topic tags are a steadier fallback for what kind of Learn
- * content fits this person day-to-day. Only the topic tags the user picked are read — this
+ * content fits this person day-to-day. Only the topic tags the user picked are read, this
  * never infers a "discipline" from anything else (journal text, app usage, etc).
  */
 private fun pickSuggestion(
@@ -73,7 +73,7 @@ private fun pickSuggestion(
 
 /**
  * A plain mood trend over the last 14 days, read from whichever source the user actually
- * logged that day — a journal entry's mood tag, or a cycle-log energy level if no journal
+ * logged that day, a journal entry's mood tag, or a cycle-log energy level if no journal
  * entry exists. Not a diagnostic tool; just a visual of the user's own logged pattern.
  */
 @Composable
@@ -95,7 +95,7 @@ fun MentalHealthScreen() {
         val profile = db.profileDao().get()
         // STRICT: "prefer_not_to_say" is mutually exclusive with every other tag at entry
         // (OnboardingScreen.kt), so if it's set, tags contains nothing else and neither card
-        // below can trigger — the disclosure is respected by construction, not a special case.
+        // below can trigger, the disclosure is respected by construction, not a special case.
         val healthTags = profile?.neurodivergentTags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
         disclosureWasNotSure = "not_sure" in healthTags
         showNeurodivergentCard = disclosureWasNotSure || healthTags.any { it in NEURODIVERGENT_TAG_IDS }
@@ -173,8 +173,8 @@ fun MentalHealthScreen() {
                 Text(
                     latestCheckIn?.let { c ->
                         "Last one: mood ${c.moodScore}/5, stress ${c.stressScore}/5" +
-                            (c.topTimeSink?.let { " — \"$it\"" } ?: "")
-                    } ?: "You haven't done one yet — mood, stress, and what's taking up your time/energy lately.",
+                            (c.topTimeSink?.let { ", \"$it\"" } ?: "")
+                    } ?: "You haven't done one yet, mood, stress, and what's taking up your time/energy lately.",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -185,7 +185,7 @@ fun MentalHealthScreen() {
         if (loading) {
             CircularProgressIndicator()
         } else if (days.all { it.score == null }) {
-            Text("Nothing logged yet — a Journal entry or Cycle energy log will start filling this in.", fontSize = 13.sp, color = Color.Gray)
+            Text("Nothing logged yet, a Journal entry or Cycle energy log will start filling this in.", fontSize = 13.sp, color = Color.Gray)
         } else {
             val logged = days.mapNotNull { it.score }
             Text(
@@ -256,7 +256,7 @@ fun MentalHealthScreen() {
 
         Spacer(Modifier.height(24.dp))
         Text(
-            "If this pattern is sitting low for a while, that's worth talking through with someone — a GP, a counsellor, or a helpline. This screen is a mirror, not a professional.",
+            "If this pattern is sitting low for a while, that's worth talking through with someone, a GP, a counsellor, or a helpline. This screen is a mirror, not a professional.",
             fontSize = 12.sp,
             color = Color.Gray
         )
@@ -275,7 +275,7 @@ fun MentalHealthScreen() {
                 Column(Modifier.padding(16.dp)) {
                     Text("SUGGESTED FOR YOU", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D5B))
                     Spacer(Modifier.height(4.dp))
-                    Text("Based on simple rules (not AI) — $why.", fontSize = 12.sp, color = Color.Gray)
+                    Text("Based on simple rules (not AI), $why.", fontSize = 12.sp, color = Color.Gray)
                     Spacer(Modifier.height(8.dp))
                     Text(item.title, fontWeight = FontWeight.Medium)
                     Text(item.source, fontSize = 12.sp, color = Color.Gray)
@@ -302,17 +302,17 @@ fun MentalHealthScreen() {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         if (disclosureWasNotSure)
-                            "You said you're not sure during setup — completely fine, that's exactly what a screener " +
+                            "You said you're not sure during setup, completely fine, that's exactly what a screener " +
                                 "is for. The Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed " +
-                                "by Harvard Medical School and the WHO — not a diagnosis, just a starting point if " +
+                                "by Harvard Medical School and the WHO, not a diagnosis, just a starting point if " +
                                 "you're curious. CHADD and ADDA (in Learn) can connect you with real support. " +
-                                "Entirely optional — tap to open the screener, or find more under Learn."
+                                "Entirely optional, tap to open the screener, or find more under Learn."
                         else
                             "You shared that this is part of your experience during setup. If it's ever useful, the " +
                                 "Adult ADHD Self-Report Scale (ASRS) is a real symptom screener designed by Harvard " +
-                                "Medical School and the WHO — not a diagnosis, just a well-regarded starting point if " +
+                                "Medical School and the WHO, not a diagnosis, just a well-regarded starting point if " +
                                 "you're curious. CHADD and ADDA (in Learn) can connect you with real support if you " +
-                                "want it. Entirely up to you — tap to open the screener, or find more under Learn.",
+                                "want it. Entirely up to you, tap to open the screener, or find more under Learn.",
                         fontSize = 12.sp
                     )
                 }
@@ -338,15 +338,15 @@ fun MentalHealthScreen() {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         if (disclosureWasNotSure)
-                            "You said you're not sure during setup — Mental Health America's free, confidential " +
+                            "You said you're not sure during setup, Mental Health America's free, confidential " +
                                 "screening covers anxiety, depression and more, built from the same real clinical " +
-                                "questionnaires (GAD-7, PHQ-9) clinicians use. Not a diagnosis — just a real, quick " +
-                                "way to check if you're curious. Entirely optional — tap to open it, or find more " +
+                                "questionnaires (GAD-7, PHQ-9) clinicians use. Not a diagnosis, just a real, quick " +
+                                "way to check if you're curious. Entirely optional, tap to open it, or find more " +
                                 "under Learn."
                         else
                             "You shared that this is part of your experience during setup. Mental Health America's " +
                                 "free, confidential screening (the same GAD-7/PHQ-9 questionnaires clinicians use) " +
-                                "is a real starting point, not a diagnosis — and NIMH's own pages on anxiety and " +
+                                "is a real starting point, not a diagnosis, and NIMH's own pages on anxiety and " +
                                 "depression (in Learn) are a grounded place to read more. Entirely up to you.",
                         fontSize = 12.sp
                     )

@@ -18,7 +18,7 @@ import com.focuslens.data.JournalRepository
 import kotlinx.coroutines.launch
 
 // Same prompt library as the web app (docs/content.js JOURNAL_CATEGORIES), minus the
-// category browsing UI — a flat, varied pool instead of three fixed questions.
+// category browsing UI, a flat, varied pool instead of three fixed questions.
 private val PROMPTS = listOf(
     "🪞" to "What did I spend the most energy on today, and was it worth it?",
     "🪞" to "What am I avoiding, and what is the smallest first step?",
@@ -39,7 +39,7 @@ private val PROMPTS = listOf(
 )
 private val MOODS = listOf("😔" to "low", "😐" to "flat", "🙂" to "okay", "😊" to "good", "🤩" to "great")
 
-/** A starting structure, not a question — unlike PROMPTS, these pre-fill the text field so
+/** A starting structure, not a question, unlike PROMPTS, these pre-fill the text field so
  *  there's a shape to write into rather than a blank box. Still just text underneath: nothing
  *  about saving or reading an entry back treats a template differently from free writing. */
 private data class JournalTemplate(val emoji: String, val title: String, val scaffold: String)
@@ -108,7 +108,7 @@ fun JournalScreen() {
             activePrompt?.let {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
-                        Text("PROMPT", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Prompt", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
                         Text(it, fontSize = 14.sp)
                     }
                 }
@@ -117,7 +117,7 @@ fun JournalScreen() {
             activeTemplateTitle?.let {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
-                        Text("TEMPLATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Template", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary)
                         Text(it, fontSize = 14.sp)
                     }
                 }
@@ -126,11 +126,11 @@ fun JournalScreen() {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                placeholder = { Text("Start writing...") },
+                placeholder = { Text("Write whatever is on your mind. 💭") },
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )
             Spacer(Modifier.height(12.dp))
-            Text("How does this feel?", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text("How are you feeling?", fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MOODS.forEach { (emoji, id) ->
@@ -165,9 +165,10 @@ fun JournalScreen() {
         item {
             Column {
                 Spacer(Modifier.height(16.dp))
-                Text("Journal", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("Your journal", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text("A quiet place for your thoughts. Only you can read it.", fontSize = 14.sp, color = Color.Gray)
                 Text(
-                    if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you — nothing here leaves your device",
+                    if (streak > 0) "$streak day streak · private to you, never leaves your device" else "Private to you, nothing here leaves your device",
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
@@ -176,10 +177,10 @@ fun JournalScreen() {
 
         if (suggestedPrompts.isNotEmpty()) {
             item {
-                Text("SUGGESTED FOR YOU", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Text("Picked for you", fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "From your own usage this week — not a fixed list.",
+                    "From your own usage this week, not a fixed list.",
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
@@ -201,7 +202,7 @@ fun JournalScreen() {
         }
 
         item {
-            Text("TODAY'S PROMPTS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            Text("Ideas for today", fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
         items(PROMPTS) { (emoji, prompt) ->
             Card(
@@ -220,12 +221,12 @@ fun JournalScreen() {
             Button(
                 onClick = { activePrompt = null; activeTemplateTitle = null; text = ""; writing = true },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("✏️ Just write freely (blank page)") }
+            ) { Text("✏️ Just write, no prompt") }
         }
 
         item {
             Spacer(Modifier.height(10.dp))
-            Text("TEMPLATES", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            Text("Start from a template", fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
         items(TEMPLATES) { t ->
             Card(
@@ -247,11 +248,11 @@ fun JournalScreen() {
 
         item {
             Spacer(Modifier.height(10.dp))
-            Text("PAST ENTRIES", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+            Text("Your past days", fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
 
         if (entries.isEmpty()) {
-            item { Text("Nothing logged yet.", fontSize = 13.sp, color = Color.Gray) }
+            item { Text("No entries yet. One line is enough to start. 🌱", fontSize = 13.sp, color = Color.Gray) }
         }
 
         items(entries, key = { it.id }) { entry ->

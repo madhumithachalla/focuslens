@@ -14,7 +14,7 @@ import java.util.Locale
 /**
  * FocusLens's own exact daily usage history, kept in Room so it doesn't degrade once
  * Android's precise event log (about a week) ages into coarser monthly/yearly buckets.
- * This can only protect data going forward from whenever it first runs — it has no way
+ * This can only protect data going forward from whenever it first runs, it has no way
  * to recover days that are already gone from Android's own records.
  *
  * Deliberately never blends Room and Android data for the same range: a range is read
@@ -77,7 +77,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
         prefs.edit().putBoolean("history_recent_rebuilt_v2", true).apply()
     }
 
-    /** Same idea as [catchUp] but hour-of-day granularity — Android itself never keeps this
+    /** Same idea as [catchUp] but hour-of-day granularity, Android itself never keeps this
      *  for more than about a week, so capturing it before then is the only way an hourly view
      *  can ever cover days further back than that. */
     suspend fun catchUpHourly(daysBack: Int = 7) {
@@ -103,7 +103,7 @@ class UsageHistoryRepository(context: Context, private val usage: UsageRepositor
     }
 
     /** Hour-of-day totals summed across the last [days] finished days (from snapshotted Room
-     *  data) plus today so far (computed live) — an approximate "when do I usually use my
+     *  data) plus today so far (computed live), an approximate "when do I usually use my
      *  phone" read, not an exact one. */
     suspend fun hourlyTotalsRecent(days: Int): Map<Int, Long> {
         val todayStart = startOfDay(System.currentTimeMillis())

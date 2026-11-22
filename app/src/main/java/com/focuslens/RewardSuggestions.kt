@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * A small, real-world thing to do with time just reclaimed from a blocked app or a
- * finished focus session — not a game mechanic, just a nudge toward something considerate
+ * finished focus session, not a game mechanic, just a nudge toward something considerate
  * or restorative. Plain curated list, no AI generation and no notion of "points" or
  * "levels" (those would turn a break into another thing to optimize).
  */

@@ -14,11 +14,11 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Optional bridge to Android's Health Connect — the system-level store that a watch or
+ * Optional bridge to Android's Health Connect, the system-level store that a watch or
  * health app (Samsung Health, Fitbit, Flo, Clue, and others) can write cycle data into.
  * Nothing here runs automatically: the user explicitly taps "Import from watch" on the
  * Cycle screen, grants the permission prompt Android itself shows, and this reads whatever
- * period-start dates are already there — it never writes anything back, and never reads
+ * period-start dates are already there, it never writes anything back, and never reads
  * anything beyond that one record type.
  *
  * Requires Health Connect to be present (built into the OS on Android 14+, a separate Play

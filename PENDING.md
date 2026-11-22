@@ -37,6 +37,29 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Accountability screen: redesigned (dark cards, one partner card, your code with Share, tasks as tappable circles, short status text) | Built | First screen of the full design change. Same Firestore logic as before. Not checked on a phone |
 | App-wide dark theme (design-board colours) | Built | Screens with their own light colours may still need a pass. Not checked on a phone |
 | Updates screen and update messages show the version name only (no build number). Release 1.9.0 | Built | Build number stays internal, for update checks |
+| Launcher: button opens the home app setting | Built | Not checked on a phone |
+| Reels count: each reel counts when you swipe to the next and watch it 5 seconds; leaving Instagram ends the count | Built | Was one count per Reels visit. Not checked on a phone |
+| Usage "Over time" shows a line chart | Built | Not checked on a phone |
+| Light or dark colours (Settings, Light colours switch); dark is the default | Built | Greyish secondary text is still the same grey in both modes. Not checked on a phone |
+| Focus tab Reels tile: reels today, minutes watched, reels left if a limit is set | Built | Not checked on a phone |
+| Focus score: today from social media minutes vs yesterday, reels watched and stepping back; each part shows its number; up to 3 tips matched to the weakest part (on-device, no AI model) | Built | Not checked on a phone. An LLM or RAG model is not included: it would send usage data off the phone, which needs your explicit decision first |
+| Search icon in the top bar: finds any page by name or keyword (water, period, habit, mood) | Built | Not checked on a phone |
+| Symbols: water drops, mood faces, energy and sleep symbols, period drop, habit ticks and crosses | Built | Not checked on a phone |
+| Feed reels: covered when the Reels switch is on, including full-screen reels in the feed | Built | Not checked on a phone. Audio can still play under the cover |
+| Usage line graph: Today uses 24 hourly points so the line shows; longer ranges use one point per day | Built | Not checked on a phone |
+| Medication: "+ Add a medicine" at the top with a how-to line; an empty state that says what to do | Built | Not checked on a phone |
+| Medication history: "Days you took it" section under Today, with a 4-week grid for each medicine (taken, missed, not scheduled) | Built | Not checked on a phone |
+| Group tasks in a study room: anyone in the room adds a task and ticks it off; only the person who added it can remove it. Rules updated | Built | Needs the updated firestore.rules published. Not checked on a phone |
+| Week planner: seven themed days from the notebook (cooking, laundry, cleaning, career, job applying, content, fun), and a Money template | Built | Days can be renamed in the planner. Not checked on a phone |
+| Week planner: fixed standard day names (Planning and admin, Money, Future you, Maintenance, Fun, Meal prep, Fun and self-care); each day is picked from the list, not typed. Default week set to these | Built | Not checked on a phone. Nightly and Sunday planning slots are suggested, not built |
+| Quiz questions fetched from Open Trivia Database every 6 hours, cached, mixed with the built-in bank | Built | Needs internet. Not checked on a phone |
+| Badges grouped by Journal, Tasks, Check-ins, Focus, Rewards; Focus badges count stepping back | Built | Not checked on a phone |
+| Journal friendlier: "Your journal" subtitle, warmer headings, kinder empty state | Built | Partial redesign; the entry editor layout is unchanged. Not checked on a phone |
+| Period tracker: next period shown as a range from your cycle lengths; a Period phase for the first 5 days | Built | Still a simple average, not Flo's model. Not checked on a phone |
+| Spotify Playlists stuck on "Connecting": client ID is set, the connection hangs. Needs the dashboard check and a Copy report | Not fixed | Needs logcat or a Copy report |
+| Interception questions: three per try from different categories (books, movies, vocabulary, general knowledge, English, maths), changing each time; alternates with breathing | Built | Question bank is on the phone. Live questions from online sources are not connected yet. Not checked on a phone |
+| 20 hours away: Start on the Focus tab. Everything pauses except the apps you keep open, for 20 hours. End early, no penalty. Inspired by 20 Hours for 20Talk, not an official feature | Built | Not checked on a phone. The 5-minute emergency override is not in this card yet |
+| Settings: Copy report button (version, device, blocking status, recent FocusLens log lines) | Built | Use it to send the developer what happened on the phone |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
 | Time stops counting when the screen turns off | Built | Not device-tested |
 | "Inside the app" shows measured coverage | Built | |

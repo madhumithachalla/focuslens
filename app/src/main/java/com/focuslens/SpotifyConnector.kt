@@ -6,7 +6,7 @@ import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
 import com.spotify.android.appremote.api.SpotifyAppRemote
 
-/** A curated focus playlist — real Spotify playlist/track URIs the user can swap in Settings. */
+/** A curated focus playlist, real Spotify playlist/track URIs the user can swap in Settings. */
 data class FocusPlaylist(val label: String, val emoji: String, val spotifyUri: String)
 
 val FOCUS_PLAYLISTS = listOf(
@@ -26,7 +26,7 @@ sealed class SpotifyState {
  * Thin wrapper over Spotify's App Remote SDK. Needs the Spotify app installed on the
  * device and a Client ID registered at developer.spotify.com (see build.gradle.kts).
  * Controls playback directly in the user's own Spotify app rather than streaming audio
- * itself — FocusLens never touches the user's Spotify login or library beyond that.
+ * itself, FocusLens never touches the user's Spotify login or library beyond that.
  */
 class SpotifyConnector(private val context: Context) {
     private var remote: SpotifyAppRemote? = null
@@ -55,7 +55,7 @@ class SpotifyConnector(private val context: Context) {
                 "Spotify isn't set up for this build yet. One-time fix: create an app at " +
                     "developer.spotify.com/dashboard to get a Client ID, then add it as a GitHub " +
                     "repo secret named SPOTIFY_CLIENT_ID (Settings > Secrets and variables > Actions) " +
-                    "and rebuild — the next CI build picks it up automatically."
+                    "and rebuild, the next CI build picks it up automatically."
             ))
             return
         }

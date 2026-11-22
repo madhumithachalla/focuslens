@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -60,6 +62,7 @@ class OpenCheckActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showing = true
+        InterceptBank.refreshIfStale(this)
         window.setBackgroundDrawable(ColorDrawable(0xFF0E0F13.toInt()))
         // Back counts as "Not now", so it can't be used to slip past the check.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -85,7 +88,7 @@ class OpenCheckActivity : ComponentActivity() {
                         if (mode == "breathing") {
                             BreathingStep(onDone = { openApp() }, onNotNow = { notNow() })
                         } else {
-                            MathStep(onDone = { openApp() }, onNotNow = { notNow() })
+                            QuestionsStep(onDone = { openApp() }, onNotNow = { notNow() })
                         }
                         Spacer(Modifier.height(20.dp))
                         Text(
@@ -157,31 +160,32 @@ private fun BreathingStep(onDone: () -> Unit, onNotNow: () -> Unit) {
     TextButton(onClick = onNotNow) { Text("Not now", color = Color.Gray) }
 }
 
-/** A maths question. You type the right answer to open the app. */
+/** Three questions from mixed categories. Get each one right to open the app. A wrong answer keeps the same question. */
 @Composable
-private fun MathStep(onDone: () -> Unit, onNotNow: () -> Unit) {
-    val a = remember { (23..97).random() }
-    val b = remember { (12..39).random() }
-    var typed by remember { mutableStateOf("") }
+private fun QuestionsStep(onDone: () -> Unit, onNotNow: () -> Unit) {
+    val context = LocalContext.current
+    val questions = remember { InterceptBank.pickThree(context) }
+    var index by remember { mutableIntStateOf(0) }
     var wrong by remember { mutableStateOf(false) }
-    Text("Solve to open", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(24.dp))
-    Text("$a × $b = ?", fontSize = 36.sp, fontWeight = FontWeight.Bold)
+    val q = questions[index]
+    Text("Question ${index + 1} of ${questions.size} · ${q.category}", fontSize = 13.sp, color = Color.Gray)
+    Spacer(Modifier.height(16.dp))
+    Text(q.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(20.dp))
-    OutlinedTextField(
-        value = typed,
-        onValueChange = { typed = it.filter { c -> c.isDigit() }.take(6); wrong = false },
-        placeholder = { Text("Answer") },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier.fillMaxWidth()
-    )
-    Spacer(Modifier.height(12.dp))
+    q.options.forEachIndexed { i, option ->
+        OutlinedButton(
+            onClick = {
+                if (i == q.answer) {
+                    wrong = false
+                    if (index == questions.size - 1) onDone() else index++
+                } else {
+                    wrong = true
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text(option) }
+        Spacer(Modifier.height(8.dp))
+    }
     if (wrong) Text("Not quite. Try again.", color = Color(0xFFD98C8C), fontSize = 13.sp)
-    Button(
-        enabled = typed.isNotEmpty(),
-        onClick = { if (typed.toIntOrNull() == a * b) onDone() else wrong = true },
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("Open") }
     TextButton(onClick = onNotNow) { Text("Not now", color = Color.Gray) }
 }

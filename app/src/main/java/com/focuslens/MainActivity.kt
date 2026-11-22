@@ -41,7 +41,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +80,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 typography = AppTypography,
-                colorScheme = darkColorScheme(
+                colorScheme = if (FocusPrefs(applicationContext).themeLight()) lightColorScheme(
+                    primary = Color(0xFF1F3A34),
+                    onPrimary = Color(0xFFFFFFFF),
+                    background = Color(0xFFF7F5F0),
+                    surface = Color(0xFFFFFFFF),
+                    onSurface = Color(0xFF1A1C22),
+                    onBackground = Color(0xFF1A1C22),
+                    outline = Color(0xFFCFCBC0),
+                    secondary = Color(0xFFB8862E)
+                ) else darkColorScheme(
                     primary = Color(0xFFA9A6F7),
                     onPrimary = Color(0xFF0E0F13),
                     background = Color(0xFF0E0F13),
@@ -91,7 +103,7 @@ class MainActivity : ComponentActivity() {
                 SleepCheckIn()
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     // targetSdk 36 means the system draws edge-to-edge by default and no longer
-                    // reserves space for the status/navigation bars on its own — without this,
+                    // reserves space for the status/navigation bars on its own, without this,
                     // the top tab row sits flush against the status bar/clock and bottom content
                     // sits under the gesture bar. This is the one place that needs to know about
                     // it; everything below keeps assuming a normal, inset-free canvas.
@@ -172,7 +184,7 @@ fun WelcomeAuthScreen(onContinue: () -> Unit) {
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().padding(24.dp)
         ) {
-            Text("Skip for now — I'll sign in later")
+            Text("Skip for now, I'll sign in later")
         }
     }
 }
@@ -198,6 +210,8 @@ fun FocusLensMain(repo: UsageRepository) {
 
     if (hasPermission) {
         var tab by remember { mutableIntStateOf(0) }
+        var searchOpen by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         ModalNavigationDrawer(
@@ -248,10 +262,19 @@ fun FocusLensMain(repo: UsageRepository) {
                     Spacer(Modifier.width(8.dp))
                     Image(painterResource(R.drawable.ic_focuslens_wordmark), contentDescription = "FocusLens", modifier = Modifier.height(20.dp))
                     Spacer(Modifier.weight(1f))
+                    IconButton(onClick = { searchOpen = !searchOpen; searchQuery = "" }) {
+                        Text("🔍", fontSize = 18.sp)
+                    }
                     Text(TAB_LABELS.getOrElse(tab) { "" }, fontSize = 14.sp, color = Color.Gray)
                 }
                 Box(Modifier.weight(1f)) {
-                when (tab) {
+                if (searchOpen) {
+                    SearchPanel(
+                        query = searchQuery,
+                        onQuery = { searchQuery = it },
+                        onPick = { picked -> tab = picked; searchOpen = false }
+                    )
+                } else when (tab) {
                     0 -> Dashboard(repo, refreshTick)
                     1 -> FocusScreen(repo, refreshTick)
                     2 -> StudyModeScreen()
@@ -330,7 +353,7 @@ fun PermissionScreen() {
         Text(
             "Got \"App was denied access\" instead of the switch? That's Android blocking a " +
                 "sensitive permission for apps installed outside the Play Store (this debug build is " +
-                "sideloaded) — it isn't anything wrong with FocusLens itself, and takes one extra step:",
+                "sideloaded), it isn't anything wrong with FocusLens itself, and takes one extra step:",
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )
@@ -706,3 +729,56 @@ private val DRAWER_GROUPS: List<Pair<String, List<Pair<Int, String>>>> = listOf(
     "Learn" to listOf(7 to "Learn", 8 to "Explore", 14 to "Guide", 21 to "Rewards"),
     "Me" to listOf(3 to "To-do", 11 to "Account", 12 to "Birthdays", 13 to "Settings", 23 to "App updates")
 )
+
+/** Extra words that find a page, so "water", "period" or "habit" lead to the right place. */
+private val PAGE_KEYWORDS = mapOf(
+    0 to "usage screen time phone",
+    1 to "focus block apps blocking",
+    4 to "period cycle mood energy tracker symptoms",
+    5 to "journal notes writing",
+    6 to "mental health stress anxiety",
+    9 to "score focus score",
+    13 to "settings privacy options",
+    14 to "guide help how to",
+    15 to "alarm reminder",
+    16 to "schedule block times",
+    19 to "medicine medication pills habit doses",
+    22 to "badges achievements",
+    24 to "diary notes",
+    25 to "planner day plan tasks",
+    26 to "partner accountability tasks",
+    27 to "water drink hydration reading habit",
+    28 to "social media instagram tiktok",
+    29 to "week planner calendar",
+    30 to "sleep night rest"
+)
+
+/** Search across every page. Type a name or a keyword and tap a result to open it. */
+@Composable
+private fun SearchPanel(query: String, onQuery: (String) -> Unit, onPick: (Int) -> Unit) {
+    val q = query.trim().lowercase()
+    val hits = DRAWER_GROUPS.flatMap { it.second }.filter { (index, name) ->
+        q.isEmpty() || name.lowercase().contains(q) || (PAGE_KEYWORDS[index] ?: "").contains(q)
+    }
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            placeholder = { Text("Search, for example water or period") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(12.dp))
+        if (hits.isEmpty()) {
+            Text("No page matches \"$query\".", color = Color.Gray)
+        }
+        hits.forEach { (index, name) ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onPick(index) }
+            ) {
+                Text(name, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+

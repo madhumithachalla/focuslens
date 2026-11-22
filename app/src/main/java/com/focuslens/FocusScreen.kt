@@ -139,10 +139,12 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         item {
             val reelLimit = remember(rev) { prefs.reelLimit() }
             val reelsUsed = remember(rev, tick) { prefs.reelsToday() }
+            val reelMins = remember(rev, tick) { prefs.reelWatchMsToday() / 60_000L }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile(
-                    value = if (reelLimit > 0) "${(reelLimit - reelsUsed).coerceAtLeast(0)}" else "∞",
-                    label = "Reels left today",
+                    value = "$reelsUsed",
+                    label = (if (reelLimit > 0) "Reels today, ${(reelLimit - reelsUsed).coerceAtLeast(0)} left" else "Reels today") +
+                        " · ${Clock.minutesHuman(reelMins)} watched",
                     modifier = Modifier.weight(1f)
                 )
                 StatTile(
@@ -154,19 +156,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         item {
-            val now = System.currentTimeMillis()
-            val (inFocus, phaseEnd) = remember(tick, rev, pomoOn) { prefs.pomodoroPhase(now) }
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("Pomodoro", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(
-                                when {
-                                    !pomoOn -> "Off. Covers social media and your blocked apps."
-                                    inFocus -> "Focus: ${Clock.untilHms(phaseEnd, now)} left"
-                                    else -> "Break: ${Clock.untilHms(phaseEnd, now)} left"
-                                },
+                                if (pomoOn) "On. After ${prefs.pomodoroFocusMin()} min of continuous use, a ${prefs.pomodoroBreakMin()} min break."
+                                else "Off. Covers social media and your blocked apps.",
                                 fontSize = 13.sp,
                                 color = Color.Gray
                             )
@@ -188,6 +185,8 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 }
             }
         }
+
+        item { TwentyHoursCard() }
 
         item {
             var studyOpen by remember { mutableStateOf(false) }
@@ -292,8 +291,8 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                     Text("Hyper Focus", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 16.sp)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        if (hyperActive) "Active — blocking every app except calls."
-                        else "Blocks every app on the phone, not just the ones below — for when you need a hard stop.",
+                        if (hyperActive) "Active, blocking every app except calls."
+                        else "Blocks every app on the phone, not just the ones below, for when you need a hard stop.",
                         color = Color(0xFFBFD3C9),
                         fontSize = 12.sp
                     )
@@ -396,7 +395,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                             Text("YouTube: academic/podcast only", fontSize = 14.sp)
                             Text(
                                 "Blocks anything in YouTube that doesn't look academic or like a podcast " +
-                                    "(a keyword check on the title/channel text on screen — best-effort, not a real " +
+                                    "(a keyword check on the title/channel text on screen, best-effort, not a real " +
                                     "content check, so it will get some wrong in both directions).",
                                 fontSize = 11.sp,
                                 color = Color.Gray
@@ -478,7 +477,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
         }
 
         if (resisted > 0) {
-            item { RewardSuggestionCard(title = "You chose not to open a blocked app today — nice") }
+            item { RewardSuggestionCard(title = "You chose not to open a blocked app today, nice") }
         }
 
         if (peakHours.values.any { it > 0 }) {
@@ -507,7 +506,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
             }
         }
 
-        // ---- Section: Feature blocking — just the one addictive tab in an otherwise-allowed app ----
+        // ---- Section: Feature blocking, just the one addictive tab in an otherwise-allowed app ----
         val featureApps = apps.filter { SectionDetector.feedFeature.containsKey(it.packageName) }
         if (featureApps.isNotEmpty()) {
             item {
@@ -520,7 +519,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Block just the one addictive tab, keep the rest of the app usable — independent of " +
+                    "Block just the one addictive tab, keep the rest of the app usable, independent of " +
                         "whether the app itself is blocked above.",
                     fontSize = 11.sp,
                     color = Color.Gray
@@ -538,7 +537,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(app.label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        Text("Block $featureName only — rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
+                        Text("Block $featureName only, rest of ${app.label} still works", fontSize = 12.sp, color = Color.Gray)
                     }
                     Switch(checked = featureBlocked, onCheckedChange = {
                         prefs.setSectionBlocked(app.packageName, featureName, it)
@@ -559,14 +558,14 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "Switches below save instantly, but nothing actually blocks until Accessibility " +
-                        "is on (see the card above) — turning a switch on here just queues it up.",
+                        "is on (see the card above), turning a switch on here just queues it up.",
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
             }
         }
 
-        // ---- Section: Apps — whole-app block, on/off, with a daily limit once blocked ----
+        // ---- Section: Apps, whole-app block, on/off, with a daily limit once blocked ----
         item {
             var reelRev by remember { mutableStateOf(0) }
             val reelCap = remember(reelRev) { prefs.reelLimit() }
@@ -615,7 +614,7 @@ fun FocusScreen(repo: UsageRepository, tick: Int) {
                 }
                 if (isBlocked) {
                     Spacer(Modifier.height(6.dp))
-                    Text("Daily limit — ${formatMinutesHM(limit)}", fontSize = 13.sp, color = Color.Gray)
+                    Text("Daily limit, ${formatMinutesHM(limit)}", fontSize = 13.sp, color = Color.Gray)
                     Spacer(Modifier.height(6.dp))
                     DurationPickerRow(
                         selectedMinutes = limit.coerceAtLeast(5),

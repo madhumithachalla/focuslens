@@ -39,6 +39,7 @@ data class AchievementStats(
     val tasksDone: Int,
     val weeklyCheckIns: Int,
     val rewardsDone: Int,
+    val stepBacks: Int = 0,
 )
 
 /** Consecutive days with a journal entry, ending today (or yesterday, so an unwritten today doesn't break it). */
@@ -56,19 +57,21 @@ fun journalStreakOf(dates: Set<String>, todayKey: String): Int {
 }
 
 /** A badge: unlocked when [value] reaches [goal]. */
-data class Badge(val name: String, val how: String, val value: Int, val goal: Int)
+data class Badge(val name: String, val how: String, val value: Int, val goal: Int, val category: String = "")
 
 fun badgesFor(s: AchievementStats): List<Badge> = listOf(
-    Badge("First page", "Write your first journal entry", s.journalEntries, 1),
-    Badge("Steady writer", "Write in your journal 10 times", s.journalEntries, 10),
-    Badge("Committed writer", "Write in your journal 50 times", s.journalEntries, 50),
-    Badge("One week", "Journal 7 days in a row", s.journalStreak, 7),
-    Badge("One month", "Journal 30 days in a row", s.journalStreak, 30),
-    Badge("First task", "Finish your first to-do", s.tasksDone, 1),
-    Badge("Getting things done", "Finish 25 to-dos", s.tasksDone, 25),
-    Badge("Checking in", "Complete a weekly check-in", s.weeklyCheckIns, 1),
-    Badge("Reward finder", "Do a suggested reward", s.rewardsDone, 1),
-    Badge("Reward regular", "Do 10 suggested rewards", s.rewardsDone, 10),
+    Badge("First page", "Write your first journal entry", s.journalEntries, 1, "Journal"),
+    Badge("Steady writer", "Write in your journal 10 times", s.journalEntries, 10, "Journal"),
+    Badge("Committed writer", "Write in your journal 50 times", s.journalEntries, 50, "Journal"),
+    Badge("One week", "Journal 7 days in a row", s.journalStreak, 7, "Journal"),
+    Badge("One month", "Journal 30 days in a row", s.journalStreak, 30, "Journal"),
+    Badge("First task", "Finish your first to-do", s.tasksDone, 1, "Tasks"),
+    Badge("Getting things done", "Finish 25 to-dos", s.tasksDone, 25, "Tasks"),
+    Badge("Checking in", "Complete a weekly check-in", s.weeklyCheckIns, 1, "Check-ins"),
+    Badge("Stepping back", "Step back from an app 10 times", s.stepBacks, 10, "Focus"),
+    Badge("Steady focus", "Step back from an app 50 times", s.stepBacks, 50, "Focus"),
+    Badge("Reward finder", "Do a suggested reward", s.rewardsDone, 1, "Rewards"),
+    Badge("Reward regular", "Do 10 suggested rewards", s.rewardsDone, 10, "Rewards"),
 )
 
 private suspend fun loadStats(context: Context): AchievementStats = withContext(Dispatchers.IO) {
@@ -82,6 +85,7 @@ private suspend fun loadStats(context: Context): AchievementStats = withContext(
         tasksDone = db.checkInDao().allOnce().count { it.completed },
         weeklyCheckIns = db.weeklyCheckInDao().since(0L).size,
         rewardsDone = rewardsDone(context),
+        stepBacks = FocusPrefs(context).resistStatsLast(3650).second,
     )
 }
 
@@ -107,7 +111,9 @@ fun AchievementsScreen() {
         Text("$unlocked of ${badges.size} unlocked", fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(12.dp))
 
-        badges.forEach { b ->
+        badges.groupBy { it.category }.forEach { (category, group) ->
+            Text(category, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+            group.forEach { b ->
             val got = b.value >= b.goal
             Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Row(Modifier.padding(16.dp)) {
@@ -124,6 +130,7 @@ fun AchievementsScreen() {
                         fontSize = 12.sp, color = Color.Gray
                     )
                 }
+            }
             }
         }
 

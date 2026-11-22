@@ -120,6 +120,14 @@ fun MedsScreen() {
             )
         }
 
+        // Start here: add a medicine with its times, then tick each dose as you take it.
+        item {
+            Button(onClick = { editing = null; showForm = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("+ Add a medicine", fontSize = 16.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("Add a medicine and its times. Then tap Taken each time you take a dose.", fontSize = 13.sp, color = Color.Gray)
+        }
         item { Text("Today", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         item {
             TodayGrid(doses) { dose, checked ->
@@ -128,7 +136,24 @@ fun MedsScreen() {
             }
         }
         if (doses.isEmpty()) {
-            item { Text("Nothing scheduled today.", color = Color.Gray) }
+            // A medicine saved with no time never makes a dose, so say which one needs a time.
+            val untimed = prefs.plans().filter { it.times.isEmpty() && MedLogic.appliesOnDate(it, Calendar.getInstance()) }
+            if (untimed.isEmpty()) {
+                item {
+                    Text(
+                        if (plans.isEmpty()) "No medicines yet. Tap + Add a medicine above."
+                        else "Nothing scheduled today.",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                item {
+                    Text(
+                        "Add a time for ${untimed.joinToString { it.name }} (tap Edit) so it shows here.",
+                        color = Color.Gray
+                    )
+                }
+            }
         }
         items(doses, key = { it.key }) { dose ->
             Card(Modifier.fillMaxWidth()) {
@@ -172,6 +197,19 @@ fun MedsScreen() {
             }
         }
 
+        // Which days each medicine was taken, for the last 4 weeks.
+        if (plans.isNotEmpty()) {
+            item { Text("Days you took it", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            item { Text("Last 4 weeks. ✅ taken, ❌ missed, blank = not scheduled.", fontSize = 13.sp, color = Color.Gray) }
+            items(plans, key = { "history-${it.id}" }) { plan ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(plan.name, fontWeight = FontWeight.Medium)
+                        MedHabitGrid(plan = plan, tick = tick, onChanged = { tick++ })
+                    }
+                }
+            }
+        }
         item { Text("My medications", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         if (plans.isEmpty()) {
             item { Text("None added yet.", color = Color.Gray) }

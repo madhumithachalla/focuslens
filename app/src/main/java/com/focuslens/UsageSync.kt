@@ -25,7 +25,7 @@ private suspend fun <T> Task<T>.awaitTask(): T = suspendCancellableCoroutine { c
 /**
  * Opt-in, off by default: uploads the last 7 days of per-day screen-time totals (plus app
  * names and an hourly breakdown) to users/{uid}/data/usage_YYYYMMDD in the signed-in user's
- * own Firestore space. Every failure is logged and swallowed — sync must never crash the app.
+ * own Firestore space. Every failure is logged and swallowed, sync must never crash the app.
  */
 object UsageSync {
 

@@ -8,11 +8,11 @@ import com.focuslens.data.AlarmEntity
 import java.util.Calendar
 
 /**
- * Schedules a real alarm via AlarmManager.setAlarmClock — the same API Android's own Clock app
+ * Schedules a real alarm via AlarmManager.setAlarmClock, the same API Android's own Clock app
  * uses. Unlike setExactAndAllowWhileIdle, this needs no special permission on any API level and
  * is explicitly exempt from Doze/battery-optimization throttling, because the OS treats it as a
  * user-visible alarm clock (it shows the little alarm icon in the status bar). This is what
- * lets the alarm fire even if the app is fully closed or the phone is locked — the one thing
+ * lets the alarm fire even if the app is fully closed or the phone is locked, the one thing
  * the web app's version cannot do.
  */
 object AlarmScheduler {

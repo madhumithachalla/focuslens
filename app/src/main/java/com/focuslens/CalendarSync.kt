@@ -11,7 +11,7 @@ import java.util.TimeZone
 
 /**
  * Writes (and removes) a single one-hour event per to-do task on the device's default
- * calendar — the same account Google Calendar, Samsung Calendar etc. already sync, so a task
+ * calendar, the same account Google Calendar, Samsung Calendar etc. already sync, so a task
  * added here shows up wherever the person already looks at their calendar. Read-only on
  * everything else: it never reads existing events, only ever writes the one it created.
  */
@@ -21,7 +21,7 @@ object CalendarSync {
         ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) ==
             PackageManager.PERMISSION_GRANTED
 
-    /** The device's first visible, writable calendar — usually the signed-in Google account's
+    /** The device's first visible, writable calendar, usually the signed-in Google account's
      *  primary one. FocusLens doesn't ask which calendar to use; most phones only have one
      *  that's actually writable anyway. */
     private fun defaultCalendarId(context: Context): Long? {
@@ -38,7 +38,7 @@ object CalendarSync {
     }
 
     /** Adds a one-hour event titled [title] starting at [whenMillis]. Returns the new event's
-     *  row id (store it as TaskEntity.calendarEventId) or null if it couldn't be added — no
+     *  row id (store it as TaskEntity.calendarEventId) or null if it couldn't be added, no
      *  permission, or no writable calendar on the device. Never throws. */
     fun addEvent(
         context: Context,
@@ -70,7 +70,7 @@ object CalendarSync {
         }
     }
 
-    /** Removes a previously-added event — called when its task is deleted, so a finished or
+    /** Removes a previously-added event, called when its task is deleted, so a finished or
      *  discarded to-do doesn't leave a stray calendar entry behind. */
     fun removeEvent(context: Context, eventId: Long) {
         if (!hasPermission(context)) return
@@ -78,7 +78,7 @@ object CalendarSync {
         try {
             context.contentResolver.delete(uri, null, null)
         } catch (e: SecurityException) {
-            // Permission revoked since the event was created — nothing more we can do.
+            // Permission revoked since the event was created, nothing more we can do.
         }
     }
 }

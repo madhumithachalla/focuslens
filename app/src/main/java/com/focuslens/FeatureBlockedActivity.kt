@@ -26,11 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * A plain, no-challenge stop for a specific blocked feature or site — Reels, Shorts, a
+ * A plain, no-challenge stop for a specific blocked feature or site, Reels, Shorts, a
  * social-media domain in Chrome, or non-academic YouTube content when academic/podcast-only
  * mode is on. Unlike BlockActivity, there is nothing to pass here while the matching
  * setting is on: it is a direct rule, not an escalating challenge. Still never a true
- * lockout — one tap always returns home, and the rule itself can be turned off any time
+ * lockout, one tap always returns home, and the rule itself can be turned off any time
  * from the Focus tab.
  */
 class FeatureBlockedActivity : ComponentActivity() {

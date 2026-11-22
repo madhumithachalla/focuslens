@@ -36,7 +36,7 @@ import kotlinx.coroutines.delay
 private const val END_PHRASE = "I want to end hyper focus"
 
 /**
- * Covers every app device-wide, not just the ones individually toggled on — the whole
+ * Covers every app device-wide, not just the ones individually toggled on, the whole
  * point of Hyper Focus. There's deliberately no challenge here (a math puzzle doesn't
  * fit "block literally everything"), but there's also deliberately no true lockout:
  * typing the confirmation phrase always ends it. A phone that can't be unlocked by its

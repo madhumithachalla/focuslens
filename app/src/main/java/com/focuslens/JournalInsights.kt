@@ -3,12 +3,12 @@ package com.focuslens
 import android.content.Context
 
 /**
- * Journal prompts generated from the device's own real usage data — not a fixed list, and
+ * Journal prompts generated from the device's own real usage data, not a fixed list, and
  * not AI-written. Two plain, inspectable rules: what app actually took the most time this
  * week, and what hour of day the phone actually gets picked up most. Both numbers are the
  * same ones already shown on the Focus and Usage tabs; this just turns them into a prompt
  * to write about, instead of leaving the data sitting unused on another screen. Never reads
- * what's inside any app — same screen-name-only boundary the rest of the usage features keep.
+ * what's inside any app, same screen-name-only boundary the rest of the usage features keep.
  */
 suspend fun usageAwareJournalPrompts(context: Context): List<Pair<String, String>> {
     val repo = UsageRepository(context)
@@ -26,7 +26,7 @@ suspend fun usageAwareJournalPrompts(context: Context): List<Pair<String, String
     if (top != null && top.millis > 0) {
         val duration = formatDuration(top.millis)
         val prompt = if (top.packageName in SectionDetector.tracked) {
-            "You've spent about $duration on ${top.label} this week. What's it actually giving you right now — and is there something else that'd give you the same thing?"
+            "You've spent about $duration on ${top.label} this week. What's it actually giving you right now, and is there something else that'd give you the same thing?"
         } else {
             "${top.label} took up the most time on your phone this week (about $duration). Worth a minute on what that time actually went toward?"
         }
