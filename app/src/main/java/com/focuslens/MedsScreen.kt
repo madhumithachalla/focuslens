@@ -120,6 +120,14 @@ fun MedsScreen() {
             )
         }
 
+        // Start here: add a medicine with its times, then tick each dose as you take it.
+        item {
+            Button(onClick = { editing = null; showForm = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("+ Add a medicine", fontSize = 16.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("Add a medicine and its times. Then tap Taken each time you take a dose.", fontSize = 13.sp, color = Color.Gray)
+        }
         item { Text("Today", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         item {
             TodayGrid(doses) { dose, checked ->
@@ -131,7 +139,13 @@ fun MedsScreen() {
             // A medicine saved with no time never makes a dose, so say which one needs a time.
             val untimed = prefs.plans().filter { it.times.isEmpty() && MedLogic.appliesOnDate(it, Calendar.getInstance()) }
             if (untimed.isEmpty()) {
-                item { Text("Nothing scheduled today.", color = Color.Gray) }
+                item {
+                    Text(
+                        if (plans.isEmpty()) "No medicines yet. Tap + Add a medicine above."
+                        else "Nothing scheduled today.",
+                        color = Color.Gray
+                    )
+                }
             } else {
                 item {
                     Text(

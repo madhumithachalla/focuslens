@@ -47,6 +47,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Symbols: water drops, mood faces, energy and sleep symbols, period drop, habit ticks and crosses | Built | Not checked on a phone |
 | Feed reels: covered when the Reels switch is on, including full-screen reels in the feed | Built | Not checked on a phone. Audio can still play under the cover |
 | Usage line graph: Today uses 24 hourly points so the line shows; longer ranges use one point per day | Built | Not checked on a phone |
+| Medication: "+ Add a medicine" at the top with a how-to line; an empty state that says what to do | Built | Not checked on a phone |
 | Period tracker: next period shown as a range from your cycle lengths; a Period phase for the first 5 days | Built | Still a simple average, not Flo's model. Not checked on a phone |
 | Spotify Playlists stuck on "Connecting": client ID is set, the connection hangs. Needs the dashboard check and a Copy report | Not fixed | Needs logcat or a Copy report |
 | Interception questions: three per try from different categories (books, movies, vocabulary, general knowledge, English, maths), changing each time; alternates with breathing | Built | Question bank is on the phone. Live questions from online sources are not connected yet. Not checked on a phone |
