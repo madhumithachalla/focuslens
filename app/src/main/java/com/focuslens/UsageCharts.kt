@@ -63,9 +63,11 @@ suspend fun bucketTotals(
 ): List<Pair<String, Long>> {
     val day = 24L * 60 * 60 * 1000
     val span = (to - from).coerceAtLeast(1L)
-    val count = if (span <= 31 * day) ((span + day - 1) / day).toInt() else 12
+    // One day or less: 24 hourly points, so the line has something to join. Longer: one point per day.
+    val hourly = span <= day
+    val count = if (hourly) 24 else if (span <= 31 * day) ((span + day - 1) / day).toInt() else 12
     val step = (span + count - 1) / count
-    val fmt = java.text.SimpleDateFormat("d MMM", java.util.Locale.US)
+    val fmt = java.text.SimpleDateFormat(if (hourly) "HH:mm" else "d MMM", java.util.Locale.US)
     return (0 until count).map { i ->
         val a = from + i * step
         val b = minOf(a + step, to)

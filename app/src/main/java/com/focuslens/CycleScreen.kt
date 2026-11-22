@@ -177,6 +177,9 @@ fun CycleScreen() {
                         )
                         Spacer(Modifier.height(4.dp))
                         Text("Day ${pred.currentCycleDay} · next start around ${formatDate(pred.predictedNextStart)}", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            if (pred.rangeEarliest.isNotBlank() && pred.rangeEarliest != pred.rangeLatest) {
+                                Text("Between ${formatDate(pred.rangeEarliest)} and ${formatDate(pred.rangeLatest)}, based on your cycle lengths", fontSize = 12.sp, color = Color.Gray)
+                            }
                         Spacer(Modifier.height(4.dp))
                         Text("${pred.phase} · estimated fertile window: day ${pred.fertileWindowStartDay}–${pred.fertileWindowEndDay}", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(6.dp))

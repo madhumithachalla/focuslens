@@ -16,6 +16,9 @@ private val DAY_FORMAT = SimpleDateFormat("yyyyMMdd", Locale.US)
 data class CyclePrediction(
     val averageCycleLengthDays: Int,
     val predictedNextStart: String, // yyyyMMdd
+    /** Earliest and latest the next start could be, from your shortest and longest recent cycles. */
+    val rangeEarliest: String = "",
+    val rangeLatest: String = "",
     val currentCycleDay: Int,
     /** True once there are enough logged cycles (3+) to call this a real rolling average. */
     val isConfident: Boolean,
@@ -32,6 +35,8 @@ data class CyclePrediction(
 )
 
 private const val LUTEAL_PHASE_DAYS = 14
+
+private const val PERIOD_DAYS = 5
 
 class CycleRepository(private val dao: CycleLogDao) {
 
@@ -67,6 +72,9 @@ class CycleRepository(private val dao: CycleLogDao) {
         val avg = gaps.average().let { Math.round(it).toInt() }
         val lastStart = starts.first()
         val predicted = addDays(lastStart, avg)
+        // Like Flo: when cycles vary, show the window the next period can land in.
+        val rangeEarliest = addDays(lastStart, gaps.min())
+        val rangeLatest = addDays(lastStart, gaps.max())
         val today = DAY_FORMAT.format(Date())
         val currentDay = (daysBetween(lastStart, today) + 1).coerceAtLeast(1)
 
@@ -74,6 +82,7 @@ class CycleRepository(private val dao: CycleLogDao) {
         val fertileStart = (ovulationDay - 5).coerceAtLeast(1)
         val fertileEnd = ovulationDay + 1
         val phase = when {
+            currentDay in 1..PERIOD_DAYS -> "Period"
             currentDay in fertileStart..fertileEnd -> if (currentDay == ovulationDay) "Ovulation" else "Fertile window"
             currentDay < fertileStart -> "Follicular phase"
             else -> "Luteal phase"
@@ -82,6 +91,8 @@ class CycleRepository(private val dao: CycleLogDao) {
         return CyclePrediction(
             averageCycleLengthDays = avg,
             predictedNextStart = predicted,
+            rangeEarliest = rangeEarliest,
+            rangeLatest = rangeLatest,
             currentCycleDay = currentDay,
             isConfident = gaps.size >= 3,
             ovulationDay = ovulationDay,
