@@ -1,5 +1,11 @@
 package com.focuslens
 
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.URL
+import java.net.URLDecoder
+
 /** One multiple-choice question. [answer] is the index of the right option. */
 data class InterceptQuestion(val category: String, val text: String, val options: List<String>, val answer: Int)
 
@@ -55,9 +61,69 @@ object InterceptBank {
         q("Maths", "A book costs $12. What do 4 books cost?", 2, "$44", "$46", "$48", "$52")
     )
 
-    /** Three questions from three different categories, in a random order. */
-    fun pickThree(): List<InterceptQuestion> {
-        val groups = all.groupBy { it.category }.values.map { it.shuffled() }.shuffled()
+    private const val PREFS = "focus"
+    private const val CACHE = "intercept_live"
+    private const val CACHED_AT = "intercept_live_at"
+    private const val SIX_HOURS = 6L * 60 * 60 * 1000
+    private const val SOURCE = "https://opentdb.com/api.php?amount=20&type=multiple&encode=url3986"
+
+    /** Three questions from three different categories, in a random order. Live questions are mixed in. */
+    fun pickThree(context: Context? = null): List<InterceptQuestion> {
+        val pool = all + (context?.let { cached(it) } ?: emptyList())
+        val groups = pool.groupBy { it.category }.values.map { it.shuffled() }.shuffled()
         return groups.take(3).map { it.first() }
+    }
+
+    /** Fetches fresh questions in the background, at most every six hours. Failures keep the cache. */
+    fun refreshIfStale(context: Context) {
+        val sp = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (System.currentTimeMillis() - sp.getLong(CACHED_AT, 0L) < SIX_HOURS) return
+        Thread {
+            try {
+                val body = URL(SOURCE).openConnection().apply { connectTimeout = 8000; readTimeout = 8000 }
+                    .getInputStream().bufferedReader().use { it.readText() }
+                val results = JSONObject(body).getJSONArray("results")
+                val out = JSONArray()
+                for (i in 0 until results.length()) {
+                    val r = results.getJSONObject(i)
+                    val category = mapCategory(decode(r.getString("category"))) ?: continue
+                    val wrong = r.getJSONArray("incorrect_answers")
+                    val options = ArrayList<String>()
+                    options.add(decode(r.getString("correct_answer")))
+                    for (j in 0 until wrong.length()) options.add(decode(wrong.getString(j)))
+                    val shuffled = options.shuffled()
+                    val answer = shuffled.indexOf(decode(r.getString("correct_answer")))
+                    out.put(JSONObject().put("c", category).put("q", decode(r.getString("question")))
+                        .put("o", JSONArray(shuffled)).put("a", answer))
+                }
+                if (out.length() > 0) {
+                    sp.edit().putString(CACHE, out.toString()).putLong(CACHED_AT, System.currentTimeMillis()).apply()
+                }
+            } catch (e: Exception) {
+                // No internet or a bad response: the built-in questions still work.
+            }
+        }.start()
+    }
+
+    private fun cached(context: Context): List<InterceptQuestion> = try {
+        val raw = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CACHE, null)
+        val arr = JSONArray(raw ?: "[]")
+        (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            val options = o.getJSONArray("o")
+            InterceptQuestion(o.getString("c"), o.getString("q"), (0 until options.length()).map { options.getString(it) }, o.getInt("a"))
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    private fun decode(text: String): String = try { URLDecoder.decode(text.replace("+", "%2B"), "UTF-8") } catch (e: Exception) { text }
+
+    private fun mapCategory(source: String): String? = when {
+        source.startsWith("Entertainment: Books") -> "Books"
+        source.startsWith("Entertainment: Film") -> "Movies"
+        source == "General Knowledge" -> "General knowledge"
+        source == "Science: Mathematics" -> "Maths"
+        else -> null
     }
 }

@@ -52,6 +52,9 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | Group tasks in a study room: anyone in the room adds a task and ticks it off; only the person who added it can remove it. Rules updated | Built | Needs the updated firestore.rules published. Not checked on a phone |
 | Week planner: seven themed days from the notebook (cooking, laundry, cleaning, career, job applying, content, fun), and a Money template | Built | Days can be renamed in the planner. Not checked on a phone |
 | Week planner: fixed standard day names (Planning and admin, Money, Future you, Maintenance, Fun, Meal prep, Fun and self-care); each day is picked from the list, not typed. Default week set to these | Built | Not checked on a phone. Nightly and Sunday planning slots are suggested, not built |
+| Quiz questions fetched from Open Trivia Database every 6 hours, cached, mixed with the built-in bank | Built | Needs internet. Not checked on a phone |
+| Badges grouped by Journal, Tasks, Check-ins, Focus, Rewards; Focus badges count stepping back | Built | Not checked on a phone |
+| Journal friendlier: "Your journal" subtitle, warmer headings, kinder empty state | Built | Partial redesign; the entry editor layout is unchanged. Not checked on a phone |
 | Period tracker: next period shown as a range from your cycle lengths; a Period phase for the first 5 days | Built | Still a simple average, not Flo's model. Not checked on a phone |
 | Spotify Playlists stuck on "Connecting": client ID is set, the connection hangs. Needs the dashboard check and a Copy report | Not fixed | Needs logcat or a Copy report |
 | Interception questions: three per try from different categories (books, movies, vocabulary, general knowledge, English, maths), changing each time; alternates with breathing | Built | Question bank is on the phone. Live questions from online sources are not connected yet. Not checked on a phone |

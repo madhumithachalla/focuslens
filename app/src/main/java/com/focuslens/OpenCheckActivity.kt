@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +62,7 @@ class OpenCheckActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showing = true
+        InterceptBank.refreshIfStale(this)
         window.setBackgroundDrawable(ColorDrawable(0xFF0E0F13.toInt()))
         // Back counts as "Not now", so it can't be used to slip past the check.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -161,7 +163,8 @@ private fun BreathingStep(onDone: () -> Unit, onNotNow: () -> Unit) {
 /** Three questions from mixed categories. Get each one right to open the app. A wrong answer keeps the same question. */
 @Composable
 private fun QuestionsStep(onDone: () -> Unit, onNotNow: () -> Unit) {
-    val questions = remember { InterceptBank.pickThree() }
+    val context = LocalContext.current
+    val questions = remember { InterceptBank.pickThree(context) }
     var index by remember { mutableIntStateOf(0) }
     var wrong by remember { mutableStateOf(false) }
     val q = questions[index]
