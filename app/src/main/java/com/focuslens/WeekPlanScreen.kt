@@ -316,22 +316,18 @@ private fun DayEditor(index: Int, day: WeekDay, onCancel: () -> Unit, onSave: (W
     var confirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val suggested = DayTemplate.suggestFor(theme)
-
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
         TextButton(onClick = onCancel) { Text("← Back") }
         Text(DAY_NAMES[index], fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = theme,
-            onValueChange = { theme = it },
-            label = { Text("Theme for this day") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (suggested != DayTemplate.NONE && suggested != template) {
-            TextButton(onClick = { template = suggested }) {
-                Text("This looks like ${suggested.label}. Use that template?")
+        Text("Theme for this day", fontSize = 12.sp, color = Color.Gray)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            STANDARD_THEMES.forEach { (name, t) ->
+                FilterChip(
+                    selected = theme == name,
+                    onClick = { theme = name; template = t },
+                    label = { Text(name) }
+                )
             }
         }
 

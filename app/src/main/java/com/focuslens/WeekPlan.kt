@@ -70,6 +70,20 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
     }
 }
 
+/**
+ * The standard day themes. The names are fixed: a day can be given any of these, and its template
+ * goes with it, but a name cannot be typed in. Change the week's events by moving themes between days.
+ */
+val STANDARD_THEMES: List<Pair<String, DayTemplate>> = listOf(
+    "Planning and admin day" to DayTemplate.ADMIN,
+    "Money day" to DayTemplate.MONEY,
+    "Future you day" to DayTemplate.NONE,
+    "Maintenance day" to DayTemplate.NONE,
+    "Fun day" to DayTemplate.FUN_SELF_CARE,
+    "Meal prep day" to DayTemplate.MEAL_PREP,
+    "Fun and self-care day" to DayTemplate.FUN_SELF_CARE
+)
+
 /** One day of the week. Index 0 is Monday. */
 data class WeekDay(
     val theme: String,
@@ -129,21 +143,12 @@ object WeekPlanStore {
 
     private fun sp(c: Context) = c.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    /**
-     * The starting week, from the weekly themes in the owner's notebook: Monday cooking and meal
-     * prep, then laundry, cleaning, career, job applying, content, and fun on Sunday. Each day can
-     * be renamed or changed in the planner.
-     */
+    /** The starting week: Monday planning and admin, Tuesday money, Wednesday future you, Thursday maintenance, Friday fun, Saturday meal prep, Sunday fun and self-care. */
     fun defaultPlan(): WeekPlan = WeekPlan(
         days = listOf(
-            WeekDay("Cooking and meal prep", DayTemplate.MEAL_PREP, emptyMap()),
-            WeekDay("Laundry", DayTemplate.NONE, emptyMap()),
-            WeekDay("Cleaning", DayTemplate.NONE, emptyMap()),
-            WeekDay("Career and upskill", DayTemplate.PROFESSIONAL, emptyMap()),
-            WeekDay("Job applying", DayTemplate.NONE, emptyMap()),
-            WeekDay("Content and organising", DayTemplate.PERSONAL_PROJECT, emptyMap()),
-            WeekDay("Fun and self-care", DayTemplate.FUN_SELF_CARE, emptyMap())
-        ),
+            "Planning and admin day", "Money day", "Future you day", "Maintenance day",
+            "Fun day", "Meal prep day", "Fun and self-care day"
+        ).map { name -> WeekDay(name, STANDARD_THEMES.first { it.first == name }.second, emptyMap()) },
         items = emptyList(),
         routines = emptyList(),
         routineDone = emptyMap()
