@@ -84,7 +84,7 @@ val STANDARD_THEMES: List<Pair<String, DayTemplate>> = listOf(
     "Fun and self-care day" to DayTemplate.FUN_SELF_CARE,
     "Upskill day" to DayTemplate.PROFESSIONAL,
     "Prep day" to DayTemplate.MEAL_PREP,
-    "Do nothing day" to DayTemplate.NONE
+    "Let it be day" to DayTemplate.NONE
 )
 
 /** One day of the week. Index 0 is Monday. */
