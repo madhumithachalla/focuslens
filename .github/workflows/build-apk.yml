@@ -62,6 +62,17 @@ jobs:
         # two to tell whether a newer build than the one installed is live on the website.
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> local.properties
 
+      # Warnings only: a missing secret never fails the build. The list of what still needs
+      # setting up is in SETUP_TODO.md. Values are never printed.
+      - name: Check setup (warnings only)
+        env:
+          SPOTIFY_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          GOOGLE_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          [ -n "$SPOTIFY_ID" ] || echo "::warning title=Setup::SPOTIFY_CLIENT_ID secret is missing. Spotify will not connect. See SETUP_TODO.md."
+          [ -n "$GOOGLE_ID" ] || echo "::warning title=Setup::GOOGLE_WEB_CLIENT_ID secret is missing. Google sign-in will not work. See SETUP_TODO.md."
+          echo "Setup checklist: SETUP_TODO.md"
+
       # Unit tests run before the APK is built, so a failing test stops the publish step.
       - name: Run unit tests
         run: gradle :app:testDebugUnitTest --no-daemon
