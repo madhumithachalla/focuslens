@@ -158,14 +158,32 @@ fun LineChart(
         val h = size.height
         val step = if (values.size > 1) w / (values.size - 1) else 0f
         fun yOf(v: Long): Float = h - (v.toFloat() / max) * h * 0.9f - h * 0.05f
+        // Faint gridlines at a quarter, half and three quarters of the peak.
+        listOf(0.25f, 0.5f, 0.75f).forEach { f ->
+            val gy = h - f * h * 0.9f - h * 0.05f
+            drawLine(color.copy(alpha = 0.12f), Offset(0f, gy), Offset(w, gy), strokeWidth = 1.dp.toPx())
+        }
         val path = Path()
         values.forEachIndexed { i, v ->
             if (i == 0) path.moveTo(0f, yOf(v)) else path.lineTo(i * step, yOf(v))
         }
+        // Soft fill under the line, down to the baseline.
+        val fill = Path().apply {
+            addPath(path)
+            lineTo((values.size - 1) * step, h)
+            lineTo(0f, h)
+            close()
+        }
+        drawPath(fill, color.copy(alpha = 0.16f))
         drawPath(
             path, color,
             style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
+        // The peak, and the latest point, are marked.
+        val peakIndex = values.indices.maxByOrNull { values[it] } ?: 0
+        if (values.size > 1 && values[peakIndex] > 0) {
+            drawCircle(color.copy(alpha = 0.6f), radius = 3.dp.toPx(), center = Offset(peakIndex * step, yOf(values[peakIndex])))
+        }
         drawCircle(color, radius = 4.dp.toPx(), center = Offset((values.size - 1) * step, yOf(values.last())))
     }
     Spacer(Modifier.height(4.dp))
