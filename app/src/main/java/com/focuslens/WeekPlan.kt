@@ -33,6 +33,12 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
         "month" to "Coming month: key dates",
         "priorities" to "Top 3 priorities"
     )),
+    MONEY("Money", listOf(
+        "bills" to "Bills to pay",
+        "budget" to "Check the budget and savings",
+        "subs" to "Subscriptions to review",
+        "minutes" to "Time (minutes)"
+    )),
     ADMIN("Admin", listOf(
         "inbox" to "Inbox tidy (20 minutes)",
         "grocery" to "Grocery order",
@@ -55,6 +61,7 @@ enum class DayTemplate(val label: String, val fields: List<Pair<String, String>>
                 "content" in t || "personal project" in t -> PERSONAL_PROJECT
                 "meal" in t -> MEAL_PREP
                 "planning" in t || "rest" in t -> PLANNING_REST
+                "money" in t || "bills" in t -> MONEY
                 "admin" in t -> ADMIN
                 "fun" in t || "self-care" in t || "self care" in t -> FUN_SELF_CARE
                 else -> NONE
@@ -122,11 +129,20 @@ object WeekPlanStore {
 
     private fun sp(c: Context) = c.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    /** The starting week: five days for the person to name, and the two suggested additions. */
+    /**
+     * The starting week, from the weekly themes in the owner's notebook: Monday cooking and meal
+     * prep, then laundry, cleaning, career, job applying, content, and fun on Sunday. Each day can
+     * be renamed or changed in the planner.
+     */
     fun defaultPlan(): WeekPlan = WeekPlan(
-        days = List(5) { WeekDay("", DayTemplate.NONE, emptyMap()) } + listOf(
-            WeekDay("Meal Prep", DayTemplate.MEAL_PREP, emptyMap(), suggested = true),
-            WeekDay("Weekly Planning + Rest", DayTemplate.PLANNING_REST, emptyMap(), suggested = true, protectedDay = true)
+        days = listOf(
+            WeekDay("Cooking and meal prep", DayTemplate.MEAL_PREP, emptyMap()),
+            WeekDay("Laundry", DayTemplate.NONE, emptyMap()),
+            WeekDay("Cleaning", DayTemplate.NONE, emptyMap()),
+            WeekDay("Career and upskill", DayTemplate.PROFESSIONAL, emptyMap()),
+            WeekDay("Job applying", DayTemplate.NONE, emptyMap()),
+            WeekDay("Content and organising", DayTemplate.PERSONAL_PROJECT, emptyMap()),
+            WeekDay("Fun and self-care", DayTemplate.FUN_SELF_CARE, emptyMap())
         ),
         items = emptyList(),
         routines = emptyList(),
