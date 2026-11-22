@@ -197,6 +197,19 @@ fun MedsScreen() {
             }
         }
 
+        // Which days each medicine was taken, for the last 4 weeks.
+        if (plans.isNotEmpty()) {
+            item { Text("Days you took it", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            item { Text("Last 4 weeks. ✅ taken, ❌ missed, blank = not scheduled.", fontSize = 13.sp, color = Color.Gray) }
+            items(plans, key = { "history-${it.id}" }) { plan ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(plan.name, fontWeight = FontWeight.Medium)
+                        MedHabitGrid(plan = plan, tick = tick, onChanged = { tick++ })
+                    }
+                }
+            }
+        }
         item { Text("My medications", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         if (plans.isEmpty()) {
             item { Text("None added yet.", color = Color.Gray) }
