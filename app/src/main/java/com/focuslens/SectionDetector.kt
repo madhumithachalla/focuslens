@@ -48,7 +48,7 @@ object SectionDetector {
      *  Reddit's front page isn't a single named tab the same way), so those are left out. */
     val feedFeature: Map<String, String> = mapOf(
         INSTAGRAM to "Reels", YOUTUBE to "Shorts", TIKTOK to "For You", SNAPCHAT to "Spotlight",
-        FACEBOOK to "Reels", TWITTER to "For You", THREADS to "For You"
+        FACEBOOK to "Reels", TWITTER to "For You", THREADS to "For You", LINKEDIN to "Videos"
     )
 
     // Longest first so "search and explore" wins over "search".
@@ -100,7 +100,7 @@ object SectionDetector {
             visited++
             val id = node.viewIdResourceName?.substringAfter(":id/")?.lowercase() ?: ""
             if (id.isNotEmpty()) ids.add(id)
-            if (pkg == LINKEDIN) {
+            if (pkg == LINKEDIN || pkg == SNAPCHAT) {
                 listOf(node.text, node.contentDescription).forEach { t ->
                     val v = t?.toString()?.trim()?.lowercase() ?: ""
                     if (v.isNotEmpty() && v.length <= 40) shortTexts.add(v)
@@ -160,7 +160,7 @@ object SectionDetector {
             INSTAGRAM -> instagram(ids, selectedIds, words)
             YOUTUBE -> youtube(ids, words)
             TIKTOK -> tiktok(words)
-            SNAPCHAT -> snapchat(words)
+            SNAPCHAT -> snapchat(words, shortTexts)
             FACEBOOK -> facebook(ids, words)
             TWITTER -> twitter(words)
             REDDIT -> reddit(words)
@@ -223,7 +223,7 @@ object SectionDetector {
             // Shorts only when the Shorts player is up, or the Shorts tab is the selected one.
             // Generic "reel_recycler"/"shorts_" ids also appear as shelves on Home and Search,
             // which is what was closing the front page, so those no longer count on their own.
-            has("reel_player") || "shorts" in words -> "Shorts"
+            has("reel_player", "shorts_player", "shorts_video", "reel_watch") || "shorts" in words -> "Shorts"
             has("watch_while", "watch_player", "player_view") -> "Watching a video"
             "subscriptions" in words -> "Subscriptions"
             "home" in words -> "Home feed"
@@ -240,6 +240,7 @@ object SectionDetector {
      * or an exact Easy Apply / Applied label, so a post that merely mentions a job is not counted.
      */
     private fun linkedin(words: List<String>, texts: Set<String>): String = when {
+        "videos" in words || texts.any { it == "video" || it == "videos" } -> "Videos"
         "jobs" in words || texts.any { it == "jobs" || it == "easy apply" || it == "applied" || it == "job search" } ->
             "Jobs / applications"
         "messaging" in words || "messages" in words || texts.any { it == "messaging" } -> "Messages"
@@ -261,8 +262,8 @@ object SectionDetector {
         else -> "Other"
     }
 
-    private fun snapchat(words: List<String>): String = when {
-        "spotlight" in words -> "Spotlight"
+    private fun snapchat(words: List<String>, texts: Set<String>): String = when {
+        "spotlight" in words || texts.any { it == "spotlight" } -> "Spotlight"
         "stories" in words || "discover" in words -> "Stories"
         "chat" in words || "inbox" in words -> "Chat"
         "map" in words -> "Map"
