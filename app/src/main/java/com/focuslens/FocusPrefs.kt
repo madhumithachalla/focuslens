@@ -6,6 +6,9 @@ import java.util.Date
 import java.util.Locale
 
 /** Everything the blocker remembers, kept on the phone only. */
+// Pomodoro is switched off: it was blocking apps without the person using them. Set to true to bring it back.
+const val POMODORO_ENABLED = false
+
 class FocusPrefs(context: Context) {
 
     private val sp = context.applicationContext
@@ -162,8 +165,6 @@ class FocusPrefs(context: Context) {
     fun setReelLockUntil(until: Long) = sp.edit().putLong("reel_lock_until", until).apply()
 
     // ---- Pomodoro: a focus phase, then a break, repeating. Only in focus are blocked apps paused. ----
-    // Pomodoro is switched off: it was blocking apps without the person using them. Set to true to bring it back.
-    const val POMODORO_ENABLED = false
     fun pomodoroOn(): Boolean = POMODORO_ENABLED && sp.getBoolean("pomo_on", false)
     fun pomodoroFocusMin(): Int = sp.getInt("pomo_focus_min", 25).coerceIn(5, 120)
     fun pomodoroBreakMin(): Int = sp.getInt("pomo_break_min", 5).coerceIn(1, 60)
