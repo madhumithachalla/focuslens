@@ -306,6 +306,7 @@ class FocusAccessibilityService : AccessibilityService() {
      * Returns true when a break is running, so the caller stops checking that app.
      */
     private fun pomodoroBlock(pkg: String, now: Long): Boolean {
+        if (!FocusPrefs.POMODORO_ENABLED) return false
         // Social media apps are included, except LinkedIn. Any other app you blocked is included too.
         val pomodoroApps = SectionDetector.tracked - SectionDetector.LINKEDIN
         if (!prefs.enabled || !prefs.pomodoroOn() || (pkg !in pomodoroApps && !prefs.isBlocked(pkg))) return false
