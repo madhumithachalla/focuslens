@@ -158,7 +158,19 @@ class UsageRepository(private val context: Context) {
             events.getNextEvent(event)
             val pkg = event.packageName ?: continue
             when (event.eventType) {
-                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> openSince[pkg] = event.timeStamp
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    // Another app coming to the front means whatever was in front has stopped. If Android
+                    // did not log its move to the background, end it here, so its time doesn't run on.
+                    val iterator = openSince.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val (other, from) = iterator.next()
+                        if (other != pkg) {
+                            totals[other] = (totals[other] ?: 0L) + (event.timeStamp - from).coerceAtLeast(0L)
+                            iterator.remove()
+                        }
+                    }
+                    openSince[pkg] = event.timeStamp
+                }
                 android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val from = openSince.remove(pkg) ?: start
                     totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - from).coerceAtLeast(0L)
