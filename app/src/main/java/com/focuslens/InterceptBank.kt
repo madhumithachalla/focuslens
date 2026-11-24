@@ -70,8 +70,36 @@ object InterceptBank {
     /** Three questions from three different categories, in a random order. Live questions are mixed in. */
     fun pickThree(context: Context? = null): List<InterceptQuestion> {
         val pool = all + (context?.let { cached(it) } ?: emptyList())
-        val groups = pool.groupBy { it.category }.values.map { it.shuffled() }.shuffled()
-        return groups.take(3).map { it.first() }
+        // Skip questions shown in the last few tries, unless a category has nothing else left.
+        val recent = context?.let { recentTexts(it) } ?: emptySet()
+        val groups = pool.groupBy { it.category }.values
+            .map { g -> g.filter { it.text !in recent }.ifEmpty { g }.shuffled() }
+            .shuffled()
+        val picked = groups.take(3).map { it.first() }
+        context?.let { rememberShown(it, picked) }
+        return picked
+    }
+
+    private const val RECENT = "intercept_recent"
+    private const val RECENT_LIMIT = 24
+
+    private fun recentTexts(context: Context): Set<String> = try {
+        val arr = JSONArray(context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(RECENT, "[]"))
+        (0 until arr.length()).map { arr.getString(it) }.toSet()
+    } catch (e: Exception) {
+        emptySet()
+    }
+
+    private fun rememberShown(context: Context, shown: List<InterceptQuestion>) {
+        try {
+            val sp = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val arr = JSONArray(sp.getString(RECENT, "[]"))
+            for (q in shown) arr.put(q.text)
+            val kept = (0 until arr.length()).map { arr.getString(it) }.takeLast(RECENT_LIMIT)
+            sp.edit().putString(RECENT, JSONArray(kept).toString()).apply()
+        } catch (e: Exception) {
+            // Not saving the history only means a question can repeat sooner.
+        }
     }
 
     /** Fetches fresh questions in the background, at most every six hours. Failures keep the cache. */
@@ -124,6 +152,15 @@ object InterceptBank {
         source.startsWith("Entertainment: Film") -> "Movies"
         source == "General Knowledge" -> "General knowledge"
         source == "Science: Mathematics" -> "Maths"
+        source.startsWith("Entertainment: Music") -> "Music"
+        source.startsWith("Entertainment: Television") -> "TV"
+        source.startsWith("Entertainment: Video Games") -> "Video games"
+        source == "Science: Computers" -> "Computers"
+        source == "Science & Nature" -> "Science"
+        source == "Geography" -> "Geography"
+        source == "History" -> "History"
+        source == "Animals" -> "Animals"
+        source == "Sports" -> "Sports"
         else -> null
     }
 }

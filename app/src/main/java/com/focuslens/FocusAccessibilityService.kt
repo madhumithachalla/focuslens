@@ -222,6 +222,8 @@ class FocusAccessibilityService : AccessibilityService() {
         ) return
         if (now - lastLaunch < 3_000L) return
 
+        releaseStaleUsageLock(pkg, now)
+
         // On a break, or locked for the day: sent out even if the app is already open.
         if (now - lastLaunch > 1_500L && (now < prefs.dayLockUntil(pkg) || now < prefs.breakUntil(pkg))) {
             lastLaunch = now
@@ -243,7 +245,7 @@ class FocusAccessibilityService : AccessibilityService() {
         ) {
             lastLaunch = now
             prefs.bump(pkg, "blocked_attempts")
-            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
+            prefs.setUsageDayLock(pkg, now + LIMIT_LOCK_MS)
             kickHome("daily limit while open")
             val appName = SectionDetector.displayName[pkg] ?: pkg
             launchFeatureBlock(
@@ -679,7 +681,7 @@ class FocusAccessibilityService : AccessibilityService() {
             if (now - lastLaunch < 1_500L) return
             lastLaunch = now
             prefs.bump(pkg, "blocked_attempts")
-            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
+            prefs.setUsageDayLock(pkg, now + LIMIT_LOCK_MS)
             startActivity(
                 Intent(this, BlockActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
@@ -715,7 +717,7 @@ class FocusAccessibilityService : AccessibilityService() {
         val limitToday = prefs.limitMin(pkg)
         if (usedToday >= limitToday) {
             val appName = SectionDetector.displayName[pkg] ?: pkg
-            prefs.setDayLockUntil(pkg, now + LIMIT_LOCK_MS)
+            prefs.setUsageDayLock(pkg, now + LIMIT_LOCK_MS)
             Toast.makeText(
                 this,
                 "$appName daily limit reached: $usedToday of $limitToday min used today. Locked for 12 hours.",
@@ -759,6 +761,21 @@ class FocusAccessibilityService : AccessibilityService() {
         val cached = usageCache[pkg]
         if (cached == null || now - cached.first > 60_000L) refreshUsage(pkg)
         return cached?.second ?: 0
+    }
+
+    /**
+     * A 12-hour lock from the daily limit is lifted once a fresh usage figure is back under the
+     * limit. Without this, a wrong count (for example from an older build) kept an app locked
+     * for hours after the real time was under the limit. Only a figure under a minute old counts.
+     */
+    private fun releaseStaleUsageLock(pkg: String, now: Long) {
+        if (now >= prefs.dayLockUntil(pkg) || !prefs.isUsageDayLock(pkg)) return
+        val fresh = usageCache[pkg]?.takeIf { now - it.first < 60_000L }
+        if (fresh == null) {
+            refreshUsage(pkg)
+            return
+        }
+        if (fresh.second < prefs.limitMin(pkg)) prefs.setDayLockUntil(pkg, 0L)
     }
 
     /** Minutes used today for the block screen: waits briefly for a fresh figure, so it is not 0. */
