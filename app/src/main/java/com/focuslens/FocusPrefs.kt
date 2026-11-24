@@ -432,7 +432,14 @@ class FocusPrefs(context: Context) {
     /** Until when [pkg] is locked for the rest of the day (epoch millis), 0 if not. */
     fun dayLockUntil(pkg: String): Long = sp.getLong("day_lock_$pkg", 0L)
 
-    fun setDayLockUntil(pkg: String, until: Long) = sp.edit().putLong("day_lock_$pkg", until).apply()
+    fun setDayLockUntil(pkg: String, until: Long) =
+        sp.edit().putLong("day_lock_$pkg", until).putBoolean("usage_lock_$pkg", false).apply()
+
+    /** A lock that came from using up the daily limit. It is lifted again if the usage drops back under the limit. */
+    fun setUsageDayLock(pkg: String, until: Long) =
+        sp.edit().putLong("day_lock_$pkg", until).putBoolean("usage_lock_$pkg", true).apply()
+
+    fun isUsageDayLock(pkg: String): Boolean = sp.getBoolean("usage_lock_$pkg", false)
 
     /** Skip reel: the button shows on Instagram when turned on (see SkipReelOverlay). */
 
