@@ -25,7 +25,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 
 | Item | Status | Notes |
 |---|---|---|
-| Usage totals match Digital Wellbeing (last 7 days) | Built | Uses Android's own totals. Not checked against your phone |
+| Usage totals match Digital Wellbeing (last 7 days) | Built | FocusLens works the totals out itself from Android's event log: one app in front at a time, screen off or lock ends it, and the Today, Week, hourly and limit numbers all use the same rule. Not checked against your phone |
 | Track my usage on this phone: yes = snapshots every 6 hours, no = Digital Wellbeing numbers | Built | Consent on first launch and in Settings. Not checked on a phone yet |
 | Instagram open interception: each open shows breathing or a maths question, alternating; Not now counted | Built | Not checked on a phone yet |
 | Daily limit and reel cap: locked 12 hours from when it is used up | Built | Quiz unlock still works on the lock screen. Break-count lock stays until 6am. Not checked on a phone yet |
@@ -61,7 +61,7 @@ Status key: **Built** = in code and compiles in CI. **Device-tested** = you have
 | 20 hours away: Start on the Focus tab. Everything pauses except the apps you keep open, for 20 hours. End early, no penalty. Inspired by 20 Hours for 20Talk, not an official feature | Built | Not checked on a phone. The 5-minute emergency override is not in this card yet |
 | Settings: Copy report button (version, device, blocking status, recent FocusLens log lines) | Built | Use it to send the developer what happened on the phone |
 | Home launcher: search box open from the start, type an app name and tap it. Set it as home in Settings > Apps > Default apps | Built | Not checked on a phone |
-| Time stops counting when the screen turns off | Built | Not device-tested |
+| Time stops counting when the screen turns off | Built | Now applies to the Today and Week totals too, not only the hourly chart. Not device-tested |
 | "Inside the app" shows measured coverage | Built | |
 | Peak hours from usage history | Built | Needs several days of history |
 

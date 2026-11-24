@@ -144,32 +144,78 @@ class UsageRepository(private val context: Context) {
             .sortedByDescending { it.millis }
     }
 
+    /** One stretch of time an app was in front. */
+    private data class Span(val pkg: String, val from: Long, val to: Long)
+
     /**
-     * Time each app was in front inside [start, end), from Android's event log and clipped to
-     * the window. Aggregated buckets can include time from neighbouring days, which made some
-     * saved days larger than 24 hours. Counting only events inside the window avoids that.
+     * Time each app was in front inside [start, end), built from the spans below.
      */
     private fun exactForegroundTotals(start: Long, end: Long): Map<String, Long> {
         val totals = HashMap<String, Long>()
-        val openSince = HashMap<String, Long>()
-        val events = usm.queryEvents(start, end)
-        val event = android.app.usage.UsageEvents.Event()
+        for (span in foregroundSpans(start, end)) {
+            totals[span.pkg] = (totals[span.pkg] ?: 0L) + (span.to - span.from)
+        }
+        return totals
+    }
+
+    /**
+     * Every stretch of time an app was in front, clipped to [start, end). This is the one place
+     * FocusLens works out its own usage: the totals, the hourly chart and the daily limits all use it,
+     * so they agree with each other.
+     *
+     * Rules, from Android's event log:
+     * - Only one app is in front at a time. When another app comes to the front, the previous one stops.
+     * - An app can have several screens open. It stays in front until all of them have paused.
+     * - Screen off, lock screen or shutdown ends whatever is in front.
+     * - Whatever is still in front at [end] is counted up to [end].
+     *
+     * The log is read from LOOKBACK_MS before [start], so an app already in front when the window
+     * opens is counted from [start] only.
+     */
+    @Suppress("DEPRECATION")
+    private fun foregroundSpans(start: Long, end: Long): List<Span> {
+        val spans = ArrayList<Span>()
+        val screensOpen = HashMap<String, Int>()
+        var front: String? = null
+        var frontSince = 0L
+
+        fun stopFront(at: Long) {
+            val pkg = front ?: return
+            val from = maxOf(frontSince, start)
+            val to = minOf(at, end)
+            if (to > from) spans.add(Span(pkg, from, to))
+            front = null
+        }
+
+        val events = usm.queryEvents(start - LOOKBACK_MS, end)
+        val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            val pkg = event.packageName ?: continue
+            val at = event.timeStamp
             when (event.eventType) {
-                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> openSince[pkg] = event.timeStamp
-                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val from = openSince.remove(pkg) ?: start
-                    totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - from).coerceAtLeast(0L)
+                in SCREEN_OFF_TYPES -> {
+                    stopFront(at)
+                    screensOpen.clear()
+                }
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    val pkg = event.packageName ?: continue
+                    screensOpen[pkg] = (screensOpen[pkg] ?: 0) + 1
+                    if (front != pkg) {
+                        stopFront(at)
+                        front = pkg
+                        frontSince = at
+                    }
+                }
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val pkg = event.packageName ?: continue
+                    val left = ((screensOpen[pkg] ?: 0) - 1).coerceAtLeast(0)
+                    screensOpen[pkg] = left
+                    if (left == 0 && front == pkg) stopFront(at)
                 }
             }
         }
-        // Apps still in front when the window ends.
-        for ((pkg, from) in openSince) {
-            totals[pkg] = (totals[pkg] ?: 0L) + (end - from).coerceAtLeast(0L)
-        }
-        return totals
+        stopFront(end)
+        return spans
     }
 
     /**
@@ -277,44 +323,23 @@ class UsageRepository(private val context: Context) {
      * day (about a week), same constraint as [usageBetween], which is why
      * UsageHistoryRepository snapshots this before it ages out.
      */
-    @Suppress("DEPRECATION")
     fun hourlyBreakdown(dayStart: Long, dayEnd: Long): Map<Int, Map<String, Long>> {
-        val events = usm.queryEvents(dayStart, dayEnd)
-        val event = UsageEvents.Event()
-        val resumedAt = HashMap<String, Long>()
         val totals = HashMap<Int, HashMap<String, Long>>()
         val cal = Calendar.getInstance()
 
-        fun addSplitByHour(pkg: String, from: Long, to: Long) {
-            var cursor = from
-            while (cursor < to) {
+        for (span in foregroundSpans(dayStart, dayEnd)) {
+            // Split each stretch at the hour boundaries, so the hours add up to the same total.
+            var cursor = span.from
+            while (cursor < span.to) {
                 cal.timeInMillis = cursor
                 val hour = cal.get(Calendar.HOUR_OF_DAY)
                 cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
-                val hourEnd = cal.timeInMillis + 3_600_000L
-                val sliceEnd = minOf(to, hourEnd)
+                val sliceEnd = minOf(span.to, cal.timeInMillis + 3_600_000L)
                 val bucket = totals.getOrPut(hour) { HashMap() }
-                bucket[pkg] = (bucket[pkg] ?: 0L) + (sliceEnd - cursor)
+                bucket[span.pkg] = (bucket[span.pkg] ?: 0L) + (sliceEnd - cursor)
                 cursor = sliceEnd
             }
         }
-
-        while (events.hasNextEvent()) {
-            events.getNextEvent(event)
-            val pkg = event.packageName ?: continue
-            when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> resumedAt.putIfAbsent(pkg, event.timeStamp)
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val from = resumedAt.remove(pkg)
-                    if (from != null && event.timeStamp > from) addSplitByHour(pkg, from, event.timeStamp)
-                }
-                in SCREEN_OFF_TYPES -> {
-                    for ((p, from) in resumedAt) if (event.timeStamp > from) addSplitByHour(p, from, event.timeStamp)
-                    resumedAt.clear()
-                }
-            }
-        }
-        for ((pkg, from) in resumedAt) if (dayEnd > from) addSplitByHour(pkg, from, dayEnd)
 
         return totals.mapValues { (_, m) ->
             m.filter { (pkg, ms) -> ms > 0 && pkg != context.packageName && !isSystemSurface(pkg) && isUserApp(pkg) }
@@ -341,6 +366,8 @@ class UsageRepository(private val context: Context) {
 
     companion object {
         private const val DAY_MS = 24L * 60 * 60 * 1000
+        /** How far back the event log is read so an app already in front at a window's start is known. */
+        private const val LOOKBACK_MS = 12L * 60 * 60 * 1000
     }
 }
 
